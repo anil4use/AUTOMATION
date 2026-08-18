@@ -34,7 +34,7 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
         userEmail: user.email,
       };
 
-      const storageKey = `autoflow_user_workflows_${user.email}`;
+      const storageKey = `autoflow_real_workflows_${user.email}`;
       const existingStr = localStorage.getItem(storageKey);
       const existing = existingStr ? JSON.parse(existingStr) : [];
       const updated = [newWf, ...existing.filter((w: any) => w.id !== newWf.id)];

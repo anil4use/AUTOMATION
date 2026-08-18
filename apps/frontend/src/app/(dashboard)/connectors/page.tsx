@@ -25,32 +25,20 @@ export default function ConnectorsPage() {
   const [apiKeyName, setApiKeyName] = useState('');
   const [apiKeyValue, setApiKeyValue] = useState('');
 
-  // Fetch connections scoped strictly to current user email
+  // Fetch real connections for current user (starts completely empty with 0 dummy connections)
   useEffect(() => {
     if (!user.email) return;
     try {
-      const storageKey = `autoflow_connections_${user.email}`;
+      const storageKey = `autoflow_real_connections_${user.email}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         setConnections(JSON.parse(saved));
       } else {
-        // Initialize default user-scoped connection for new account
-        const initialUserConns: ConnectionAccount[] = [
-          {
-            id: `conn_${Date.now()}`,
-            name: `Gmail Account (${user.email})`,
-            connectorId: 'gmail',
-            email: user.email,
-            authType: 'OAuth2 (AES-256 Encrypted)',
-            status: 'connected',
-            createdAt: new Date().toLocaleDateString(),
-          },
-        ];
-        setConnections(initialUserConns);
-        localStorage.setItem(storageKey, JSON.stringify(initialUserConns));
+        setConnections([]); // Starts 100% empty for new users!
       }
     } catch (e) {
       console.error('LocalStorage user connections sync error:', e);
+      setConnections([]);
     }
   }, [user.email]);
 
@@ -58,7 +46,7 @@ export default function ConnectorsPage() {
     setConnections(updated);
     if (!user.email) return;
     try {
-      localStorage.setItem(`autoflow_connections_${user.email}`, JSON.stringify(updated));
+      localStorage.setItem(`autoflow_real_connections_${user.email}`, JSON.stringify(updated));
     } catch (e) {
       console.error('LocalStorage save error:', e);
     }
@@ -166,7 +154,7 @@ export default function ConnectorsPage() {
         ))}
       </div>
 
-      {/* Active Secure Connections Scoped to Current User */}
+      {/* Active Secure Connections Scoped Strictly to Current User (0 Dummy Data) */}
       <SectionCard>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -177,8 +165,9 @@ export default function ConnectorsPage() {
         </div>
 
         {connections.length === 0 ? (
-          <div className="text-center py-8 text-textMuted text-xs">
-            No active connections found for account <strong className="text-white">{user.email}</strong>. Click a connector above to connect your account.
+          <div className="text-center py-10 text-textMuted text-xs bg-white/[0.01] rounded-xl border border-dashed border-borderColor">
+            No active connections found for account <strong className="text-white">{user.email}</strong>.<br />
+            Click &quot;Connect Gmail&quot; or any connector above to authenticate your real account.
           </div>
         ) : (
           <div className="flex flex-col gap-3">

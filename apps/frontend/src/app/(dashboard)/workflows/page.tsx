@@ -22,41 +22,28 @@ export default function WorkflowsPage() {
   const { user } = useUserRole();
   const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
 
-  // Synchronize workflows scoped strictly to current user email
+  // Synchronize real workflows scoped strictly to current user email (0 dummy workflows)
   useEffect(() => {
     if (!user.email) return;
     try {
-      const storageKey = `autoflow_user_workflows_${user.email}`;
+      const storageKey = `autoflow_real_workflows_${user.email}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         setWorkflows(JSON.parse(saved));
       } else {
-        const initialWorkflows: WorkflowItem[] = [
-          {
-            id: `wf_${Date.now().toString().slice(-4)}`,
-            name: `${user.name || 'User'} Gmail & Slack Automation`,
-            desc: `Automated DAG workflow created for ${user.email}.`,
-            status: 'active',
-            connectors: ['AutoFlow Schedule', 'Gmail', 'Slack'],
-            runsCount: 14,
-            createdAt: new Date().toLocaleDateString(),
-            lastRunAt: '5 mins ago',
-            userEmail: user.email,
-          },
-        ];
-        setWorkflows(initialWorkflows);
-        localStorage.setItem(storageKey, JSON.stringify(initialWorkflows));
+        setWorkflows([]); // Starts 100% empty for new users!
       }
     } catch (e) {
       console.error('LocalStorage user workflows sync error:', e);
+      setWorkflows([]);
     }
-  }, [user.email, user.name]);
+  }, [user.email]);
 
   const saveWorkflowsToStorage = (updated: WorkflowItem[]) => {
     setWorkflows(updated);
     if (!user.email) return;
     try {
-      localStorage.setItem(`autoflow_user_workflows_${user.email}`, JSON.stringify(updated));
+      localStorage.setItem(`autoflow_real_workflows_${user.email}`, JSON.stringify(updated));
     } catch (e) {
       console.error('LocalStorage save error:', e);
     }
@@ -100,7 +87,7 @@ export default function WorkflowsPage() {
         <div>
           <Heading as="h1">Automation Workflows ({user.email})</Heading>
           <Text variant="secondary">
-            Manage workflows created for account <strong className="text-white">{user.email}</strong>.
+            Manage real workflows created for account <strong className="text-white">{user.email}</strong>.
           </Text>
         </div>
         <Link href="/workflows/new" className="glow-button inline-flex items-center gap-1.5 text-xs">
@@ -120,8 +107,9 @@ export default function WorkflowsPage() {
         </div>
 
         {workflows.length === 0 ? (
-          <div className="text-center py-10 text-textMuted text-xs">
-            No workflows found for account <strong className="text-white">{user.email}</strong>. Click + Create New Workflow to build your first automation.
+          <div className="text-center py-12 text-textMuted text-xs bg-white/[0.01]">
+            No workflows created yet for account <strong className="text-white">{user.email}</strong>.<br />
+            Click <strong className="text-accentPurple">+ Create New Workflow</strong> above to build your first real automation pipeline.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -144,7 +132,6 @@ export default function WorkflowsPage() {
                       <div className="text-[11px] text-textMuted max-w-md truncate">{wf.desc}</div>
                     </td>
 
-                    {/* Status Toggle Switch */}
                     <td className="p-3.5">
                       <button
                         onClick={() => handleToggleStatus(wf.id)}
@@ -169,7 +156,6 @@ export default function WorkflowsPage() {
                       </button>
                     </td>
 
-                    {/* Connected Integrations Badges */}
                     <td className="p-3.5">
                       <div className="flex flex-wrap gap-1">
                         {wf.connectors.map((c) => (
@@ -189,7 +175,6 @@ export default function WorkflowsPage() {
                       {wf.runsCount} runs
                     </td>
 
-                    {/* Action Controls */}
                     <td className="p-3.5 text-right pr-4 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
