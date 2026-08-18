@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import './theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: var(--af-bg-primary);
+    color: var(--af-text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  /* Design Token Class Helpers - ZERO INLINE STYLES */
+  .glass-card {
+    background-color: var(--af-bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--af-border);
+    border-radius: var(--af-radius-lg);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    border-color: var(--af-border-hover);
+    box-shadow: var(--af-shadow-glow);
+  }
+
+  .glow-button {
+    background: var(--af-gradient-glow);
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--af-radius-md);
+    transition: all 0.15s ease;
+  }
+
+  .glow-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--af-shadow-purple);
+  }
+
+  .glow-button:active {
+    transform: translateY(0);
+  }
+}

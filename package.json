@@ -1,0 +1,26 @@
+{
+  "name": "automation-platform",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "npm@9.0.0",
+  "description": "Enterprise-grade MERN + AI Agent Automation Platform Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
