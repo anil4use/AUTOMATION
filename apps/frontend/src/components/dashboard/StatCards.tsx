@@ -2,12 +2,19 @@
 import React from 'react';
 import { Workflow, Play, CheckCircle2, AlertTriangle } from 'lucide-react';
 
-export function StatCards() {
+export interface DashboardStatsData {
+  activeWorkflows?: number;
+  totalExecutions?: number | string;
+  successRate?: string;
+  failedJobs?: number;
+}
+
+export function StatCards({ statsData }: { statsData?: DashboardStatsData }) {
   const stats = [
-    { label: 'Active Workflows', value: '12', icon: Workflow, colorClass: 'text-accentIndigo' },
-    { label: 'Total Executions', value: '1,420', icon: Play, colorClass: 'text-accentPurple' },
-    { label: 'Success Rate', value: '99.4%', icon: CheckCircle2, colorClass: 'text-accentEmerald' },
-    { label: 'Failed Jobs', value: '8', icon: AlertTriangle, colorClass: 'text-accentRose' },
+    { label: 'Active Workflows', value: statsData?.activeWorkflows ?? 14, icon: Workflow, colorClass: 'text-accentIndigo' },
+    { label: 'Total Executions', value: statsData?.totalExecutions ?? '1,420', icon: Play, colorClass: 'text-accentPurple' },
+    { label: 'Success Rate', value: statsData?.successRate ?? '99.4%', icon: CheckCircle2, colorClass: 'text-accentEmerald' },
+    { label: 'Failed Jobs', value: statsData?.failedJobs ?? 8, icon: AlertTriangle, colorClass: 'text-accentRose' },
   ];
 
   return (
@@ -15,7 +22,7 @@ export function StatCards() {
       {stats.map((stat, i) => {
         const Icon = stat.icon;
         return (
-          <div key={i} className="glass-card p-5 flex flex-col justify-between">
+          <div key={i} className="glass-card p-5 flex flex-col justify-between hover:border-accentPurple transition-all">
             <div className="flex items-center justify-between mb-3">
               <span className="text-textSecondary text-xs font-medium">{stat.label}</span>
               <Icon size={20} className={stat.colorClass} />

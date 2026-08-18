@@ -69,8 +69,8 @@ export class AutoFlowScheduleConnector extends BaseConnector {
         type: 'trigger',
         inputs: [{ key: 'webhookPath', label: 'Custom Webhook Path', type: 'string', required: true }],
         outputs: [
-          { key: 'payload', label: 'Webhook JSON Payload', type: 'object', required: true },
-          { key: 'headers', label: 'HTTP Request Headers', type: 'object', required: true },
+          { key: 'payload', label: 'Webhook JSON Payload', type: 'json', required: true },
+          { key: 'headers', label: 'HTTP Request Headers', type: 'json', required: true },
         ],
       },
     ],

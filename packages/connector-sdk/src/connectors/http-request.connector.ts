@@ -18,8 +18,8 @@ export class HttpRequestConnector extends BaseConnector {
         type: 'trigger',
         inputs: [{ key: 'endpointPath', label: 'Endpoint Path', type: 'string', required: true }],
         outputs: [
-          { key: 'body', label: 'Body Payload', type: 'object', required: true },
-          { key: 'headers', label: 'Headers', type: 'object', required: true },
+          { key: 'body', label: 'Body Payload', type: 'json', required: true },
+          { key: 'headers', label: 'Headers', type: 'json', required: true },
         ],
       },
     ],
@@ -35,7 +35,7 @@ export class HttpRequestConnector extends BaseConnector {
         ],
         outputs: [
           { key: 'statusCode', label: 'Status Code', type: 'number', required: true },
-          { key: 'responseData', label: 'Response Data', type: 'object', required: true },
+          { key: 'responseData', label: 'Response Data', type: 'json', required: true },
         ],
       },
     ],

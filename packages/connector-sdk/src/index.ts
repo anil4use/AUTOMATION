@@ -1,4 +1,4 @@
-export * from './types';
+export * from './core/types';
 export * from './core/base-connector';
 export * from './integrations/gmail';
 export * from './integrations/slack';

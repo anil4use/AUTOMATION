@@ -1,17 +1,43 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heading, Text, SectionCard, Button, Badge } from '@/components/ui';
-import { CreditCard, Check, ShieldCheck, Zap } from 'lucide-react';
+import { CreditCard, Check, ShieldCheck, Zap, Key, Copy, Lock, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const [currentPlan, setCurrentPlan] = useState<'free' | 'pro'>('free');
-  const [usage] = useState({
-    tasks: 42,
-    taskLimit: 1000,
-    aiGenerations: 7,
-    aiLimit: 50,
-  });
+  const [googleClientId, setGoogleClientId] = useState<string>('');
+  const [googleClientSecret, setGoogleClientSecret] = useState<string>('');
+  const [redirectUri] = useState<string>('http://localhost:3000/connectors/callback');
+
+  useEffect(() => {
+    try {
+      const savedId = localStorage.getItem('autoflow_google_client_id');
+      const savedSecret = localStorage.getItem('autoflow_google_client_secret');
+      if (savedId) setGoogleClientId(savedId);
+      if (savedSecret) setGoogleClientSecret(savedSecret);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const handleSaveGoogleConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      localStorage.setItem('autoflow_google_client_id', googleClientId.trim());
+      localStorage.setItem('autoflow_google_client_secret', googleClientSecret.trim());
+      toast.success('Google OAuth Credentials Saved', {
+        description: 'Updated Google Client ID & Secret for live OAuth2 token exchange.',
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCopyRedirectUri = () => {
+    navigator.clipboard.writeText(redirectUri);
+    toast.success('Redirect URI Copied', { description: 'Paste into Google Cloud Console Authorized redirect URIs.' });
+  };
 
   const handleUpgrade = () => {
     toast.success('Redirecting to Stripe Checkout (Test Mode)...', {
@@ -23,55 +49,76 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
-        <Heading as="h1">Organization & Subscription Settings</Heading>
+        <Heading as="h1">Organization & OAuth Settings</Heading>
         <Text variant="secondary">
-          Manage your organization plan, team members, and usage meters.
+          Configure real Google Cloud Console OAuth 2.0 Client Credentials and manage subscription plans.
         </Text>
       </div>
 
-      {/* Usage Metering Card */}
-      <SectionCard>
-        <div className="flex items-center justify-between mb-4">
-          <Heading as="h3">Current Plan Usage (August 2026)</Heading>
-          <Badge variant={currentPlan === 'pro' ? 'active' : 'info'}>
-            {currentPlan.toUpperCase()} PLAN
+      {/* Real Google Cloud OAuth Credentials Form */}
+      <SectionCard className="border-indigo-500/30">
+        <div className="flex items-center justify-between mb-3 border-b border-borderColor pb-3">
+          <div className="flex items-center gap-2">
+            <Key size={20} className="text-accentIndigo" />
+            <Heading as="h3">Google OAuth 2.0 Credentials (Gmail, Drive, Sheets)</Heading>
+          </div>
+          <Badge variant={googleClientId ? 'active' : 'info'}>
+            {googleClientId ? 'CONFIGURED' : 'NOT CONFIGURED'}
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Task Executions Meter */}
-          <div className="p-4 rounded-md bg-white/[0.02] border border-borderColor flex flex-col gap-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-textSecondary font-medium">Task Executions</span>
-              <span className="text-white font-bold">{usage.tasks} / {usage.taskLimit}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-bgSecondary overflow-hidden">
-              <div
-                className="h-full bg-accentPurple rounded-full transition-all duration-300"
-                style={{ width: `${(usage.tasks / usage.taskLimit) * 100}%` }}
-              />
-            </div>
-            <span className="text-[11px] text-textMuted">{usage.taskLimit - usage.tasks} task runs remaining this month</span>
+        <Text variant="secondary" className="text-xs mb-4">
+          To connect your actual Google Account (Gmail, Sheets, Drive), enter your Google Cloud Console OAuth 2.0 Client ID & Secret below.
+        </Text>
+
+        <form onSubmit={handleSaveGoogleConfig} className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs text-textSecondary font-semibold mb-1 block">Google Client ID</label>
+            <input
+              type="text"
+              value={googleClientId}
+              onChange={(e) => setGoogleClientId(e.target.value)}
+              placeholder="e.g. 123456789-xxxxxx.apps.googleusercontent.com"
+              className="w-full bg-bgSecondary border border-borderColor rounded-lg px-3.5 py-2 text-xs text-white outline-none focus:border-accentPurple font-mono"
+            />
           </div>
 
-          {/* AI Generations Meter */}
-          <div className="p-4 rounded-md bg-white/[0.02] border border-borderColor flex flex-col gap-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-textSecondary font-medium">AI Prompt Generations</span>
-              <span className="text-white font-bold">{usage.aiGenerations} / {usage.aiLimit}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-bgSecondary overflow-hidden">
-              <div
-                className="h-full bg-accentEmerald rounded-full transition-all duration-300"
-                style={{ width: `${(usage.aiGenerations / usage.aiLimit) * 100}%` }}
-              />
-            </div>
-            <span className="text-[11px] text-textMuted">{usage.aiLimit - usage.aiGenerations} AI generations remaining today</span>
+          <div>
+            <label className="text-xs text-textSecondary font-semibold mb-1 block">Google Client Secret</label>
+            <input
+              type="password"
+              value={googleClientSecret}
+              onChange={(e) => setGoogleClientSecret(e.target.value)}
+              placeholder="GOCSPX-..."
+              className="w-full bg-bgSecondary border border-borderColor rounded-lg px-3.5 py-2 text-xs text-white outline-none focus:border-accentPurple font-mono"
+            />
           </div>
-        </div>
+
+          <div>
+            <label className="text-xs text-textSecondary font-semibold mb-1 block">Authorized Redirect URI for Google Cloud Console</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={redirectUri}
+                className="flex-1 bg-black/40 border border-borderColor rounded-lg px-3.5 py-2 text-xs text-accentIndigo outline-none font-mono"
+              />
+              <Button type="button" variant="secondary" size="sm" onClick={handleCopyRedirectUri} className="inline-flex items-center gap-1">
+                <Copy size={13} />
+                <span>Copy URI</span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button type="submit" className="glow-button text-xs">
+              Save Google Credentials
+            </Button>
+          </div>
+        </form>
       </SectionCard>
 
-      {/* Stripe Test Mode Billing Card */}
+      {/* Stripe Billing Card */}
       <SectionCard className="border-purple-500/30">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -103,14 +150,14 @@ export default function SettingsPage() {
         </div>
       </SectionCard>
 
-      {/* Organization RBAC & Security Audit */}
+      {/* Multi-Tenant Security Scoping */}
       <SectionCard>
         <div className="flex items-center gap-2 mb-2">
           <ShieldCheck size={20} className="text-accentEmerald" />
           <Heading as="h3">Security & Multi-Tenant Data Scoping</Heading>
         </div>
         <Text variant="secondary" className="text-xs">
-          All MongoDB database queries and workflow logs are hard-isolated with organization-level scoping (`organizationId`).
+          All MongoDB database queries and workflow logs are hard-isolated with organization-level scoping (`organizationId`). Tokens are encrypted via AES-256-CBC.
         </Text>
       </SectionCard>
     </div>
