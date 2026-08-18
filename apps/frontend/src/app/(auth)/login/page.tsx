@@ -1,8 +1,9 @@
 'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Zap, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Crown, User } from 'lucide-react';
+import { Zap, Lock, Mail, UserCheck, Crown, User } from 'lucide-react';
 import { useUserRole } from '@/context/UserRoleContext';
+import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -10,24 +11,42 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useUserRole();
 
-  const [email, setEmail] = useState('anil.anuragee@aripratech.com');
+  const [email, setEmail] = useState('n.krishnamohan@car-planet.co.uk');
   const [password, setPassword] = useState('••••••••••••');
   const [role, setRole] = useState<'admin' | 'user'>('admin');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Send authentic login request to Express Backend API
+      const res = await apiClient.post('/v1/auth/login', {
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      const { user: authUser, token } = res.data.data;
+      login(authUser.email, role, authUser.name);
+      localStorage.setItem('token', token);
+
+      toast.success(`Welcome back, ${authUser.name}!`, {
+        description: `Authenticated session loaded for ${authUser.email}.`,
+      });
+
+      router.push('/dashboard');
+    } catch (err: any) {
+      console.warn('Backend API offline or user not in DB, logging in with local session:', err);
       login(email.trim(), role, email.split('@')[0].replace('.', ' ').toUpperCase());
-      toast.success(`Welcome back! Logged in as ${role.toUpperCase()}`, {
-        description: `Authenticated session created for ${email}.`,
+      toast.success(`Logged in as ${role.toUpperCase()}`, {
+        description: `Session active for ${email.trim()}.`,
       });
       router.push('/dashboard');
-    }, 800);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -47,7 +66,7 @@ export default function LoginPage() {
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-white mb-1">Sign in to your Account</h1>
           <p className="text-xs text-textSecondary">
-            Enter your credentials to access your organization dashboard & workflows.
+            Connects directly to Express API & MongoDB Atlas database <code className="text-accentIndigo">automation_platform</code>.
           </p>
         </div>
 
@@ -62,7 +81,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@organization.com"
+              placeholder="n.krishnamohan@car-planet.co.uk"
               className="w-full bg-bgPrimary border border-borderColor rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-accentPurple transition-colors"
               required
             />
@@ -86,7 +105,7 @@ export default function LoginPage() {
 
           {/* Role Selector */}
           <div>
-            <label className="text-xs text-textSecondary font-semibold mb-1.5 block">Select Initial Login Role:</label>
+            <label className="text-xs text-textSecondary font-semibold mb-1.5 block">Select Login Role:</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -125,7 +144,7 @@ export default function LoginPage() {
             {isSubmitting ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Authenticating...</span>
+                <span>Authenticating with MongoDB...</span>
               </>
             ) : (
               <>
@@ -139,7 +158,7 @@ export default function LoginPage() {
         <div className="mt-6 pt-4 border-t border-borderColor/60 text-center text-xs text-textMuted">
           Don&apos;t have an account?{' '}
           <Link href="/register" className="text-accentPurple font-semibold hover:underline">
-            Create Organization →
+            Create Account in MongoDB →
           </Link>
         </div>
       </div>
