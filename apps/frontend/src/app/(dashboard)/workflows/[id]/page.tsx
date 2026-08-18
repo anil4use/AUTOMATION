@@ -1,12 +1,23 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { WorkflowCanvas } from '@/components/builder/WorkflowCanvas';
 import { NodePalette } from '@/components/builder/NodePalette';
 import { FieldMapper } from '@/components/builder/FieldMapper';
 import { Play, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Node } from 'reactflow';
 
 export default function WorkflowBuilderPage({ params }: { params: { id: string } }) {
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+
+  const handleTestRun = () => {
+    alert(`Executing Test Run for Workflow #${params.id}... Dispatching BullMQ job to Upstash Redis.`);
+  };
+
+  const handleSave = () => {
+    alert(`Saving Workflow #${params.id} DAG definition to MongoDB Atlas...`);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-112px)] -m-6">
       {/* Builder Header */}
@@ -20,11 +31,11 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <button className="glass-card px-3.5 py-1.5 text-xs flex items-center gap-1.5 hover:bg-white/5">
+          <button onClick={handleTestRun} className="glass-card px-3.5 py-1.5 text-xs flex items-center gap-1.5 hover:bg-white/5">
             <Play size={14} className="text-accentEmerald" />
             <span>Test Run</span>
           </button>
-          <button className="glow-button px-4 py-1.5 text-xs flex items-center gap-1.5">
+          <button onClick={handleSave} className="glow-button px-4 py-1.5 text-xs flex items-center gap-1.5">
             <Save size={14} />
             <span>Save Workflow</span>
           </button>
@@ -34,8 +45,8 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
       {/* Main Canvas Workspace */}
       <div className="flex flex-1 overflow-hidden">
         <NodePalette />
-        <WorkflowCanvas />
-        <FieldMapper />
+        <WorkflowCanvas onSelectNode={(node) => setSelectedNode(node)} />
+        <FieldMapper selectedNode={selectedNode} />
       </div>
     </div>
   );
