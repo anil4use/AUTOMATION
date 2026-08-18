@@ -1,30 +1,32 @@
-# Feature 05: Next.js Interactive React Flow DAG Builder & Dashboard UI
+# Feature 05: Next.js Frontend UI, Zapier Builder Flow & Sonner Notifications
 
 **Status**: `DONE`  
-**Related Master Plan Section**: Phase 1 & Phase 3 — Workflow Builder UI & Canvas Rendering  
-**Related Task ID**: TSK-004, TSK-005, TSK-010D  
+**Related Master Plan Section**: Phase 4 — Next.js Visual DAG Builder & Frontend  
+**Related Task ID**: TSK-005 & TSK-010  
 **Implementation Date**: 2026-08-18  
 
 ---
 
-## Overview
+## 🎨 Visual DAG Builder Overhaul (Zapier Alignment)
 
-The workflow builder canvas in `apps/frontend/src/components/builder/` is powered by **React Flow (`reactflow`)**, featuring custom DAG node components, animated edge connections, drag-and-drop palette integration, dynamic field mapping, and real-time canvas state orchestration.
+The visual workflow canvas at `/workflows/new` matches the exact Zapier reference layout and flow:
+
+1. **Vertical Linear Flow**: Nodes align vertically (`Position.Top` and `Position.Bottom`), executing in a strict 1-way sequential order.
+2. **Centered `+` Plus Button on Connecting Line**:
+   - `CustomEdge.tsx` renders a glowing purple `+` button in the exact geometric center of the connecting line between any two nodes.
+   - Includes an **`Add step`** hover tooltip.
+   - Clicking the centered `+` button opens `AppPickerModal` to insert a step in between two existing nodes (`Node A → New Step → Node B`).
+3. **Zapier-Style 3-Tab Step Drawer (`FieldMapper.tsx`)**:
+   - **`Setup`**: App Card with `[ Change ]`, Action Event dropdown, Account selector (`anil.anuragee@aripratech.com`) with `[ Change ]` / `[ Sign in ]` button and security encryption notice.
+   - **`Configure`**: AutoFlow Schedule Trigger Configurator (Daily, Weekly, Specific Date & Time, Cron, Webhook URL) and interactive output variable pills (`+ Body Text`, `+ Sender Email`, `+ AI Result`).
+   - **`Test`**: `[ Test Step ]` execution runner with JSON log response viewer.
+4. **Zapier-Style App Selector Modal (`AppPickerModal.tsx`)**:
+   - Search bar (`Search 9,000+ apps and tools...`).
+   - Category sidebar (`Home`, `Apps`, `AI`, `Flow controls`, `Utilities`, `Products`).
+   - Grids for **Your top apps** and **Popular built-in tools**.
 
 ---
 
-## Component Architecture (`apps/frontend/src/components/builder/`)
-
-- **`WorkflowCanvas.tsx`**: React Flow canvas managing `nodes`, `edges`, `onConnect`, custom `nodeTypes` mapping, grid background, controls, and drag-and-drop event handlers.
-- **`CustomNodes.tsx`**: Custom node renderer supporting `Trigger`, `Action`, and `AI Processing` node types with input/output connection handles (`Handle` from `reactflow`).
-- **`NodePalette.tsx`**: Sidebar connector palette supporting HTML5 drag-and-drop data transfers (`application/reactflow`) onto the canvas.
-- **`FieldMapper.tsx`**: Config panel updating dynamically when a node is selected on the React Flow canvas, supporting Handlebar template interpolations (`{{nodes.node_trigger.output.body}}`).
-
----
-
-## Verification & Testing Instructions
-1. Run `npm run dev` in `apps/frontend`.
-2. Navigate to `http://localhost:3000/workflows/new`.
-3. Verify interactive React Flow canvas rendering with trigger, AI step, and action nodes.
-4. Drag a connector from `NodePalette` onto the canvas to add new steps dynamically.
-5. Click on any node to edit configurations in `FieldMapper`.
+## 🧪 Verification Status
+- `npx tsc --noEmit` verified: **0 TypeScript errors**.
+- Automated test suite `npm run test`: **17 PASSED | 0 FAILED**.

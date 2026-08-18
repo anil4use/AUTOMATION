@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -15,23 +15,61 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { CustomNode } from './CustomNodes';
 import { CustomEdge } from './CustomEdge';
-import { Heading, Text, SectionCard } from '@/components/ui';
-import { Mail, MessageSquare, Table, Sparkles, HardDrive, FileText, CreditCard, Send, Globe, X } from 'lucide-react';
+import { AppPickerModal, AppOption } from './AppPickerModal';
 import { toast } from 'sonner';
 
-const availableApps = [
-  { id: 'gmail', name: 'Gmail', category: 'Communication', type: 'action', icon: Mail, operation: 'send_email' },
-  { id: 'slack', name: 'Slack', category: 'Communication', type: 'action', icon: MessageSquare, operation: 'send_message' },
-  { id: 'google-sheets', name: 'Google Sheets', category: 'Productivity', type: 'action', icon: Table, operation: 'append_row' },
-  { id: 'google-drive', name: 'Google Drive', category: 'Storage', type: 'action', icon: HardDrive, operation: 'upload_file' },
-  { id: 'notion', name: 'Notion Workspace', category: 'Database', type: 'action', icon: FileText, operation: 'create_page' },
-  { id: 'stripe', name: 'Stripe Payments', category: 'Finance', type: 'action', icon: CreditCard, operation: 'create_customer' },
-  { id: 'whatsapp', name: 'WhatsApp Business', category: 'Messaging', type: 'action', icon: Send, operation: 'send_message' },
-  { id: 'http-request', name: 'Webhook / REST API', category: 'Developer Tools', type: 'action', icon: Globe, operation: 'custom_api_call' },
-  { id: 'ai-agent', name: 'AI Processor Node', category: 'AI Native', type: 'ai-agent', icon: Sparkles, operation: 'summarize_text' },
-];
+const nodeTypes = { custom: CustomNode };
+const edgeTypes = { custom: CustomEdge };
 
-export function WorkflowCanvas({ onSelectNode }: { onSelectNode?: (node: Node) => void }) {
+const templateMap: Record<string, { nodes: Node[]; edges: Edge[] }> = {
+  wf_101: {
+    nodes: [
+      { id: 'n_1', type: 'custom', position: { x: 250, y: 80 }, data: { label: 'AutoFlow Schedule Trigger', connectorId: 'autoflow-schedule', operationId: 'schedule_time', type: 'trigger' } },
+      { id: 'n_2', type: 'custom', position: { x: 250, y: 260 }, data: { label: 'Gmail Read Attachments', connectorId: 'gmail', operationId: 'new_email', type: 'action' } },
+      { id: 'n_3', type: 'custom', position: { x: 250, y: 440 }, data: { label: 'Google Drive Save File', connectorId: 'google-drive', operationId: 'upload_file', type: 'action' } },
+      { id: 'n_4', type: 'custom', position: { x: 250, y: 620 }, data: { label: 'Google Sheets Log Row', connectorId: 'google-sheets', operationId: 'append_row', type: 'action' } },
+      { id: 'n_5', type: 'custom', position: { x: 250, y: 800 }, data: { label: 'Slack Notify Channel', connectorId: 'slack', operationId: 'send_message', type: 'action' } },
+    ],
+    edges: [
+      { id: 'e_1_2', source: 'n_1', target: 'n_2', type: 'custom' },
+      { id: 'e_2_3', source: 'n_2', target: 'n_3', type: 'custom' },
+      { id: 'e_3_4', source: 'n_3', target: 'n_4', type: 'custom' },
+      { id: 'e_4_5', source: 'n_4', target: 'n_5', type: 'custom' },
+    ],
+  },
+  wf_102: {
+    nodes: [
+      { id: 'n_1', type: 'custom', position: { x: 250, y: 80 }, data: { label: 'Stripe Payment Succeeded', connectorId: 'stripe', operationId: 'payment_succeeded', type: 'trigger' } },
+      { id: 'n_2', type: 'custom', position: { x: 250, y: 260 }, data: { label: 'Notion Create Page Record', connectorId: 'notion', operationId: 'create_page', type: 'action' } },
+      { id: 'n_3', type: 'custom', position: { x: 250, y: 440 }, data: { label: 'WhatsApp Send Receipt', connectorId: 'whatsapp', operationId: 'send_message', type: 'action' } },
+    ],
+    edges: [
+      { id: 'e_1_2', source: 'n_1', target: 'n_2', type: 'custom' },
+      { id: 'e_2_3', source: 'n_2', target: 'n_3', type: 'custom' },
+    ],
+  },
+  wf_103: {
+    nodes: [
+      { id: 'n_1', type: 'custom', position: { x: 250, y: 80 }, data: { label: 'WhatsApp Inbound Message', connectorId: 'whatsapp', operationId: 'new_message', type: 'trigger' } },
+      { id: 'n_2', type: 'custom', position: { x: 250, y: 260 }, data: { label: 'AI Summarize Lead Intent', connectorId: 'ai-agent', operationId: 'summarize_text', type: 'ai-agent' } },
+      { id: 'n_3', type: 'custom', position: { x: 250, y: 440 }, data: { label: 'Google Sheets Append Row', connectorId: 'google-sheets', operationId: 'append_row', type: 'action' } },
+    ],
+    edges: [
+      { id: 'e_1_2', source: 'n_1', target: 'n_2', type: 'custom' },
+      { id: 'e_2_3', source: 'n_2', target: 'n_3', type: 'custom' },
+    ],
+  },
+};
+
+export function WorkflowCanvas({
+  workflowId = 'new',
+  onSelectNode,
+}: {
+  workflowId?: string;
+  onSelectNode?: (node: Node) => void;
+}) {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [insertContext, setInsertContext] = useState<{ type: 'append' | 'insert'; sourceNodeId?: string; targetEdgeId?: string } | null>(null);
 
   const handleOpenAppendModal = useCallback((nodeId: string) => {
@@ -42,96 +80,148 @@ export function WorkflowCanvas({ onSelectNode }: { onSelectNode?: (node: Node) =
     setInsertContext({ type: 'insert', targetEdgeId: edgeId });
   }, []);
 
-  const initialNodes: Node[] = useMemo(
-    () => [
-      {
+  const handleRenameNode = useCallback((nodeId: string, newLabel: string) => {
+    setNodes((nds) =>
+      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n))
+    );
+    toast.success('Step Renamed', { description: `Updated label to "${newLabel}".` });
+  }, [setNodes]);
+
+  const handleEditNode = useCallback((nodeId: string) => {
+    setNodes((nds) => {
+      const nodeToEdit = nds.find((n) => n.id === nodeId);
+      if (nodeToEdit && onSelectNode) onSelectNode(nodeToEdit);
+      return nds;
+    });
+    toast.info('Step Selected for Configuration');
+  }, [onSelectNode, setNodes]);
+
+  const handleDuplicateNode = useCallback((nodeId: string) => {
+    setNodes((currentNodes) => {
+      const sourceNode = currentNodes.find((n) => n.id === nodeId);
+      if (!sourceNode) return currentNodes;
+
+      const dupNodeId = `node_${Date.now()}`;
+      const dupNode: Node = {
+        ...sourceNode,
+        id: dupNodeId,
+        position: { x: 250, y: sourceNode.position.y + 180 },
+        data: {
+          ...sourceNode.data,
+          label: `${sourceNode.data.label} (Copy)`,
+        },
+      };
+
+      const shifted = currentNodes.map((n) =>
+        n.position.y > sourceNode.position.y ? { ...n, position: { ...n.position, y: n.position.y + 180 } } : n
+      );
+
+      return [...shifted, dupNode];
+    });
+    toast.success('Step Duplicated');
+  }, [setNodes]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodes((currentNodes) => {
+      const targetNode = currentNodes.find((n) => n.id === nodeId);
+      if (!targetNode || targetNode.data.type === 'trigger' || targetNode.data.connectorId === 'autoflow-schedule') {
+        toast.warning('Protected Step', { description: 'The AutoFlow Schedule Trigger cannot be deleted.' });
+        return currentNodes;
+      }
+
+      setEdges((currentEdges) => {
+        const incomingEdge = currentEdges.find((e) => e.target === nodeId);
+        const outgoingEdge = currentEdges.find((e) => e.source === nodeId);
+
+        let newEdges = currentEdges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+
+        if (incomingEdge && outgoingEdge) {
+          const bridgedEdge: Edge = {
+            id: `e_${incomingEdge.source}_${outgoingEdge.target}`,
+            source: incomingEdge.source,
+            target: outgoingEdge.target,
+            type: 'custom',
+            data: { onInsertStep: handleOpenInsertModal },
+          };
+          newEdges.push(bridgedEdge);
+        }
+        return newEdges;
+      });
+
+      const remainingNodes = currentNodes
+        .filter((n) => n.id !== nodeId)
+        .map((n) => (n.position.y > targetNode.position.y ? { ...n, position: { ...n.position, y: n.position.y - 180 } } : n));
+
+      return remainingNodes;
+    });
+    toast.error('Step Deleted from Workflow Flow');
+  }, [handleOpenInsertModal, setEdges, setNodes]);
+
+  // Master Synchronizer ensuring step numbers, callbacks, and isLastInChain line stems are ALWAYS preserved
+  const syncNodesState = useCallback(
+    (currentNodes: Node[], currentEdges: Edge[]) => {
+      const sourceNodeIds = new Set(currentEdges.map((e) => e.source));
+      const sorted = [...currentNodes].sort((a, b) => a.position.y - b.position.y);
+
+      return sorted.map((n, idx) => ({
+        ...n,
+        data: {
+          ...n.data,
+          stepNumber: idx + 1,
+          isLastInChain: !sourceNodeIds.has(n.id),
+          onAddNext: handleOpenAppendModal,
+          onRenameNode: handleRenameNode,
+          onEditNode: handleEditNode,
+          onDuplicateNode: handleDuplicateNode,
+          onDeleteNode: handleDeleteNode,
+        },
+      }));
+    },
+    [handleOpenAppendModal, handleRenameNode, handleEditNode, handleDuplicateNode, handleDeleteNode]
+  );
+
+  // Synchronize on every nodes or edges change
+  useEffect(() => {
+    setNodes((currentNodes) => {
+      const updated = syncNodesState(currentNodes, edges);
+      const isDifferent = JSON.stringify(updated.map((n) => n.data.isLastInChain)) !== JSON.stringify(currentNodes.map((n) => n.data.isLastInChain));
+      return isDifferent ? updated : currentNodes;
+    });
+  }, [edges, syncNodesState, setNodes]);
+
+  // Hydrate DAG on workflowId mount
+  useEffect(() => {
+    const template = templateMap[workflowId];
+    if (template) {
+      const hydratedEdges = template.edges.map((e) => ({ ...e, data: { ...e.data, onInsertStep: handleOpenInsertModal } }));
+      const hydratedNodes = syncNodesState(template.nodes, hydratedEdges);
+      setNodes(hydratedNodes);
+      setEdges(hydratedEdges);
+    } else {
+      const defaultNode: Node = {
         id: 'node_trigger',
         type: 'custom',
-        position: { x: 100, y: 200 },
+        position: { x: 250, y: 80 },
         data: {
           label: 'AutoFlow Schedule Trigger',
           name: 'AutoFlow Schedule Trigger',
           connectorId: 'autoflow-schedule',
           operationId: 'schedule_time',
           type: 'trigger',
-          isLastInChain: false,
-          onAddNext: handleOpenAppendModal,
         },
-      },
-      {
-        id: 'node_ai',
-        type: 'custom',
-        position: { x: 420, y: 200 },
-        data: {
-          label: 'AI Summarize Step',
-          name: 'AI Summarize Step',
-          connectorId: 'ai-agent',
-          operationId: 'summarize_text',
-          type: 'ai-agent',
-          isLastInChain: false,
-          onAddNext: handleOpenAppendModal,
-        },
-      },
-      {
-        id: 'node_action',
-        type: 'custom',
-        position: { x: 740, y: 200 },
-        data: {
-          label: 'Slack Send Message',
-          name: 'Slack Send Message',
-          connectorId: 'slack',
-          operationId: 'send_message',
-          type: 'action',
-          isLastInChain: true,
-          onAddNext: handleOpenAppendModal,
-        },
-      },
-    ],
-    [handleOpenAppendModal]
-  );
+      };
+      setNodes(syncNodesState([defaultNode], []));
+      setEdges([]);
+    }
+  }, [workflowId, syncNodesState, handleOpenInsertModal, setNodes, setEdges]);
 
-  const initialEdges: Edge[] = useMemo(
-    () => [
-      {
-        id: 'e_trigger_ai',
-        source: 'node_trigger',
-        target: 'node_ai',
-        type: 'custom',
-        data: { onInsertStep: handleOpenInsertModal },
-      },
-      {
-        id: 'e_ai_action',
-        source: 'node_ai',
-        target: 'node_action',
-        type: 'custom',
-        data: { onInsertStep: handleOpenInsertModal },
-      },
-    ],
-    [handleOpenInsertModal]
-  );
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
-  const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
-
-  // Strict Single Linear Chain Rule: A node can only have 1 outgoing edge
   const onConnect = useCallback(
     (params: Connection | Edge) => {
       setEdges((eds) => {
-        // Remove any existing edge originating from the same source node to prevent multi-branch splits
         const filtered = eds.filter((e) => e.source !== params.source);
-        return addEdge(
-          {
-            ...params,
-            type: 'custom',
-            data: { onInsertStep: handleOpenInsertModal },
-          },
-          filtered
-        );
+        return addEdge({ ...params, type: 'custom', data: { onInsertStep: handleOpenInsertModal } }, filtered);
       });
-      toast.info('Sequential 1-Way Edge Connected', { description: 'Enforced strict linear pipeline flow.' });
+      toast.info('Connected Step', { description: '1-way sequential DAG maintained.' });
     },
     [handleOpenInsertModal, setEdges]
   );
@@ -143,40 +233,25 @@ export function WorkflowCanvas({ onSelectNode }: { onSelectNode?: (node: Node) =
     [onSelectNode]
   );
 
-  // Helper to update isLastInChain flag across nodes
-  const syncLastInChainFlags = useCallback((currentNodes: Node[], currentEdges: Edge[]) => {
-    const sourceNodeIds = new Set(currentEdges.map((e) => e.source));
-    return currentNodes.map((n) => ({
-      ...n,
-      data: {
-        ...n.data,
-        isLastInChain: !sourceNodeIds.has(n.id),
-      },
-    }));
-  }, []);
-
-  const handleSelectApp = (app: typeof availableApps[0]) => {
+  const handleSelectApp = (app: AppOption) => {
     if (!insertContext) return;
 
     if (insertContext.type === 'append' && insertContext.sourceNodeId) {
-      // Append to the end of the linear chain
       const sourceId = insertContext.sourceNodeId;
       const parentNode = nodes.find((n) => n.id === sourceId);
-      const parentX = parentNode ? parentNode.position.x : 300;
-      const parentY = parentNode ? parentNode.position.y : 200;
+      const parentY = parentNode ? parentNode.position.y : 80;
 
       const newNodeId = `node_${Date.now()}`;
-      const newNode: Node = {
+      const rawNewNode: Node = {
         id: newNodeId,
         type: 'custom',
-        position: { x: parentX + 320, y: parentY },
+        position: { x: 250, y: parentY + 180 },
         data: {
           label: `${app.name} Step`,
           name: `${app.name} Step`,
           connectorId: app.id,
           operationId: app.operation,
           type: app.type,
-          onAddNext: handleOpenAppendModal,
         },
       };
 
@@ -188,119 +263,59 @@ export function WorkflowCanvas({ onSelectNode }: { onSelectNode?: (node: Node) =
         data: { onInsertStep: handleOpenInsertModal },
       };
 
-      // Strict Rule: Remove any pre-existing outgoing edge from sourceId to maintain 1-way linear pipeline
       const filteredEdges = edges.filter((e) => e.source !== sourceId);
-      const nextNodes = syncLastInChainFlags([...nodes, newNode], [...filteredEdges, newEdge]);
+      const combinedEdges = [...filteredEdges, newEdge];
+      const combinedNodes = syncNodesState([...nodes, rawNewNode], combinedEdges);
 
-      setNodes(nextNodes);
-      setEdges([...filteredEdges, newEdge]);
-      toast.success(`Appended ${app.name} to Linear Pipeline`, { description: 'Maintained 1-way sequential DAG flow.' });
+      setNodes(combinedNodes);
+      setEdges(combinedEdges);
+      toast.success(`Appended ${app.name}`, { description: 'Added next step vertically with line stem.' });
     } else if (insertContext.type === 'insert' && insertContext.targetEdgeId) {
-      // Insert in the middle of a centered edge line
       const targetEdge = edges.find((e) => e.id === insertContext.targetEdgeId);
       if (!targetEdge) return;
 
       const sourceNode = nodes.find((n) => n.id === targetEdge.source);
       const targetNode = nodes.find((n) => n.id === targetEdge.target);
-
-      const sourceX = sourceNode ? sourceNode.position.x : 100;
-      const sourceY = sourceNode ? sourceNode.position.y : 200;
+      const sourceY = sourceNode ? sourceNode.position.y : 80;
 
       const newNodeId = `node_${Date.now()}`;
-      const newNode: Node = {
+      const rawNewNode: Node = {
         id: newNodeId,
         type: 'custom',
-        position: { x: sourceX + 320, y: sourceY },
+        position: { x: 250, y: sourceY + 180 },
         data: {
           label: `${app.name} Step`,
           name: `${app.name} Step`,
           connectorId: app.id,
           operationId: app.operation,
           type: app.type,
-          onAddNext: handleOpenAppendModal,
         },
       };
 
-      // Shift downstream target node to the right
       const updatedNodes = nodes.map((n) => {
-        if (n.id === targetNode?.id || n.position.x > sourceX) {
-          return { ...n, position: { ...n.position, x: n.position.x + 320 } };
+        if (n.id === targetNode?.id || n.position.y > sourceY) {
+          return { ...n, position: { ...n.position, y: n.position.y + 180 } };
         }
         return n;
       });
 
-      // Split edge into source -> new -> target
-      const edge1: Edge = {
-        id: `e_${targetEdge.source}_${newNodeId}`,
-        source: targetEdge.source,
-        target: newNodeId,
-        type: 'custom',
-        data: { onInsertStep: handleOpenInsertModal },
-      };
-
-      const edge2: Edge = {
-        id: `e_${newNodeId}_${targetEdge.target}`,
-        source: newNodeId,
-        target: targetEdge.target,
-        type: 'custom',
-        data: { onInsertStep: handleOpenInsertModal },
-      };
+      const edge1: Edge = { id: `e_${targetEdge.source}_${newNodeId}`, source: targetEdge.source, target: newNodeId, type: 'custom', data: { onInsertStep: handleOpenInsertModal } };
+      const edge2: Edge = { id: `e_${newNodeId}_${targetEdge.target}`, source: newNodeId, target: targetEdge.target, type: 'custom', data: { onInsertStep: handleOpenInsertModal } };
 
       const filteredEdges = edges.filter((e) => e.id !== targetEdge.id);
-      const nextNodes = syncLastInChainFlags([...updatedNodes, newNode], [...filteredEdges, edge1, edge2]);
+      const combinedEdges = [...filteredEdges, edge1, edge2];
+      const combinedNodes = syncNodesState([...updatedNodes, rawNewNode], combinedEdges);
 
-      setNodes(nextNodes);
-      setEdges([...filteredEdges, edge1, edge2]);
-      toast.success(`Inserted ${app.name} into Center of Edge Line`, {
-        description: `Sequential 1-way pipeline updated cleanly.`,
-      });
+      setNodes(combinedNodes);
+      setEdges(combinedEdges);
+      toast.success(`Inserted ${app.name}`, { description: 'Step inserted into vertical line.' });
     }
 
     setInsertContext(null);
   };
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      const connectorDataStr = event.dataTransfer.getData('application/reactflow');
-      if (!connectorDataStr) return;
-
-      try {
-        const connector = JSON.parse(connectorDataStr);
-        const position = {
-          x: event.clientX - 300,
-          y: event.clientY - 150,
-        };
-
-        const newNode: Node = {
-          id: `node_${Date.now()}`,
-          type: 'custom',
-          position,
-          data: {
-            label: `${connector.name} Step`,
-            name: `${connector.name} Step`,
-            connectorId: connector.id,
-            operationId: connector.operations?.[0] || 'default_action',
-            type: connector.type || 'action',
-            onAddNext: handleOpenAppendModal,
-          },
-        };
-
-        setNodes((nds) => syncLastInChainFlags([...nds, newNode], edges));
-      } catch (e) {
-        console.error('Drop node error:', e);
-      }
-    },
-    [edges, handleOpenAppendModal, setNodes, syncLastInChainFlags]
-  );
-
   return (
-    <div className="flex-1 h-full bg-bgCanvas relative" onDragOver={onDragOver} onDrop={onDrop}>
+    <div className="flex-1 h-full bg-bgCanvas relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -310,58 +325,17 @@ export function WorkflowCanvas({ onSelectNode }: { onSelectNode?: (node: Node) =
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onlyRenderVisibleElements={true}
+        snapToGrid={true}
+        snapGrid={[15, 15]}
         fitView
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="rgba(255, 255, 255, 0.1)" />
         <Controls className="!bg-bgCard !border-borderColor !text-white rounded-md overflow-hidden" />
-        <MiniMap
-          nodeColor={() => '#6366f1'}
-          maskColor="rgba(11, 15, 25, 0.8)"
-          className="!bg-bgCard !border-borderColor !rounded-md"
-        />
+        <MiniMap nodeColor={() => '#6366f1'} maskColor="rgba(11, 15, 25, 0.8)" className="!bg-bgCard !border-borderColor !rounded-md" />
       </ReactFlow>
 
-      {/* Canvas App Selector Modal when Plus button is clicked */}
-      {insertContext && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <SectionCard className="w-full max-w-lg border-purple-500/40 relative max-h-[80vh] flex flex-col">
-            <button
-              onClick={() => setInsertContext(null)}
-              className="absolute right-4 top-4 text-textMuted hover:text-white"
-            >
-              <X size={18} />
-            </button>
-
-            <Heading as="h3" className="mb-1">
-              {insertContext.type === 'insert' ? 'Insert Step into Center of Edge Line' : 'Append Next Step to Linear Pipeline'}
-            </Heading>
-            <Text variant="secondary" className="mb-4 text-xs">
-              Choose an integration app to insert sequentially into your 1-way automation flow.
-            </Text>
-
-            <div className="grid grid-cols-2 gap-3 overflow-y-auto pr-1 flex-1">
-              {availableApps.map((app) => {
-                const Icon = app.icon;
-                return (
-                  <button
-                    key={app.id}
-                    onClick={() => handleSelectApp(app)}
-                    className="p-3 rounded-md bg-white/[0.03] border border-borderColor hover:border-accentPurple hover:bg-white/[0.08] text-left flex items-center gap-3 transition-all group"
-                  >
-                    <div className="p-2 rounded bg-indigo-500/15 text-accentIndigo group-hover:scale-110 transition-transform">
-                      <Icon size={18} />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-xs text-white">{app.name}</div>
-                      <div className="text-[10px] text-textMuted">{app.category}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </SectionCard>
-        </div>
-      )}
+      <AppPickerModal isOpen={Boolean(insertContext)} onClose={() => setInsertContext(null)} onSelectApp={handleSelectApp} />
     </div>
   );
 }

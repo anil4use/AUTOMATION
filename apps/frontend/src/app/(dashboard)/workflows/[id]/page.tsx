@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 import { WorkflowCanvas } from '@/components/builder/WorkflowCanvas';
-import { NodePalette } from '@/components/builder/NodePalette';
 import { FieldMapper } from '@/components/builder/FieldMapper';
 import { Play, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -47,10 +46,9 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
         </div>
       </div>
 
-      {/* Main Canvas Workspace */}
+      {/* Main Canvas Workspace — Clean Zapier Layout */}
       <div className="flex flex-1 overflow-hidden">
-        <NodePalette />
-        <WorkflowCanvas onSelectNode={(node) => setSelectedNode(node)} />
+        <WorkflowCanvas workflowId={params.id} onSelectNode={(node) => setSelectedNode(node)} />
         <FieldMapper selectedNode={selectedNode} />
       </div>
     </div>

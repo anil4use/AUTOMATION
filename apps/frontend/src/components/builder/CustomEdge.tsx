@@ -29,7 +29,7 @@ export function CustomEdge({
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        style={{ ...style, stroke: '#6366f1', strokeWidth: 2, strokeDasharray: '4 4' }}
+        style={{ ...style, stroke: '#6366f1', strokeWidth: 2 }}
         markerEnd={markerEnd}
       />
       <EdgeLabelRenderer>
@@ -39,7 +39,7 @@ export function CustomEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             pointerEvents: 'all',
           }}
-          className="nodrag nopan"
+          className="nodrag nopan flex items-center justify-center"
         >
           {data?.onInsertStep && (
             <button
@@ -47,8 +47,8 @@ export function CustomEdge({
                 e.stopPropagation();
                 data.onInsertStep(id);
               }}
-              className="w-7 h-7 rounded-full bg-accentPurple text-white flex items-center justify-center shadow-glow border-2 border-bgPrimary hover:scale-125 transition-all"
-              title="Insert App Step Here"
+              className="w-6 h-6 rounded-full bg-accentIndigo text-white flex items-center justify-center shadow-lg border-2 border-bgPrimary hover:scale-125 hover:bg-accentPurple transition-all z-10"
+              title="Add step"
             >
               <Plus size={14} />
             </button>
