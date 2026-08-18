@@ -1,5 +1,12 @@
 import { encryptJson, decryptJson } from '../apps/backend/src/shared/utils/crypto';
-import { OAuth2Strategy, ApiKeyStrategy, WebhookStrategy, GmailConnector, SlackConnector } from '../packages/connector-sdk/src';
+import { GmailConnector } from '../packages/connector-sdk/src/integrations/gmail';
+import { SlackConnector } from '../packages/connector-sdk/src/integrations/slack';
+import { GoogleDriveConnector } from '../packages/connector-sdk/src/connectors/google-drive.connector';
+import { NotionConnector } from '../packages/connector-sdk/src/connectors/notion.connector';
+import { StripeConnector } from '../packages/connector-sdk/src/connectors/stripe.connector';
+import { WhatsAppConnector } from '../packages/connector-sdk/src/connectors/whatsapp.connector';
+import { OAuth2Strategy } from '../packages/connector-sdk/src/auth/oauth2.strategy';
+import { ApiKeyStrategy } from '../packages/connector-sdk/src/auth/api-key.strategy';
 import { DAGRunner } from '../apps/worker/src/engine/dag-runner';
 import { RateLimiter } from '../apps/worker/src/engine/rate-limiter';
 import { AIAgentService } from '../apps/backend/src/modules/ai-agent/ai-agent.service';
@@ -35,13 +42,22 @@ async function runSystemTestSuite() {
     assert(false, `AES-256 Encryption Test Error: ${e.message}`);
   }
 
-  // 2. Connector SDK Strategies Test
-  console.log('\n[2/6] Testing Connector SDK Auth & Manifests...');
+  // 2. Multi-App Connector SDK Strategies Test
+  console.log('\n[2/6] Testing Multi-App Connector SDK Auth & Manifests...');
   try {
     const gmailManifest = new GmailConnector().manifest;
     const slackManifest = new SlackConnector().manifest;
+    const driveManifest = new GoogleDriveConnector().manifest;
+    const notionManifest = new NotionConnector().manifest;
+    const stripeManifest = new StripeConnector().manifest;
+    const whatsappManifest = new WhatsAppConnector().manifest;
+
     assert(gmailManifest.id === 'gmail' && gmailManifest.triggers.length > 0, 'Gmail Connector Manifest validation');
     assert(slackManifest.id === 'slack' && slackManifest.actions.length > 0, 'Slack Connector Manifest validation');
+    assert(driveManifest.id === 'google-drive' && driveManifest.actions.length > 0, 'Google Drive Connector Manifest validation');
+    assert(notionManifest.id === 'notion' && notionManifest.actions.length > 0, 'Notion Connector Manifest validation');
+    assert(stripeManifest.id === 'stripe' && stripeManifest.triggers.length > 0, 'Stripe Connector Manifest validation');
+    assert(whatsappManifest.id === 'whatsapp' && whatsappManifest.actions.length > 0, 'WhatsApp Connector Manifest validation');
 
     const authUrl = OAuth2Strategy.getAuthorizationUrl('gmail', 'http://localhost:3000/callback', 'state123');
     assert(authUrl.includes('accounts.google.com'), 'OAuth2 Strategy Authorization URL Generator');

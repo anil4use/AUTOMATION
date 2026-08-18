@@ -1,15 +1,21 @@
 'use client';
 import React, { useState } from 'react';
-import { Search, Mail, MessageSquare, Table, Sparkles, Cpu } from 'lucide-react';
+import { Search, Mail, MessageSquare, Table, Sparkles, HardDrive, FileText, CreditCard, Send, Globe, Clock } from 'lucide-react';
 import { Heading, Text, Badge } from '@/components/ui';
 
 export function NodePalette() {
   const [search, setSearch] = useState('');
 
   const connectors = [
+    { id: 'autoflow-schedule', name: 'AutoFlow Schedule Trigger', category: 'Core Triggers', type: 'trigger', icon: Clock, operations: ['schedule_time', 'schedule_weekly', 'schedule_date', 'schedule_cron', 'inbound_webhook'] },
     { id: 'gmail', name: 'Gmail', category: 'Communication', type: 'trigger', icon: Mail, operations: ['new_email', 'send_email'] },
     { id: 'slack', name: 'Slack', category: 'Communication', type: 'action', icon: MessageSquare, operations: ['send_message', 'post_channel'] },
     { id: 'google-sheets', name: 'Google Sheets', category: 'Productivity', type: 'trigger', icon: Table, operations: ['new_row', 'append_row'] },
+    { id: 'google-drive', name: 'Google Drive', category: 'Storage', type: 'action', icon: HardDrive, operations: ['upload_file', 'create_folder'] },
+    { id: 'notion', name: 'Notion Workspace', category: 'Database', type: 'action', icon: FileText, operations: ['create_page', 'query_database'] },
+    { id: 'stripe', name: 'Stripe Payments', category: 'Finance', type: 'trigger', icon: CreditCard, operations: ['payment_succeeded', 'create_customer'] },
+    { id: 'whatsapp', name: 'WhatsApp Business', category: 'Messaging', type: 'trigger', icon: Send, operations: ['new_message', 'send_message'] },
+    { id: 'http-request', name: 'Webhook / REST API', category: 'Developer Tools', type: 'action', icon: Globe, operations: ['custom_api_call', 'inbound_webhook'] },
     { id: 'ai-agent', name: 'AI Processor Node', category: 'AI Native', type: 'ai-agent', icon: Sparkles, operations: ['summarize_text', 'extract_data'] },
   ];
 

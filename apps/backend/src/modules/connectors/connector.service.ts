@@ -1,13 +1,31 @@
-import { GmailConnector, SlackConnector, GoogleSheetsConnector, AINodeConnector, OAuth2Strategy } from '@automation/connector-sdk';
+import {
+  AutoFlowScheduleConnector,
+  GmailConnector,
+  SlackConnector,
+  GoogleSheetsConnector,
+  AINodeConnector,
+  GoogleDriveConnector,
+  NotionConnector,
+  StripeConnector,
+  WhatsAppConnector,
+  HttpRequestConnector,
+  OAuth2Strategy,
+} from '@automation/connector-sdk';
 import { ConnectorRepository } from './connector.repository';
 import { encryptJson, decryptJson } from '../../shared/utils/crypto';
 import { AppError } from '../../shared/errors/app.error';
 import { env } from '../../config/env';
 
 const availableConnectors = [
+  new AutoFlowScheduleConnector().manifest,
   new GmailConnector().manifest,
   new SlackConnector().manifest,
   new GoogleSheetsConnector().manifest,
+  new GoogleDriveConnector().manifest,
+  new NotionConnector().manifest,
+  new StripeConnector().manifest,
+  new WhatsAppConnector().manifest,
+  new HttpRequestConnector().manifest,
   new AINodeConnector().manifest,
 ];
 
@@ -35,7 +53,7 @@ export class ConnectorService {
       organizationId: orgId,
       userId,
       connectorId,
-      name: `${connectorId.toUpperCase()} Connection (${new Date().toLocaleDateString()})`,
+      name: `${connectorId.toUpperCase()} Account (${new Date().toLocaleDateString()})`,
       authType: 'oauth2',
       encryptedCredentials,
       status: 'connected',

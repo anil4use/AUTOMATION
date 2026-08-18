@@ -1,12 +1,18 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Mail, MessageSquare, Table, Sparkles, Zap, Trash2 } from 'lucide-react';
+import { Mail, MessageSquare, Table, Sparkles, Zap, HardDrive, FileText, CreditCard, Send, Globe, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
 
 const iconMap: Record<string, any> = {
+  'autoflow-schedule': Clock,
   gmail: Mail,
   slack: MessageSquare,
   'google-sheets': Table,
+  'google-drive': HardDrive,
+  notion: FileText,
+  stripe: CreditCard,
+  whatsapp: Send,
+  'http-request': Globe,
   'ai-agent': Sparkles,
 };
 
