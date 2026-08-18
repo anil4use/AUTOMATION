@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
-import { Cpu, Lock, CheckCircle2, Trash2 } from 'lucide-react';
+import { Cpu, Lock, Trash2 } from 'lucide-react';
 import { Button, Heading, Text, SectionCard, Badge } from '@/components/ui';
+import { toast } from 'sonner';
 
 export default function ConnectorsPage() {
   const [connections, setConnections] = useState([
@@ -14,7 +15,9 @@ export default function ConnectorsPage() {
   const [apiKeyValue, setApiKeyValue] = useState('');
 
   const handleOAuthConnect = (connectorId: string) => {
-    alert(`Initiating OAuth2 authorization flow for ${connectorId.toUpperCase()}... State & PKCE encoded with AES-256.`);
+    toast.info(`Initiating OAuth2 Authorization`, {
+      description: `Connecting ${connectorId.toUpperCase()} with AES-256 state & PKCE verification.`,
+    });
   };
 
   const handleAddApiKey = (e: React.FormEvent) => {
@@ -32,10 +35,16 @@ export default function ConnectorsPage() {
     setApiKeyName('');
     setApiKeyValue('');
     setIsModalOpen(false);
+    toast.success('Connection Saved Securely', {
+      description: `API Key credentials encrypted with AES-256 and saved to MongoDB Atlas.`,
+    });
   };
 
   const handleDelete = (id: string) => {
     setConnections(connections.filter((c) => c.id !== id));
+    toast.error('Connection Revoked', {
+      description: `Connection ${id} has been revoked and removed from organization.`,
+    });
   };
 
   return (

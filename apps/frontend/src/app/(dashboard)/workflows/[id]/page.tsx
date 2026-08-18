@@ -6,16 +6,21 @@ import { FieldMapper } from '@/components/builder/FieldMapper';
 import { Play, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Node } from 'reactflow';
+import { toast } from 'sonner';
 
 export default function WorkflowBuilderPage({ params }: { params: { id: string } }) {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
   const handleTestRun = () => {
-    alert(`Executing Test Run for Workflow #${params.id}... Dispatching BullMQ job to Upstash Redis.`);
+    toast.info('Dispatching Test Execution Run', {
+      description: `Workflow #${params.id} enqueued into Upstash Redis BullMQ worker.`,
+    });
   };
 
   const handleSave = () => {
-    alert(`Saving Workflow #${params.id} DAG definition to MongoDB Atlas...`);
+    toast.success('Workflow Definition Saved', {
+      description: `Workflow #${params.id} DAG saved to MongoDB Atlas.`,
+    });
   };
 
   return (

@@ -1,5 +1,6 @@
 import '../styles/globals.css';
 import React from 'react';
+import { Toaster } from 'sonner';
 
 export const metadata = {
   title: 'AutoFlow — AI Automation Platform',
@@ -9,7 +10,10 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="bg-bgPrimary text-textPrimary antialiased">
+        {children}
+        <Toaster theme="dark" position="top-right" richColors closeButton />
+      </body>
     </html>
   );
 }

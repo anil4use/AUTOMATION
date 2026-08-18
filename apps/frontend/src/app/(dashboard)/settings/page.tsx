@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Heading, Text, SectionCard, Button, Badge } from '@/components/ui';
 import { CreditCard, Check, ShieldCheck, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const [currentPlan, setCurrentPlan] = useState<'free' | 'pro'>('free');
@@ -13,7 +14,9 @@ export default function SettingsPage() {
   });
 
   const handleUpgrade = () => {
-    alert('Redirecting to Stripe Checkout (Test Mode)... Plan will upgrade upon webhook confirmation.');
+    toast.success('Redirecting to Stripe Checkout (Test Mode)...', {
+      description: 'Organization plan will upgrade to Pro automatically upon webhook delivery.',
+    });
     setCurrentPlan('pro');
   };
 

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Heading, Text, SectionCard, Badge, Button } from '@/components/ui';
 import { getSocketClient } from '@/lib/socket-client';
 import { RotateCw, Activity } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ExecutionsPage() {
   const [logs, setLogs] = useState([
@@ -20,6 +21,9 @@ export default function ExecutionsPage() {
     socket.on('execution_update', (eventData: any) => {
       console.log('Real-time Socket.io Execution Update:', eventData);
       setLiveStatus(`Live Event: ${eventData.event} for job ${eventData.jobId}`);
+      toast.info(`Execution Update: ${eventData.event}`, {
+        description: `Job ${eventData.jobId} status is now ${eventData.status}.`,
+      });
 
       if (eventData.event === 'job_started' || eventData.event === 'job_completed' || eventData.event === 'job_failed') {
         setLogs((prev) => [
@@ -42,7 +46,9 @@ export default function ExecutionsPage() {
   }, []);
 
   const handleReplayStep = (id: string) => {
-    alert(`Replaying execution ${id} from failed node step... Skipping previously succeeded nodes.`);
+    toast.success('Replaying Execution Step', {
+      description: `Resuming execution ${id} starting from the failed step... Skipping previously completed nodes.`,
+    });
   };
 
   return (
