@@ -25,7 +25,7 @@ When starting a new session or task in this repository, the AI agent MUST execut
 ```
 AUTOMATIONS/
 ├── apps/
-│   ├── frontend/            # Next.js App Router UI (Zapier Vertical Builder, React Flow 60 FPS, Sonner Toasts, Log Stream)
+│   ├── frontend/            # Next.js App Router UI (Workflows Table, Start/Stop Toggles, Zapier Canvas, Executions Inspector, Logs Stream)
 │   ├── backend/             # Modular Express REST API (7-Layer Architecture + Stripe Billing + Log API)
 │   └── worker/              # BullMQ Background Worker Process (DAG Engine + Redis Rate Limiter)
 ├── packages/
@@ -44,28 +44,25 @@ AUTOMATIONS/
 
 ---
 
-## 🎨 Zapier Visual Builder Architecture (`/workflows/[id]`)
+## ⚙️ Workflows Management & Execution Control System
 
-1. **Vertical 1-Way Linear Pipeline**: Nodes execute sequentially from top to bottom (`Position.Top` and `Position.Bottom`), with strict 1-way DAG flow rules.
-2. **Centered `+ Add step` Button & Line Stems**:
-   - `CustomEdge.tsx`: Renders glowing purple `+` button in exact geometric center of vertical connection line.
-   - `CustomNode.tsx`: Renders vertical line stem extending 56px downwards from the bottom node with centered `+` button.
-3. **App Picker Modal (`AppPickerModal.tsx`)**: Search bar (`Search 9,000+ apps...`), category sidebar (`Home`, `Apps`, `AI`, `Flow controls`, `Utilities`), and grid for top apps & built-in tools.
-4. **Zapier 3-Tab Step Drawer (`FieldMapper.tsx`)**:
-   - **`Setup`**: App Card with `[ Change ]`, Action Event dropdown, Account selector (`anil.anuragee@aripratech.com`) with AES-256 security notice.
-   - **`Configure`**: AutoFlow Schedule Configurator (Daily, Weekly, Specific Date & Time, Cron, Webhook URL) and interactive output variable pills (`+ Body Text`, `+ Sender Email`, `+ AI Result`).
-   - **`Test`**: `[ Test Step ]` runner with JSON log response viewer.
-5. **Step Card 3-Dots Context Menu (`CustomNodes.tsx`)**:
-   - Options: ✏️ `Rename Step`, ⚙️ `Edit Configuration`, 📋 `Duplicate Step`, 🗑️ `Delete Step`.
-   - **Protection Guard**: `1. AutoFlow Schedule Trigger` node is strictly protected and CANNOT be deleted.
-   - **Click-Outside Dismissal**: Window capture-phase listeners (`window.addEventListener('click', ..., true)`) close the menu when clicking anywhere outside.
+- **Workflows Management Table (`/workflows`)**:
+  - Displays all created user workflows with creation date, last execution timestamp, run count, and connected app badges.
+  - **Start / Stop (Active / Paused) Toggle Switches**: Instantly activate (`RUNNING`) or stop (`PAUSED`) workflow execution rules.
+  - **Action Controls**: ⚡ Start/Stop toggle, 🧪 Test Run trigger, 📄 View Logs link, ✏️ Canvas Edit, and 🗑️ Delete Workflow.
+  - **LocalStorage Persistence**: Saving a workflow in the builder canvas (`/workflows/[id]`) persists the workflow and redirects to `/workflows`.
+
+- **Execution Audit Logs & Control (`/executions`)**:
+  - Filter logs by status (`ALL`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`).
+  - **Stop Running Job**: Instant cancellation button (`Stop Job`) for running executions.
+  - **Detailed Log Inspector**: Modal drawer displaying step-by-step execution payloads and timestamped status logs.
 
 ---
 
 ## 🧪 Automated Testing & System Log Infrastructure
 
-- **Automated Integration Test Suite (`scripts/test-runner.ts`)**: Run `npm run test` to execute 17 assertions covering AES-256 Encryption, OAuth2/API Key strategies, 10 Connector manifests, AI Agent generator, Worker DAG runner, Stripe billing, and Token-bucket rate limiter (**17 PASSED | 0 FAILED**).
-- **Centralized System Logging (`/logs`)**: Express `/api/v1/logs` endpoint delivering log streams to a dedicated log console UI with level filtering (`INFO`, `WARN`, `ERROR`).
+- **Automated Integration Test Suite (`scripts/test-runner.ts`)**: Run `npm run test` (**17 PASSED | 0 FAILED**).
+- **Centralized System Logging (`/logs`)**: Express `/api/v1/logs` log stream API console.
 
 ---
 
@@ -77,7 +74,7 @@ AUTOMATIONS/
 | **Backend Modular System** | [02_backend_modular_architecture.md](file:///d:/CODE/AUTOMATIONS/docs/features/02_backend_modular_architecture.md) | 7-layer architecture, Express routes, controllers, services, repositories, billing, logs |
 | **Connector SDK & OAuth Security** | [03_connector_sdk.md](file:///d:/CODE/AUTOMATIONS/docs/features/03_connector_sdk.md) | AES-256 encryption, OAuth2 flows, 10 multi-app connector plugins |
 | **BullMQ Worker Engine** | [04_bullmq_worker_engine.md](file:///d:/CODE/AUTOMATIONS/docs/features/04_bullmq_worker_engine.md) | DAG topological runner, step execution, retries, rate limiter |
-| **Zapier Next.js UI & Builder** | [05_frontend_nextjs_ui.md](file:///d:/CODE/AUTOMATIONS/docs/features/05_frontend_nextjs_ui.md) | Zapier vertical builder, centered Plus buttons, AppPickerModal, 3-tab drawer, Log Stream |
+| **Zapier Next.js UI & Builder** | [05_frontend_nextjs_ui.md](file:///d:/CODE/AUTOMATIONS/docs/features/05_frontend_nextjs_ui.md) | Workflows table, Start/Stop toggles, Zapier vertical builder, Executions inspector |
 | **AI Agent Service** | [06_ai_agent_service.md](file:///d:/CODE/AUTOMATIONS/docs/features/06_ai_agent_service.md) | Natural language prompt → Structured JSON DAG generation, clarification loop |
 | **Database & Shared Types** | [07_database_and_shared_types.md](file:///d:/CODE/AUTOMATIONS/docs/features/07_database_and_shared_types.md) | Mongoose ODM schemas & TypeScript contracts |
 | **Design Tokens & Tailwind** | [08_frontend_design_system_and_tokens.md](file:///d:/CODE/AUTOMATIONS/docs/features/08_frontend_design_system_and_tokens.md) | Zero inline styles, central tokens.ts, Tailwind CSS integration |
