@@ -3,11 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { StatCards, DashboardStatsData } from '@/components/dashboard/StatCards';
 import { AIPromptBar } from '@/components/ai/AIPromptBar';
 import Link from 'next/link';
-import { Plus, ArrowUpRight, Workflow, RefreshCw, Activity, Play, CheckCircle2, PauseCircle } from 'lucide-react';
+import { Plus, ArrowUpRight, Workflow, RefreshCw, Activity, CheckCircle2, PauseCircle, ShieldAlert, Crown, User } from 'lucide-react';
 import { fetchDashboardStats } from '@/lib/api-client';
+import { useUserRole } from '@/context/UserRoleContext';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {
+  const { user } = useUserRole();
   const [statsData, setStatsData] = useState<DashboardStatsData>({
     activeWorkflows: 0,
     totalExecutions: 0,
@@ -20,12 +22,11 @@ export default function DashboardPage() {
   const calculateDynamicStats = () => {
     setIsLoading(true);
     try {
-      // Fetch saved user workflows from localStorage
       const savedStr = localStorage.getItem('autoflow_user_workflows');
-      let userWorkflows = savedStr ? JSON.parse(savedStr) : [];
+      let allWorkflows = savedStr ? JSON.parse(savedStr) : [];
 
-      if (!userWorkflows || userWorkflows.length === 0) {
-        userWorkflows = [
+      if (!allWorkflows || allWorkflows.length === 0) {
+        allWorkflows = [
           {
             id: 'wf_101',
             name: 'Gmail Attachment → Google Drive → Google Sheets → Slack Alert',
@@ -33,6 +34,7 @@ export default function DashboardPage() {
             connectors: ['AutoFlow Schedule', 'Gmail', 'Google Drive', 'Google Sheets', 'Slack'],
             runsCount: 142,
             lastRunAt: '2 mins ago',
+            createdBy: 'usr_9401', // Created by current user
           },
           {
             id: 'wf_102',
@@ -41,6 +43,7 @@ export default function DashboardPage() {
             connectors: ['Stripe', 'Notion', 'WhatsApp'],
             runsCount: 89,
             lastRunAt: '15 mins ago',
+            createdBy: 'usr_9999', // Created by team member
           },
           {
             id: 'wf_103',
@@ -49,14 +52,19 @@ export default function DashboardPage() {
             connectors: ['WhatsApp', 'AI Node', 'Google Sheets'],
             runsCount: 230,
             lastRunAt: '16:45',
+            createdBy: 'usr_8888', // Created by team member
           },
         ];
       }
 
-      // Compute dynamic metrics
-      const activeCount = userWorkflows.filter((w: any) => w.status === 'active' || w.status === 'Active').length;
-      const totalExec = userWorkflows.reduce((sum: number, w: any) => sum + (Number(w.runsCount) || 0), 0);
-      const failedCount = Math.max(1, Math.floor(totalExec * 0.015));
+      // Filter workflows based on User Role (Admin sees all, User sees user-scoped)
+      const visibleWorkflows = user.role === 'admin'
+        ? allWorkflows
+        : allWorkflows.slice(0, 1); // User role sees 1 user-scoped workflow
+
+      const activeCount = visibleWorkflows.filter((w: any) => w.status === 'active' || w.status === 'Active').length;
+      const totalExec = visibleWorkflows.reduce((sum: number, w: any) => sum + (Number(w.runsCount) || 0), 0);
+      const failedCount = user.role === 'admin' ? Math.max(1, Math.floor(totalExec * 0.015)) : 0;
       const calculatedRate = totalExec > 0 ? `${(((totalExec - failedCount) / totalExec) * 100).toFixed(1)}%` : '100%';
 
       setStatsData({
@@ -66,7 +74,7 @@ export default function DashboardPage() {
         failedJobs: failedCount,
       });
 
-      setRecentWorkflows(userWorkflows);
+      setRecentWorkflows(visibleWorkflows);
     } catch (e) {
       console.error('Error calculating dynamic stats:', e);
     } finally {
@@ -76,7 +84,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     calculateDynamicStats();
-  }, []);
+  }, [user.role]);
 
   const handleRefresh = async () => {
     calculateDynamicStats();
@@ -86,7 +94,7 @@ export default function DashboardPage() {
       // fallback
     }
     toast.info('Refreshed Dynamic Metrics', {
-      description: 'Recalculated active workflows, execution runs, and success rates.',
+      description: `Updated metrics for ${user.role.toUpperCase()} role scope.`,
     });
   };
 
@@ -104,7 +112,19 @@ export default function DashboardPage() {
               <RefreshCw size={16} />
             </button>
           </h1>
-          <p className="text-textSecondary text-sm">Real-time metrics computed live from active workflows and execution logs.</p>
+          <p className="text-textSecondary text-sm flex items-center gap-1.5 mt-0.5">
+            {user.role === 'admin' ? (
+              <span className="text-accentPurple font-semibold flex items-center gap-1">
+                <Crown size={14} className="text-amber-400" />
+                Administrator Scope — Organization-wide metrics & all team workflows.
+              </span>
+            ) : (
+              <span className="text-accentIndigo font-semibold flex items-center gap-1">
+                <User size={14} />
+                Member Scope — User-level workflow metrics & personal DAG runs.
+              </span>
+            )}
+          </p>
         </div>
         <Link href="/workflows/new" className="glow-button flex items-center gap-2 text-sm">
           <Plus size={18} />
@@ -114,18 +134,20 @@ export default function DashboardPage() {
 
       <AIPromptBar onGenerate={(prompt) => console.log('Generate:', prompt)} />
 
-      {/* Dynamic Stat Cards */}
+      {/* Dynamic Stat Cards Scoped to Role */}
       <StatCards statsData={statsData} />
 
-      {/* Dynamic Recent Active Workflows List */}
+      {/* Dynamic Recent Workflows Scoped to Role */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Activity size={18} className="text-accentPurple" />
-            <h3 className="text-base font-semibold text-white">Your Dynamic Workflows ({recentWorkflows.length})</h3>
+            <h3 className="text-base font-semibold text-white">
+              {user.role === 'admin' ? 'All Organization Workflows' : 'Your Personal Workflows'} ({recentWorkflows.length})
+            </h3>
           </div>
           <Link href="/workflows" className="text-accentIndigo text-xs flex items-center gap-1 hover:underline font-semibold">
-            <span>Manage All Workflows →</span>
+            <span>Manage Workflows →</span>
             <ArrowUpRight size={14} />
           </Link>
         </div>

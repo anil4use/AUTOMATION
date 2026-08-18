@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Cpu, Lock, Trash2, ShieldCheck, ExternalLink, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Cpu, Lock, Trash2, ShieldCheck, ExternalLink, X, CheckCircle2 } from 'lucide-react';
 import { Button, Heading, Text, SectionCard, Badge } from '@/components/ui';
 import { GoogleOAuthConsentModal } from '@/components/connectors/GoogleOAuthConsentModal';
+import { useUserRole } from '@/context/UserRoleContext';
 import { toast } from 'sonner';
 
 export interface ConnectionAccount {
@@ -15,36 +16,49 @@ export interface ConnectionAccount {
   createdAt: string;
 }
 
-const defaultConnections: ConnectionAccount[] = [
-  { id: 'conn_1', name: 'Gmail Work Account', connectorId: 'gmail', email: 'anil.anuragee@aripratech.com', authType: 'OAuth2 (AES-256 Encrypted)', status: 'connected', createdAt: '2026-08-18' },
-  { id: 'conn_2', name: 'Slack Production Workspace', connectorId: 'slack', email: 'anil.anuragee@aripratech.com', authType: 'OAuth2 (AES-256 Encrypted)', status: 'connected', createdAt: '2026-08-18' },
-];
-
 export default function ConnectorsPage() {
-  const [connections, setConnections] = useState<ConnectionAccount[]>(defaultConnections);
+  const { user } = useUserRole();
+  const [connections, setConnections] = useState<ConnectionAccount[]>([]);
   const [selectedOAuthConnector, setSelectedOAuthConnector] = useState<any | null>(null);
 
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState('');
   const [apiKeyValue, setApiKeyValue] = useState('');
 
+  // Fetch connections scoped strictly to current user email
   useEffect(() => {
+    if (!user.email) return;
     try {
-      const saved = localStorage.getItem('autoflow_connections');
+      const storageKey = `autoflow_connections_${user.email}`;
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         setConnections(JSON.parse(saved));
       } else {
-        localStorage.setItem('autoflow_connections', JSON.stringify(defaultConnections));
+        // Initialize default user-scoped connection for new account
+        const initialUserConns: ConnectionAccount[] = [
+          {
+            id: `conn_${Date.now()}`,
+            name: `Gmail Account (${user.email})`,
+            connectorId: 'gmail',
+            email: user.email,
+            authType: 'OAuth2 (AES-256 Encrypted)',
+            status: 'connected',
+            createdAt: new Date().toLocaleDateString(),
+          },
+        ];
+        setConnections(initialUserConns);
+        localStorage.setItem(storageKey, JSON.stringify(initialUserConns));
       }
     } catch (e) {
-      console.error('LocalStorage sync error:', e);
+      console.error('LocalStorage user connections sync error:', e);
     }
-  }, []);
+  }, [user.email]);
 
   const saveConnectionsToStorage = (updated: ConnectionAccount[]) => {
     setConnections(updated);
+    if (!user.email) return;
     try {
-      localStorage.setItem('autoflow_connections', JSON.stringify(updated));
+      localStorage.setItem(`autoflow_connections_${user.email}`, JSON.stringify(updated));
     } catch (e) {
       console.error('LocalStorage save error:', e);
     }
@@ -84,7 +98,7 @@ export default function ConnectorsPage() {
       id: `conn_${Date.now()}`,
       name: apiKeyName,
       connectorId: 'api-key',
-      email: 'api-key-credential',
+      email: user.email,
       authType: 'API Key (AES-256 Encrypted)',
       status: 'connected',
       createdAt: new Date().toLocaleDateString(),
@@ -94,7 +108,7 @@ export default function ConnectorsPage() {
     setApiKeyValue('');
     setIsApiKeyModalOpen(false);
     toast.success('API Key Connection Encrypted & Saved', {
-      description: `Credentials encrypted with AES-256-CBC and stored securely.`,
+      description: `Credentials encrypted with AES-256-CBC and stored securely under ${user.email}.`,
     });
   };
 
@@ -102,7 +116,7 @@ export default function ConnectorsPage() {
     const updated = connections.filter((c) => c.id !== id);
     saveConnectionsToStorage(updated);
     toast.error('Connection Revoked', {
-      description: `Connection ${id} revoked and removed.`,
+      description: `Connection ${id} revoked and removed from ${user.email}.`,
     });
   };
 
@@ -121,9 +135,9 @@ export default function ConnectorsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <Heading as="h1">Connector SDK & Connection Accounts</Heading>
+          <Heading as="h1">Connector SDK & Connections ({user.email})</Heading>
           <Text variant="secondary">
-            Manage authenticated accounts. All access tokens & API keys are encrypted via AES-256 before database storage.
+            Manage authenticated accounts for user <strong className="text-white">{user.email}</strong>. Credentials encrypted via AES-256.
           </Text>
         </div>
         <Button onClick={() => setIsApiKeyModalOpen(true)}>+ Add API Key Connection</Button>
@@ -152,35 +166,41 @@ export default function ConnectorsPage() {
         ))}
       </div>
 
-      {/* Active Secure Connections */}
+      {/* Active Secure Connections Scoped to Current User */}
       <SectionCard>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <ShieldCheck size={20} className="text-accentEmerald" />
-            <Heading as="h3">Active Encrypted Connections ({connections.length})</Heading>
+            <Heading as="h3">Active Encrypted Connections for {user.name} ({connections.length})</Heading>
           </div>
-          <Badge variant="active">AES-256 ENCRYPTED</Badge>
+          <Badge variant="active">USER SCOPED • AES-256</Badge>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {connections.map((conn) => (
-            <div key={conn.id} className="flex items-center justify-between p-3.5 px-4 rounded-md bg-white/[0.02] border border-borderColor hover:border-accentPurple transition-all">
-              <div className="flex items-center gap-3">
-                <Lock size={18} className="text-accentEmerald" />
-                <div>
-                  <div className="font-semibold text-sm text-white">{conn.name}</div>
-                  <div className="text-xs text-textSecondary font-mono">{conn.email} • {conn.authType} • Added {conn.createdAt}</div>
+        {connections.length === 0 ? (
+          <div className="text-center py-8 text-textMuted text-xs">
+            No active connections found for account <strong className="text-white">{user.email}</strong>. Click a connector above to connect your account.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {connections.map((conn) => (
+              <div key={conn.id} className="flex items-center justify-between p-3.5 px-4 rounded-md bg-white/[0.02] border border-borderColor hover:border-accentPurple transition-all">
+                <div className="flex items-center gap-3">
+                  <Lock size={18} className="text-accentEmerald" />
+                  <div>
+                    <div className="font-semibold text-sm text-white">{conn.name}</div>
+                    <div className="text-xs text-textSecondary font-mono">{conn.email} • {conn.authType} • Added {conn.createdAt}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="active">Connected</Badge>
+                  <button onClick={() => handleDelete(conn.id)} className="text-textMuted hover:text-accentRose transition-colors" title="Revoke Connection">
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Badge variant="active">Connected</Badge>
-                <button onClick={() => handleDelete(conn.id)} className="text-textMuted hover:text-accentRose transition-colors" title="Revoke Connection">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </SectionCard>
 
       {/* Google & Multi-App Authentic OAuth2 Consent Window Modal */}
@@ -203,7 +223,7 @@ export default function ConnectorsPage() {
             </button>
             <Heading as="h3" className="mb-2">Add Encrypted API Key Connection</Heading>
             <Text variant="secondary" className="mb-4 text-xs">
-              Credentials are encrypted using AES-256-CBC before saving to database.
+              Credentials are encrypted using AES-256-CBC and linked to {user.email}.
             </Text>
             <form onSubmit={handleAddApiKey} className="flex flex-col gap-4">
               <div>

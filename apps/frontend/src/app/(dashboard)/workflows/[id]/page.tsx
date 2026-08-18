@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { WorkflowCanvas } from '@/components/builder/WorkflowCanvas';
 import { FieldMapper } from '@/components/builder/FieldMapper';
+import { useUserRole } from '@/context/UserRoleContext';
 import { Play, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Node } from 'reactflow';
@@ -9,12 +10,13 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function WorkflowBuilderPage({ params }: { params: { id: string } }) {
+  const { user } = useUserRole();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const router = useRouter();
 
   const handleTestRun = () => {
     toast.info('Dispatching Test Execution Run', {
-      description: `Workflow #${params.id} enqueued into Upstash Redis BullMQ worker.`,
+      description: `Workflow #${params.id} enqueued into Upstash Redis BullMQ worker for ${user.email}.`,
     });
   };
 
@@ -22,22 +24,24 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
     try {
       const newWf = {
         id: params.id === 'new' ? `wf_${Date.now().toString().slice(-4)}` : params.id,
-        name: params.id === 'new' ? 'New Custom Multi-App Workflow' : `Workflow #${params.id}`,
+        name: params.id === 'new' ? `${user.name || 'User'} Custom Workflow` : `Workflow #${params.id}`,
         desc: 'Custom user automation workflow DAG configured via visual builder.',
         status: 'active' as const,
         connectors: ['AutoFlow Schedule', 'Gmail', 'Slack'],
         runsCount: 1,
         createdAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         lastRunAt: 'Just now',
+        userEmail: user.email,
       };
 
-      const existingStr = localStorage.getItem('autoflow_user_workflows');
+      const storageKey = `autoflow_user_workflows_${user.email}`;
+      const existingStr = localStorage.getItem(storageKey);
       const existing = existingStr ? JSON.parse(existingStr) : [];
       const updated = [newWf, ...existing.filter((w: any) => w.id !== newWf.id)];
-      localStorage.setItem('autoflow_user_workflows', JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
 
       toast.success('Workflow Definition Saved & Activated', {
-        description: `Saved to local storage and MongoDB Atlas. Redirecting to workflows list...`,
+        description: `Saved under ${user.email}. Redirecting to workflows list...`,
       });
 
       setTimeout(() => {

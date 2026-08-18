@@ -1,10 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Heading, Text, SectionCard, Button, Badge } from '@/components/ui';
-import { CreditCard, Check, ShieldCheck, Zap, Key, Copy, Lock, ExternalLink } from 'lucide-react';
+import { CreditCard, Check, ShieldCheck, Zap, Key, Copy, Lock, ExternalLink, ShieldAlert, Crown, User } from 'lucide-react';
+import { useUserRole } from '@/context/UserRoleContext';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
+  const { user } = useUserRole();
   const [currentPlan, setCurrentPlan] = useState<'free' | 'pro'>('free');
   const [googleClientId, setGoogleClientId] = useState<string>('');
   const [googleClientSecret, setGoogleClientSecret] = useState<string>('');
@@ -23,6 +25,10 @@ export default function SettingsPage() {
 
   const handleSaveGoogleConfig = (e: React.FormEvent) => {
     e.preventDefault();
+    if (user.role !== 'admin') {
+      toast.error('Admin Role Required', { description: 'Only Organization Admins can modify OAuth credentials.' });
+      return;
+    }
     try {
       localStorage.setItem('autoflow_google_client_id', googleClientId.trim());
       localStorage.setItem('autoflow_google_client_secret', googleClientSecret.trim());
@@ -40,6 +46,10 @@ export default function SettingsPage() {
   };
 
   const handleUpgrade = () => {
+    if (user.role !== 'admin') {
+      toast.error('Admin Role Required', { description: 'Only Organization Admins can upgrade subscription plans.' });
+      return;
+    }
     toast.success('Redirecting to Stripe Checkout (Test Mode)...', {
       description: 'Organization plan will upgrade to Pro automatically upon webhook delivery.',
     });
@@ -48,12 +58,27 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
-      <div>
-        <Heading as="h1">Organization & OAuth Settings</Heading>
-        <Text variant="secondary">
-          Configure real Google Cloud Console OAuth 2.0 Client Credentials and manage subscription plans.
-        </Text>
+      <div className="flex items-center justify-between">
+        <div>
+          <Heading as="h1">Organization & OAuth Settings</Heading>
+          <Text variant="secondary">
+            Configure real Google Cloud Console OAuth 2.0 Client Credentials and manage subscription plans.
+          </Text>
+        </div>
+        <Badge variant={user.role === 'admin' ? 'active' : 'info'} className="text-xs">
+          {user.role === 'admin' ? '👑 ADMIN ROLE' : '👤 MEMBER ROLE'}
+        </Badge>
       </div>
+
+      {/* Role Scoped Banner */}
+      {user.role === 'user' && (
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
+          <ShieldAlert size={16} className="text-amber-400 shrink-0" />
+          <span>
+            You are viewing Settings as a <strong>Member (User Role)</strong>. OAuth credentials and plan upgrades are read-only. Switch to <strong>ADMIN</strong> role in the Navbar to edit settings.
+          </span>
+        </div>
+      )}
 
       {/* Real Google Cloud OAuth Credentials Form */}
       <SectionCard className="border-indigo-500/30">
@@ -76,10 +101,11 @@ export default function SettingsPage() {
             <label className="text-xs text-textSecondary font-semibold mb-1 block">Google Client ID</label>
             <input
               type="text"
+              disabled={user.role !== 'admin'}
               value={googleClientId}
               onChange={(e) => setGoogleClientId(e.target.value)}
               placeholder="e.g. 123456789-xxxxxx.apps.googleusercontent.com"
-              className="w-full bg-bgSecondary border border-borderColor rounded-lg px-3.5 py-2 text-xs text-white outline-none focus:border-accentPurple font-mono"
+              className="w-full bg-bgSecondary border border-borderColor rounded-lg px-3.5 py-2 text-xs text-white outline-none focus:border-accentPurple font-mono disabled:opacity-50"
             />
           </div>
 
@@ -87,10 +113,11 @@ export default function SettingsPage() {
             <label className="text-xs text-textSecondary font-semibold mb-1 block">Google Client Secret</label>
             <input
               type="password"
+              disabled={user.role !== 'admin'}
               value={googleClientSecret}
               onChange={(e) => setGoogleClientSecret(e.target.value)}
               placeholder="GOCSPX-..."
-              className="w-full bg-bgSecondary border border-borderColor rounded-lg px-3.5 py-2 text-xs text-white outline-none focus:border-accentPurple font-mono"
+              className="w-full bg-bgSecondary border border-borderColor rounded-lg px-3.5 py-2 text-xs text-white outline-none focus:border-accentPurple font-mono disabled:opacity-50"
             />
           </div>
 
@@ -110,11 +137,13 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
-            <Button type="submit" className="glow-button text-xs">
-              Save Google Credentials
-            </Button>
-          </div>
+          {user.role === 'admin' && (
+            <div className="flex justify-end pt-2">
+              <Button type="submit" className="glow-button text-xs">
+                Save Google Credentials
+              </Button>
+            </div>
+          )}
         </form>
       </SectionCard>
 
@@ -142,23 +171,14 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2"><Check size={14} className="text-accentEmerald" /> Priority Queue & Support</div>
         </div>
 
-        <div className="flex justify-end gap-3">
-          <Button variant="primary" onClick={handleUpgrade} className="inline-flex items-center gap-2">
-            <CreditCard size={16} />
-            <span>Pay $29 (Stripe Test Mode)</span>
-          </Button>
-        </div>
-      </SectionCard>
-
-      {/* Multi-Tenant Security Scoping */}
-      <SectionCard>
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldCheck size={20} className="text-accentEmerald" />
-          <Heading as="h3">Security & Multi-Tenant Data Scoping</Heading>
-        </div>
-        <Text variant="secondary" className="text-xs">
-          All MongoDB database queries and workflow logs are hard-isolated with organization-level scoping (`organizationId`). Tokens are encrypted via AES-256-CBC.
-        </Text>
+        {user.role === 'admin' && (
+          <div className="flex justify-end gap-3">
+            <Button variant="primary" onClick={handleUpgrade} className="inline-flex items-center gap-2">
+              <CreditCard size={16} />
+              <span>Pay $29 (Stripe Test Mode)</span>
+            </Button>
+          </div>
+        )}
       </SectionCard>
     </div>
   );
