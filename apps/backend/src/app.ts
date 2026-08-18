@@ -9,6 +9,7 @@ import connectorRoutes from './modules/connectors/connector.routes';
 import aiAgentRoutes from './modules/ai-agent/ai-agent.routes';
 import executionRoutes from './modules/executions/execution.routes';
 import billingRoutes from './modules/billing/billing.routes';
+import logsRoutes from './modules/logs/logs.routes';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
@@ -29,6 +30,7 @@ export function createApp() {
   app.use('/api/v1/ai-agent', aiAgentRoutes);
   app.use('/api/v1/executions', executionRoutes);
   app.use('/api/v1/billing', billingRoutes);
+  app.use('/api/v1/logs', logsRoutes);
 
   app.use(errorMiddleware as any);
 

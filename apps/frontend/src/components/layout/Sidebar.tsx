@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Workflow, Cpu, Activity, Sparkles, Settings } from 'lucide-react';
+import { LayoutDashboard, Workflow, Cpu, Activity, Sparkles, Settings, Terminal } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/ai-agent', label: 'AI Agent Generator', icon: Sparkles },
   { href: '/connectors', label: 'Integrations SDK', icon: Cpu },
   { href: '/executions', label: 'Execution Logs', icon: Activity },
+  { href: '/logs', label: 'System Logs Stream', icon: Terminal },
   { href: '/settings', label: 'Settings & Plans', icon: Settings },
 ];
 

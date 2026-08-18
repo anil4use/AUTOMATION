@@ -11,10 +11,12 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "test": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/test-runner.ts",
     "lint": "turbo run lint",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {
+    "ts-node": "^10.9.2",
     "turbo": "^2.0.0",
     "typescript": "^5.4.0",
     "rimraf": "^5.0.0"
