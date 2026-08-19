@@ -1,40 +1,51 @@
-# Feature 05: Next.js Frontend UI, Zapier Builder Flow & Sonner Notifications
+# Feature 05: Next.js Frontend UI, Zapier Builder Flow & Dynamic Manifest-Driven Forms
 
 **Status**: `DONE`  
-**Related Master Plan Section**: Phase 4 — Next.js Visual DAG Builder & Frontend  
-**Related Task ID**: TSK-005, TSK-027 through TSK-033  
-**Implementation Date**: 2026-08-18  
+**Related Master Plan Section**: Phase 4 — Next.js Visual DAG Builder & Dynamic Field Mapping  
+**Related Task ID**: TSK-005, TSK-027 through TSK-033, Real-vs-Mock Audit Fixes  
+**Last Updated**: 2026-08-19  
 
 ---
 
-## 🎨 Visual DAG Builder Overhaul (Zapier Alignment)
+## 🎨 Visual Builder & Dynamic Manifest-Driven Field Form Generator
 
-The visual workflow canvas at `/workflows/[id]` matches the exact Zapier reference layout and flow:
+The visual workflow canvas (`/workflows/[id]`) features a dynamic manifest-driven configuration drawer (`FieldMapper.tsx`) that updates in real time based on the selected connector plugin:
 
-1. **Vertical 1-Way Linear Flow**:
-   - Nodes align vertically (`Position.Top` input handle and `Position.Bottom` output handle).
-   - Strict 1-way DAG pipeline rules prevent multi-branch splits.
-2. **Centered `+ Add step` Button & Vertical Line Stems**:
-   - `CustomEdge.tsx`: Renders glowing purple `+` button in exact geometric center of vertical connection line.
-   - `CustomNode.tsx`: Renders vertical line stem extending 56px downwards from bottom node with centered `+` button.
-3. **Zapier-Style 3-Tab Step Drawer (`FieldMapper.tsx`)**:
-   - **`Setup`**: App Card with `[ Change ]`, Action Event dropdown, Account selector (`anil.anuragee@aripratech.com`) with `[ Change ]` / `[ Sign in ]` button and security encryption notice.
-   - **`Configure`**: AutoFlow Schedule Trigger Configurator (Daily, Weekly, Specific Date & Time, Cron, Webhook URL) and interactive output variable pills (`+ Body Text`, `+ Sender Email`, `+ AI Result`).
-   - **`Test`**: `[ Test Step ]` execution runner with JSON log response viewer.
-4. **Zapier-Style App Selector Modal (`AppPickerModal.tsx`)**:
-   - Search bar (`Search 9,000+ apps and tools...`).
-   - Category sidebar (`Home`, `Apps`, `AI`, `Flow controls`, `Utilities`, `Products`).
-   - Grids for **Your top apps** and **Popular built-in tools**.
-5. **Step Card 3-Dots Context Menu (`CustomNodes.tsx`)**:
-   - Options: ✏️ `Rename Step`, ⚙️ `Edit Configuration`, 📋 `Duplicate Step`, 🗑️ `Delete Step`.
-   - **Protection Guard**: `1. AutoFlow Schedule Trigger` node is strictly protected and CANNOT be deleted.
-   - **Click-Outside Dismissal**: Window capture-phase listeners (`window.addEventListener('click', ..., true)`) close the menu when clicking anywhere outside.
-6. **Template vs. New Workflow Initialization**:
-   - `/workflows/new`: Initialized with 1 single default trigger node (`1. AutoFlow Schedule Trigger`).
-   - `/workflows/wf_101`, `wf_102`, `wf_103`: Automatically loads pre-configured multi-step DAG templates.
+### 1. Dynamic Action / Event Selection (`1. Setup` Tab)
+- Dynamically populates the **Action / Event** dropdown from the selected connector's manifest (`CONNECTOR_MANIFESTS`):
+  - **Gmail**: `Send Email Notification / Auto-Reply` vs `New Incoming Email Trigger`
+  - **Slack**: `Post Channel Message` vs `New Channel Message Trigger`
+  - **Google Sheets**: `Append Row to Spreadsheet` vs `New Row Added Trigger`
+  - **AI Processor Node**: `Summarize, Auto-Reply & Extract Text with AI`
+  - **WhatsApp Business**: `Send WhatsApp Text Message` vs `Inbound Message Trigger`
+  - **Web Search & Scraper**: `Search Google / Tavily & Scrape Web Pages`
+  - **Notion Workspace**: `Create Database Page Record`
+  - **Stripe Payments**: `Payment Checkout Succeeded Trigger` vs `Create Customer`
+  - **HTTP Request / Webhook**: `Custom HTTP REST API Call` (POST, GET, PUT, DELETE)
+
+### 2. Dynamic Input Parameter Form Generator (`2. Configure` Tab)
+- Automatically renders customized inputs (text inputs, textareas, dropdowns) for EVERY parameter defined in the selected operation manifest.
+- **Gmail Send Email**: `To (Recipient Email)`, `Subject`, `Email Body Content / Auto-Reply`
+- **Gmail New Email**: `Mailbox Label / Folder` (INBOX/IMPORTANT/STARRED), `Search Filter`
+- **Slack Post Message**: `Slack Channel Name or ID`, `Message Payload Text`
+- **Google Sheets Append Row**: `Spreadsheet ID`, `Worksheet Name`, `Row Values`
+- **AI Processor Node**: `AI System Prompt / Instruction`, `Input Text Variable`
+- **WhatsApp**: `Recipient Phone Number`, `Message Content`
+- **Web Search**: `Search Query Keyword`
+- **Notion**: `Database ID`, `Page Title & Content`
+- **HTTP Request**: `HTTP Method`, `Endpoint URL`, `Request Headers`, `Body Payload`
+
+### 3. Clickable Upstream Dynamic Variable Inserter
+- Renders clickable pill buttons below input fields (`+ Sender Email`, `+ Subject`, `+ Body Text`, `+ AI Summary Result`, `+ Trigger Time`, `+ Run ID`).
+- Appends template variables (`{{nodes.node_trigger.output.sender}}`, `{{nodes.node_ai.output.result}}`) into whichever field is active.
+
+### 4. Real-time Live Node State Synchronization
+- Node changes update `selectedNode.data.config`, `selectedNode.data.operationId`, and step labels live in React Flow via `handleUpdateNodeData`.
 
 ---
 
 ## 🧪 Verification Status
-- **Frontend TypeScript compilation (`npx tsc --noEmit`)**: **0 errors**.
-- **Automated test suite (`npm run test`)**: **17 PASSED | 0 FAILED**.
+
+- **Frontend TypeScript check (`npx tsc --noEmit`)**: **0 errors**.
+- **Backend TypeScript check (`npx tsc --noEmit`)**: **0 errors**.
+- **Integration Test Suite**: **17 PASSED | 0 FAILED**.

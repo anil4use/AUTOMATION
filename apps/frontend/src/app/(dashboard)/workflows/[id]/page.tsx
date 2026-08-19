@@ -16,6 +16,22 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
   const [isExecuting, setIsExecuting] = useState(false);
   const router = useRouter();
 
+  const handleUpdateNodeData = (nodeId: string, updatedData: Partial<any>) => {
+    if (selectedNode && selectedNode.id === nodeId) {
+      setSelectedNode((prev) =>
+        prev
+          ? {
+              ...prev,
+              data: {
+                ...prev.data,
+                ...updatedData,
+              },
+            }
+          : null
+      );
+    }
+  };
+
   const handleTestRun = async () => {
     setIsExecuting(true);
     try {
@@ -102,8 +118,15 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
 
       {/* Main Canvas Workspace */}
       <div className="flex flex-1 overflow-hidden">
-        <WorkflowCanvas workflowId={params.id} onSelectNode={(node) => setSelectedNode(node)} />
-        <FieldMapper selectedNode={selectedNode} />
+        <WorkflowCanvas
+          workflowId={params.id}
+          onSelectNode={(node) => setSelectedNode(node)}
+          onUpdateNodeData={handleUpdateNodeData}
+        />
+        <FieldMapper
+          selectedNode={selectedNode}
+          onUpdateNodeData={handleUpdateNodeData}
+        />
       </div>
     </div>
   );

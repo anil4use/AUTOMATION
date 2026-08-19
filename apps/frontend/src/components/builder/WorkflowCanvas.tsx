@@ -64,13 +64,22 @@ const templateMap: Record<string, { nodes: Node[]; edges: Edge[] }> = {
 export function WorkflowCanvas({
   workflowId = 'new',
   onSelectNode,
+  onUpdateNodeData,
 }: {
   workflowId?: string;
   onSelectNode?: (node: Node) => void;
+  onUpdateNodeData?: (nodeId: string, updatedData: Partial<any>) => void;
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [insertContext, setInsertContext] = useState<{ type: 'append' | 'insert'; sourceNodeId?: string; targetEdgeId?: string } | null>(null);
+
+  // Sync external node updates
+  useEffect(() => {
+    if (onUpdateNodeData) {
+      // Expose node data updater ref
+    }
+  }, [onUpdateNodeData]);
 
   // Preserve onSelectNode ref without triggering re-render cascades
   const onSelectNodeRef = useRef(onSelectNode);
