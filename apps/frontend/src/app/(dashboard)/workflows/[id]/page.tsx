@@ -118,11 +118,13 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
 
       {/* Main Canvas Workspace */}
       <div className="flex flex-1 overflow-hidden">
-        <WorkflowCanvas
-          workflowId={params.id}
-          onSelectNode={(node) => setSelectedNode(node)}
-          onUpdateNodeData={handleUpdateNodeData}
-        />
+        <React.Suspense fallback={<div className="flex-1 bg-bgCanvas flex items-center justify-center text-xs text-textMuted">Loading Canvas...</div>}>
+          <WorkflowCanvas
+            workflowId={params.id}
+            onSelectNode={(node) => setSelectedNode(node)}
+            onUpdateNodeData={handleUpdateNodeData}
+          />
+        </React.Suspense>
         <FieldMapper
           selectedNode={selectedNode}
           onUpdateNodeData={handleUpdateNodeData}

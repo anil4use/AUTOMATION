@@ -118,7 +118,10 @@ export class AIAgentService {
       };
     } else {
       // 2. Detect connectors dynamically based on user requirement
-      const isSchedule = lower.includes('8pm') || lower.includes('schedule') || lower.includes('daily') || lower.includes('time') || lower.includes('cron') || lower.includes('alert at');
+      const isSchedule = lower.includes('schedule') || lower.includes('daily') || lower.includes('cron') || lower.includes('alert at') || lower.includes('8pm') || lower.includes('reminder');
+      const isInterval = /every\s+\d+\s*(min|minute|hour|sec)/.test(lower); // e.g. "every 10 minutes"
+      const needsScheduleTrigger = isSchedule || isInterval;
+
       const isWebSearch = lower.includes('search') || lower.includes('scraper') || lower.includes('job') || lower.includes('google search');
       const isSlack = lower.includes('slack');
       const isGmail = lower.includes('gmail') || lower.includes('email');
@@ -127,37 +130,57 @@ export class AIAgentService {
       const isWhatsApp = lower.includes('whatsapp') || lower.includes('gf') || lower.includes('girlfriend') || lower.includes('text message');
       const isNotion = lower.includes('notion');
 
+      // Detect if user wants to READ email (fetch/read) AND SEND a summary — 4-node pipeline
+      const isEmailSummaryPipeline = isGmail && (lower.includes('summarize') || lower.includes('summary') || lower.includes('read') || lower.includes('fetch')) && needsScheduleTrigger;
+
+      // Extract schedule interval if mentioned (e.g. "every 10 minutes")
+      const intervalMatch = lower.match(/every\s+(\d+)\s*(min|minute|hour)/);
+      const intervalValue = intervalMatch ? parseInt(intervalMatch[1]) : null;
+      const intervalUnit = intervalMatch ? (intervalMatch[2].startsWith('h') ? 'hours' : 'minutes') : 'minutes';
+
+      // Extract recipient email if mentioned
+      const recipientMatch = lower.match(/send.*?to\s+([\w.\-+]+@[\w.\-]+\.\w+)/i) || lower.match(/([\w.\-+]+@[\w.\-]+\.\w+)/i);
+      const recipientEmail = recipientMatch ? recipientMatch[1] : '';
+
       const suggestedConnectors: string[] = [];
 
-      // Trigger Node
-      if (isSchedule) {
+      if (isEmailSummaryPipeline) {
+        // 4-step pipeline: Schedule → Gmail fetch → AI summarize → Gmail send
         suggestedConnectors.push('autoflow-schedule');
-      } else if (isWebSearch) {
-        suggestedConnectors.push('web-search');
-      } else if (isGmail) {
-        suggestedConnectors.push('gmail');
-      } else if (isStripe) {
-        suggestedConnectors.push('stripe');
+        suggestedConnectors.push('gmail-read');   // gmail read step
+        suggestedConnectors.push('ai-agent');
+        suggestedConnectors.push('gmail');         // gmail send step
       } else {
-        suggestedConnectors.push('autoflow-schedule');
-      }
+        // Trigger Node
+        if (needsScheduleTrigger) {
+          suggestedConnectors.push('autoflow-schedule');
+        } else if (isWebSearch) {
+          suggestedConnectors.push('web-search');
+        } else if (isGmail) {
+          suggestedConnectors.push('gmail');
+        } else if (isStripe) {
+          suggestedConnectors.push('stripe');
+        } else {
+          suggestedConnectors.push('autoflow-schedule');
+        }
 
-      // AI Summarizer Step
-      suggestedConnectors.push('ai-agent');
+        // AI Summarizer Step
+        suggestedConnectors.push('ai-agent');
 
-      // Action Node
-      if (isWhatsApp) {
-        suggestedConnectors.push('whatsapp');
-      } else if (isSlack) {
-        suggestedConnectors.push('slack');
-      } else if (isSheets) {
-        suggestedConnectors.push('google-sheets');
-      } else if (isNotion) {
-        suggestedConnectors.push('notion');
-      } else if (isGmail) {
-        suggestedConnectors.push('gmail');
-      } else {
-        suggestedConnectors.push('whatsapp');
+        // Action Node
+        if (isWhatsApp) {
+          suggestedConnectors.push('whatsapp');
+        } else if (isSlack) {
+          suggestedConnectors.push('slack');
+        } else if (isSheets) {
+          suggestedConnectors.push('google-sheets');
+        } else if (isNotion) {
+          suggestedConnectors.push('notion');
+        } else if (isGmail) {
+          suggestedConnectors.push('gmail');
+        } else {
+          suggestedConnectors.push('whatsapp');
+        }
       }
 
       // 3. Query MongoDB for active user connections
@@ -174,27 +197,44 @@ export class AIAgentService {
       const connectedIds = new Set(userConnections.map((c) => c.connectorId));
 
       const userConnectionsStatus = suggestedConnectors.map((cid) => ({
-        connectorId: cid,
+        connectorId: cid === 'gmail-read' ? 'gmail' : cid,
         name:
           cid === 'autoflow-schedule'
-            ? 'AutoFlow Schedule Trigger (8:00 PM)'
+            ? 'AutoFlow Schedule Trigger'
             : cid === 'ai-agent'
             ? 'AI Processor Node'
             : cid === 'web-search'
             ? 'Web Search & Scraper'
             : cid === 'whatsapp'
             ? 'WhatsApp Business'
+            : cid === 'gmail-read'
+            ? 'Gmail — Read Inbox'
+            : cid === 'gmail'
+            ? 'Gmail — Send Email'
             : cid.charAt(0).toUpperCase() + cid.slice(1),
-        isConnected: cid === 'autoflow-schedule' || cid === 'ai-agent' || cid === 'web-search' || connectedIds.has(cid),
+        isConnected: cid === 'autoflow-schedule' || cid === 'ai-agent' || cid === 'web-search' || connectedIds.has(cid) || connectedIds.has('gmail'),
       }));
 
       // 4. Build Auto-Configured DAG Nodes & Edges
       const nodes: any[] = [];
       const edges: any[] = [];
 
+      // Determine interval label for schedule node
+      const scheduleLabel = intervalValue
+        ? `Schedule Trigger (Every ${intervalValue} ${intervalUnit})`
+        : isSchedule && lower.includes('8pm')
+        ? 'Schedule Trigger (Daily at 8:00 PM)'
+        : isSchedule && lower.includes('daily')
+        ? 'Schedule Trigger (Daily)'
+        : 'Schedule Trigger (Hourly)';
+      const scheduleConfig = intervalValue
+        ? { intervalMinutes: intervalUnit === 'hours' ? intervalValue * 60 : intervalValue, frequency: 'interval' }
+        : { time: '20:00', frequency: 'daily' };
+
       suggestedConnectors.forEach((cid, idx) => {
         const isFirst = idx === 0;
         const nodeId = `node_${idx + 1}`;
+        const aiNodeIdx = suggestedConnectors.indexOf('ai-agent') + 1; // 1-based index of AI node
 
         let operationId = 'execute';
         let name = `${cid.toUpperCase()} Step`;
@@ -203,40 +243,76 @@ export class AIAgentService {
 
         if (cid === 'autoflow-schedule') {
           operationId = 'schedule_time';
-          name = 'Schedule Trigger (Daily at 8:00 PM)';
-          config = { time: '20:00', frequency: 'daily' };
+          name = scheduleLabel;
+          config = scheduleConfig;
+        } else if (cid === 'gmail-read') {
+          // Gmail Read Step — fetch emails from INBOX
+          operationId = 'new_email';
+          name = 'Gmail — Read Inbox Emails';
+          config = { label: 'INBOX', searchQuery: 'is:unread' };
+          fieldMapping = {};
         } else if (cid === 'web-search') {
           operationId = 'search_web';
           name = 'Web Search & Scraper';
-          config = { query: 'Romantic quotes & thoughtful messages' };
+          config = { query: 'Latest news & updates' };
         } else if (cid === 'ai-agent') {
           operationId = 'process_text';
-          name = 'AI Message Generator';
-          config = { prompt: 'Generate a sweet, romantic 2-sentence message for my girlfriend.' };
-          fieldMapping = { inputText: '{{nodes.node_1.output || nodes.node_2.output}}' };
+          const isEmailSummary = suggestedConnectors.includes('gmail-read');
+          name = isEmailSummary ? 'AI Email Summarizer' : 'AI Message Generator';
+          config = {
+            prompt: isEmailSummary
+              ? 'Summarize the following emails into a concise, readable digest. Group by sender. Highlight important action items.'
+              : 'Generate a helpful, concise, professional response based on the input.',
+          };
+          // Reference the previous node's output
+          const prevNodeId = `node_${idx}`;
+          fieldMapping = { inputText: `{{${prevNodeId}.output.emails || ${prevNodeId}.output.body || ${prevNodeId}.output}}` };
         } else if (cid === 'whatsapp') {
           operationId = 'send_message';
-          name = 'WhatsApp Business Send Message';
-          config = { recipient: 'Girlfriend Contact' };
-          fieldMapping = { message: '{{nodes.node_2.output.result || nodes.node_3.output.result}}' };
+          name = 'WhatsApp Business — Send Message';
+          config = { recipient: '+1234567890' };
+          fieldMapping = { message: `{{node_${aiNodeIdx}.output.result}}` };
         } else if (cid === 'gmail') {
-          operationId = 'send_email';
-          name = 'Gmail Send Email';
-          fieldMapping = { body: '{{nodes.node_2.output.result}}' };
+          const isLastNode = idx === suggestedConnectors.length - 1;
+          if (isLastNode && suggestedConnectors.includes('gmail-read')) {
+            // Final action: send summary email
+            operationId = 'send_email';
+            name = 'Gmail — Send Summary Email';
+            config = {
+              to: recipientEmail || 'your@email.com',
+              subject: 'Your Automated Email Summary — AutoFlow',
+              body: `{{node_${aiNodeIdx}.output.result}}`,
+            };
+            fieldMapping = {
+              to: recipientEmail || 'your@email.com',
+              subject: 'Your Automated Email Summary — AutoFlow',
+              body: `{{node_${aiNodeIdx}.output.result}}`,
+            };
+          } else {
+            operationId = 'send_email';
+            name = 'Gmail — Send Email';
+            config = { to: recipientEmail || '', subject: 'AutoFlow Notification' };
+            fieldMapping = { body: `{{node_${aiNodeIdx}.output.result}}` };
+          }
         } else if (cid === 'slack') {
           operationId = 'send_message';
-          name = 'Slack Post Message';
-          fieldMapping = { text: '{{nodes.node_2.output.result}}' };
+          name = 'Slack — Post Message';
+          config = { channel: '#general' };
+          fieldMapping = { text: `{{node_${aiNodeIdx}.output.result}}` };
         } else if (cid === 'google-sheets') {
           operationId = 'append_row';
-          name = 'Google Sheets Append Row';
-          fieldMapping = { rowData: '{{nodes.node_2.output.result}}' };
+          name = 'Google Sheets — Append Row';
+          config = { spreadsheetId: '', worksheet: 'Sheet1' };
+          fieldMapping = { rowData: `{{node_${aiNodeIdx}.output.result}}` };
         }
+
+        // gmail-read maps to connectorId 'gmail' on the canvas
+        const canvasConnectorId = cid === 'gmail-read' ? 'gmail' : cid;
 
         nodes.push({
           id: nodeId,
           type: isFirst ? 'trigger' : cid === 'ai-agent' ? 'ai-agent' : 'action',
-          connectorId: cid,
+          connectorId: canvasConnectorId,
           operationId,
           name,
           config,
@@ -254,7 +330,7 @@ export class AIAgentService {
         }
       });
 
-      const defaultMessage = `I've designed an automated workflow for **"${lastUserMessage}"**:\n\n1. **${suggestedConnectors[0].toUpperCase()}** fires at 8:00 PM.\n2. **AI Message Generator** crafts a sweet note.\n3. **${suggestedConnectors[suggestedConnectors.length - 1].toUpperCase()}** delivers the message!`;
+      const defaultMessage = `I've designed a **${suggestedConnectors.length}-step** automated workflow for **"${lastUserMessage}"**:\n\n${nodes.map((n, i) => `${i + 1}. **${n.name}**`).join('\n')}\n\nAll steps are pre-configured and ready to activate!`;
 
       responseData = {
         replyMessage: llmResponseText || defaultMessage,

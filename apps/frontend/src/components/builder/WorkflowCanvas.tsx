@@ -17,6 +17,7 @@ import { CustomNode } from './CustomNodes';
 import { CustomEdge } from './CustomEdge';
 import { AppPickerModal, AppOption } from './AppPickerModal';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -209,7 +210,10 @@ export function WorkflowCanvas({
     },
   }), [handleOpenAppendModal, handleRenameNode, handleEditNode, handleDuplicateNode, handleDeleteNode]);
 
-  // ONLY run DAG hydration ONCE on workflowId change
+  const searchParams = useSearchParams();
+  const isDraftParam = searchParams.get('draft') === 'true';
+
+  // Run DAG hydration on workflowId or draft param change
   useEffect(() => {
     const template = templateMap[workflowId];
     let draftWf: any = null;
@@ -217,7 +221,6 @@ export function WorkflowCanvas({
       const savedDraftStr = localStorage.getItem('autoflow_draft_workflow');
       if (savedDraftStr) {
         draftWf = JSON.parse(savedDraftStr);
-        localStorage.removeItem('autoflow_draft_workflow'); // Clear after reading
       }
     } catch (e) {
       console.error('Draft parsing error:', e);
@@ -282,7 +285,7 @@ export function WorkflowCanvas({
       setEdges([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowId]);
+  }, [workflowId, isDraftParam]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => {

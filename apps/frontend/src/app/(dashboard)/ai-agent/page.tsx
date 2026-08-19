@@ -139,7 +139,7 @@ export default function AIAgentPage() {
       toast.success('AI Workflow Mapped & Ready!', {
         description: `Loading ${draft.nodes?.length || 0} pre-configured steps onto the builder canvas...`,
       });
-      router.push('/workflows/new');
+      router.push('/workflows/new?draft=true');
     } catch (e) {
       console.error(e);
     }
