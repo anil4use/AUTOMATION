@@ -203,7 +203,53 @@ export function WorkflowCanvas({
   // ONLY run DAG hydration ONCE on workflowId change
   useEffect(() => {
     const template = templateMap[workflowId];
-    if (template) {
+    let draftWf: any = null;
+    try {
+      const savedDraftStr = localStorage.getItem('autoflow_draft_workflow');
+      if (savedDraftStr) {
+        draftWf = JSON.parse(savedDraftStr);
+        localStorage.removeItem('autoflow_draft_workflow'); // Clear after reading
+      }
+    } catch (e) {
+      console.error('Draft parsing error:', e);
+    }
+
+    if (draftWf && draftWf.nodes && draftWf.nodes.length > 0) {
+      const hydratedNodes: Node[] = draftWf.nodes.map((n: any, idx: number) => {
+        const isTrigger = idx === 0 || n.type === 'trigger';
+        const isLast = idx === draftWf.nodes.length - 1;
+        return bindNodeCallbacks({
+          id: n.id || `node_${idx + 1}`,
+          type: 'custom',
+          position: { x: 250, y: 80 + idx * 180 },
+          data: {
+            stepNumber: idx + 1,
+            label: n.name || n.label || `Step ${idx + 1}`,
+            name: n.name || n.label || `Step ${idx + 1}`,
+            connectorId: n.connectorId || 'autoflow-schedule',
+            operationId: n.operationId || 'execute',
+            type: isTrigger ? 'trigger' : n.type || 'action',
+            isLastInChain: isLast,
+            config: n.config || {},
+            fieldMapping: n.fieldMapping || {},
+          },
+        });
+      });
+
+      const hydratedEdges: Edge[] = (draftWf.edges || []).map((e: any) => ({
+        id: e.id || `e_${e.source}_${e.target}`,
+        source: e.source,
+        target: e.target,
+        type: 'custom',
+        data: { onInsertStep: handleOpenInsertModal },
+      }));
+
+      setNodes(hydratedNodes);
+      setEdges(hydratedEdges);
+      toast.success('AI Workflow Draft Loaded onto Canvas!', {
+        description: `Loaded ${hydratedNodes.length} auto-configured DAG steps.`,
+      });
+    } else if (template) {
       const hEdges = template.edges.map((e) => ({ ...e, data: { ...e.data, onInsertStep: handleOpenInsertModal } }));
       const hNodes = template.nodes.map(bindNodeCallbacks);
       setNodes(hNodes);

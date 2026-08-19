@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { AIAgentController } from './ai-agent.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
-import { validationMiddleware } from '../../middleware/validation.middleware';
-import { generateWorkflowSchema } from './ai-agent.validation';
 
 const router = Router();
 
 router.use(authMiddleware as any);
 
-router.post('/generate', validationMiddleware(generateWorkflowSchema), AIAgentController.generate as any);
+router.get('/chat-history', AIAgentController.getHistory as any);
+router.delete('/chat-history', AIAgentController.clearHistory as any);
+router.post('/chat', AIAgentController.chat as any);
+router.post('/generate', AIAgentController.generate as any);
 
 export default router;

@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { getCookie, deleteCookie } from '@/context/UserRoleContext';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -9,9 +10,10 @@ export const apiClient = axios.create({
   },
 });
 
+// Attach real JWT token from localStorage or Cookies on every request
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || getCookie('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -19,22 +21,33 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-export async function fetchDashboardStats() {
-  try {
-    const res = await apiClient.get('/v1/dashboard/stats');
-    return res.data.data;
-  } catch (error) {
-    console.warn('Backend API unavailable, returning fallback dashboard stats:', error);
-    return {
-      activeWorkflows: 14,
-      totalExecutions: 1420,
-      successRate: '99.4%',
-      failedJobs: 8,
-      recentWorkflows: [
-        { id: 'wf_101', name: 'Gmail Attachment → Google Drive → Google Sheets → Slack Alert', status: 'Active', trigger: 'Gmail', action: 'Slack', lastRun: '2 mins ago' },
-        { id: 'wf_102', name: 'Stripe Payment Succeeded → Notion DB Page → WhatsApp Contact', status: 'Active', trigger: 'Stripe', action: 'WhatsApp', lastRun: '15 mins ago' },
-        { id: 'wf_103', name: 'WhatsApp Lead → AI Summarizer Node → Google Sheets Row', status: 'Active', trigger: 'WhatsApp', action: 'Google Sheets', lastRun: '1 hour ago' },
-      ],
-    };
+// Auto-clean session on expired 401 responses
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('organization_id');
+      localStorage.removeItem('autoflow_user_role');
+
+      deleteCookie('token');
+      deleteCookie('user_email');
+      deleteCookie('user_name');
+      deleteCookie('user_id');
+      deleteCookie('organization_id');
+      deleteCookie('autoflow_user_role');
+
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
   }
+);
+
+/** Fetch real dashboard stats from the authenticated backend */
+export async function fetchDashboardStats() {
+  const res = await apiClient.get('/v1/dashboard/stats');
+  return res.data.data;
 }

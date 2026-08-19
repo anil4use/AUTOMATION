@@ -1,11 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { WorkflowModel, ExecutionLogModel } from '@automation/database';
+import { authMiddleware } from '../../middleware/auth.middleware';
+import { AuthenticatedRequest } from '../../shared/types/common.types';
 
 const router = Router();
 
-router.get('/stats', async (req: Request, res: Response) => {
+router.use(authMiddleware as any);
+
+router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const orgId = (req.query.orgId as string) || 'org_dev_123';
+    const orgId = req.user!.organizationId;
 
     let activeWorkflows = 0;
     let recentWorkflows: any[] = [];
@@ -18,14 +22,17 @@ router.get('/stats', async (req: Request, res: Response) => {
       totalExecutions = await ExecutionLogModel.countDocuments({ organizationId: orgId });
       failedJobs = await ExecutionLogModel.countDocuments({ organizationId: orgId, status: 'failed' });
     } catch (dbErr) {
-      // Default cleanly to 0 if database collection is empty or uninitialized
+      // Default cleanly to 0 if collections are empty or uninitialized
       activeWorkflows = 0;
       recentWorkflows = [];
       totalExecutions = 0;
       failedJobs = 0;
     }
 
-    const successRate = totalExecutions > 0 ? `${(((totalExecutions - failedJobs) / totalExecutions) * 100).toFixed(1)}%` : '100%';
+    const successRate =
+      totalExecutions > 0
+        ? `${(((totalExecutions - failedJobs) / totalExecutions) * 100).toFixed(1)}%`
+        : '100%';
 
     res.status(200).json({
       success: true,

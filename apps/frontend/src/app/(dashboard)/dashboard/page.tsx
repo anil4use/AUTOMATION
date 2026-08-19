@@ -1,14 +1,20 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { StatCards, DashboardStatsData } from '@/components/dashboard/StatCards';
 import { AIPromptBar } from '@/components/ai/AIPromptBar';
 import Link from 'next/link';
-import { Plus, ArrowUpRight, Workflow, RefreshCw, Activity, CheckCircle2, PauseCircle, Crown, User } from 'lucide-react';
+import {
+  Plus, ArrowUpRight, Workflow, RefreshCw, Activity,
+  CheckCircle2, PauseCircle, Crown, User, Loader2,
+} from 'lucide-react';
 import { fetchDashboardStats } from '@/lib/api-client';
 import { useUserRole } from '@/context/UserRoleContext';
 import { toast } from 'sonner';
 
+import { useRouter } from 'next/navigation';
+
 export default function DashboardPage() {
+  const router = useRouter();
   const { user } = useUserRole();
   const [statsData, setStatsData] = useState<DashboardStatsData>({
     activeWorkflows: 0,
@@ -19,47 +25,35 @@ export default function DashboardPage() {
   const [recentWorkflows, setRecentWorkflows] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const calculateDynamicStats = () => {
+  const loadStats = useCallback(async () => {
     setIsLoading(true);
     try {
-      const storageKey = `autoflow_real_workflows_${user.email}`;
-      const savedStr = localStorage.getItem(storageKey);
-      const userWorkflows = savedStr ? JSON.parse(savedStr) : [];
-
-      const activeCount = userWorkflows.filter((w: any) => w.status === 'active' || w.status === 'Active').length;
-      const totalExec = userWorkflows.reduce((sum: number, w: any) => sum + (Number(w.runsCount) || 0), 0);
-      const failedCount = 0;
-      const calculatedRate = totalExec > 0 ? `${(((totalExec - failedCount) / totalExec) * 100).toFixed(1)}%` : '100%';
-
+      const data = await fetchDashboardStats();
       setStatsData({
-        activeWorkflows: activeCount,
-        totalExecutions: totalExec.toLocaleString(),
-        successRate: calculatedRate,
-        failedJobs: failedCount,
+        activeWorkflows: data.activeWorkflows ?? 0,
+        totalExecutions: data.totalExecutions ?? 0,
+        successRate: data.successRate ?? '100%',
+        failedJobs: data.failedJobs ?? 0,
       });
-
-      setRecentWorkflows(userWorkflows);
-    } catch (e) {
-      console.error('Error calculating dynamic stats:', e);
+      setRecentWorkflows(data.recentWorkflows || []);
+    } catch (err: any) {
+      console.error('Dashboard stats error:', err);
+      // Don't show fake numbers — just leave zeros
+      setStatsData({ activeWorkflows: 0, totalExecutions: 0, successRate: '—', failedJobs: 0 });
       setRecentWorkflows([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    calculateDynamicStats();
-  }, [user.email, user.role]);
+    loadStats();
+  }, [loadStats]);
 
   const handleRefresh = async () => {
-    calculateDynamicStats();
-    try {
-      await fetchDashboardStats();
-    } catch (e) {
-      // fallback
-    }
-    toast.info('Refreshed Real Metrics', {
-      description: `Updated metrics for ${user.email}.`,
+    await loadStats();
+    toast.info('Dashboard Refreshed', {
+      description: `Latest metrics loaded from MongoDB Atlas for ${user.email}.`,
     });
   };
 
@@ -68,11 +62,11 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <span>Platform Overview ({user.email})</span>
+            <span>Platform Overview</span>
             <button
               onClick={handleRefresh}
               className={`p-1.5 rounded-lg text-textMuted hover:text-white hover:bg-white/5 transition-colors ${isLoading ? 'animate-spin' : ''}`}
-              title="Recalculate Stats"
+              title="Refresh Stats"
             >
               <RefreshCw size={16} />
             </button>
@@ -81,12 +75,12 @@ export default function DashboardPage() {
             {user.role === 'admin' ? (
               <span className="text-accentPurple font-semibold flex items-center gap-1">
                 <Crown size={14} className="text-amber-400" />
-                Administrator Scope — Real user workflows & executions for {user.email}.
+                Administrator — Live metrics from MongoDB Atlas for {user.email}.
               </span>
             ) : (
               <span className="text-accentIndigo font-semibold flex items-center gap-1">
                 <User size={14} />
-                Member Scope — Personal workflow metrics for {user.email}.
+                Member — Personal metrics for {user.email}.
               </span>
             )}
           </p>
@@ -97,61 +91,74 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <AIPromptBar onGenerate={(prompt) => console.log('Generate:', prompt)} />
+      <AIPromptBar onGenerate={(prompt) => router.push(`/ai-agent?prompt=${encodeURIComponent(prompt)}`)} />
 
-      {/* Real Stat Cards (Zero Dummy Metrics) */}
-      <StatCards statsData={statsData} />
+      {/* Live Stat Cards from MongoDB */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8 gap-2 text-textMuted text-xs">
+          <Loader2 size={18} className="animate-spin text-accentPurple" />
+          <span>Loading live metrics...</span>
+        </div>
+      ) : (
+        <StatCards statsData={statsData} />
+      )}
 
-      {/* Real User Workflows List */}
+      {/* Recent Workflows from MongoDB */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Activity size={18} className="text-accentPurple" />
             <h3 className="text-base font-semibold text-white">
-              Your Real Workflows ({recentWorkflows.length})
+              Recent Workflows ({recentWorkflows.length})
             </h3>
           </div>
           <Link href="/workflows" className="text-accentIndigo text-xs flex items-center gap-1 hover:underline font-semibold">
-            <span>Manage Workflows →</span>
+            <span>Manage All →</span>
             <ArrowUpRight size={14} />
           </Link>
         </div>
 
-        {recentWorkflows.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8 gap-2 text-textMuted text-xs">
+            <Loader2 size={16} className="animate-spin text-accentPurple" />
+            <span>Loading workflows...</span>
+          </div>
+        ) : recentWorkflows.length === 0 ? (
           <div className="text-center py-8 text-textMuted text-xs bg-white/[0.01] rounded-xl border border-dashed border-borderColor">
-            No workflows created yet for account <strong className="text-white">{user.email}</strong>.<br />
-            Click <strong className="text-accentPurple">+ New Workflow</strong> above to build your first real automation pipeline.
+            No workflows yet for <strong className="text-white">{user.email}</strong>.<br />
+            Click <strong className="text-accentPurple">+ New Workflow</strong> above to build your first automation.
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {recentWorkflows.map((wf: any) => (
-              <div key={wf.id} className="flex items-center justify-between p-3 px-4 rounded-md bg-white/[0.02] border border-borderColor hover:border-accentPurple transition-all">
+              <div
+                key={wf._id || wf.id}
+                className="flex items-center justify-between p-3 px-4 rounded-md bg-white/[0.02] border border-borderColor hover:border-accentPurple transition-all"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-indigo-500/10 text-accentIndigo">
                     <Workflow size={16} />
                   </div>
                   <div>
                     <div className="font-semibold text-sm text-white">{wf.name}</div>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      {(wf.connectors || []).map((c: string) => (
-                        <span key={c} className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-accentIndigo font-mono">
-                          {c}
-                        </span>
-                      ))}
+                    <div className="text-[11px] text-textMuted mt-0.5">
+                      {wf.description || 'No description'} · Updated {new Date(wf.updatedAt || wf.createdAt).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${
-                    wf.status === 'active' || wf.status === 'Active'
+                    wf.status === 'active'
                       ? 'bg-emerald-500/15 text-accentEmerald'
                       : 'bg-amber-500/15 text-amber-400'
                   }`}>
-                    {wf.status === 'active' || wf.status === 'Active' ? <CheckCircle2 size={12} /> : <PauseCircle size={12} />}
-                    <span>{(wf.status || 'Active').toUpperCase()}</span>
+                    {wf.status === 'active' ? <CheckCircle2 size={12} /> : <PauseCircle size={12} />}
+                    <span>{(wf.status || 'draft').toUpperCase()}</span>
                   </span>
-                  <span className="text-textMuted text-xs font-mono">{wf.runsCount || 0} runs</span>
-                  <Link href={`/workflows/${wf.id}`} className="text-xs text-accentPurple hover:text-white font-semibold">
+                  <Link
+                    href={`/workflows/${wf._id || wf.id}`}
+                    className="text-xs text-accentPurple hover:text-white font-semibold"
+                  >
                     Edit →
                   </Link>
                 </div>

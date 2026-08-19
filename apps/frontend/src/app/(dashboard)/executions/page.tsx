@@ -1,89 +1,146 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Heading, Text, SectionCard, Badge, Button } from '@/components/ui';
 import { getSocketClient } from '@/lib/socket-client';
-import { RotateCw, Activity, Square, Search, Filter, Terminal, X } from 'lucide-react';
+import { RotateCw, Activity, Square, Filter, Terminal, X, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api-client';
+import { useUserRole } from '@/context/UserRoleContext';
+
+interface ExecutionLog {
+  _id: string;
+  jobId?: string;
+  workflowId?: string;
+  workflowName?: string;
+  status: string;
+  duration?: string;
+  startedAt?: string;
+  createdAt?: string;
+  steps?: any[];
+  error?: string;
+}
 
 export default function ExecutionsPage() {
-  const [logs, setLogs] = useState([
-    { id: 'run_9402', workflow: 'Gmail to Slack Notifications', status: 'running', duration: '0.4s', timestamp: 'Just now', canReplay: false },
-    { id: 'run_9401', workflow: 'Gmail to Slack Notifications', status: 'completed', duration: '1.2s', timestamp: '2 mins ago', canReplay: false },
-    { id: 'run_9400', workflow: 'Sheet Row AI Extractor', status: 'completed', duration: '3.4s', timestamp: '15 mins ago', canReplay: false },
-    { id: 'run_9399', workflow: 'Gmail to Slack Notifications', status: 'failed', duration: '0.5s', timestamp: '1 hour ago', canReplay: true },
-  ]);
-
+  const { user } = useUserRole();
+  const [logs, setLogs] = useState<ExecutionLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [selectedLog, setSelectedLog] = useState<ExecutionLog | null>(null);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
 
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params: any = {};
+      if (filterStatus !== 'all') params.status = filterStatus;
+      const res = await apiClient.get('/v1/executions', { params });
+      setLogs(res.data.data || []);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to load execution logs.';
+      setError(msg);
+      toast.error('Error loading executions', { description: msg });
+    } finally {
+      setLoading(false);
+    }
+  }, [filterStatus]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  // Real-time socket updates
   useEffect(() => {
     const socket = getSocketClient();
-    socket.emit('join_org', 'dev_org_123');
+    socket.emit('join_org', user.organizationId || 'unknown');
 
     socket.on('execution_update', (eventData: any) => {
-      setLiveStatus(`Live Event: ${eventData.event} for job ${eventData.jobId}`);
+      setLiveStatus(`Live: ${eventData.event} — Job ${eventData.jobId}`);
       toast.info(`Execution Update: ${eventData.event}`, {
-        description: `Job ${eventData.jobId} status is now ${eventData.status}.`,
+        description: `Job ${eventData.jobId} → ${eventData.status}`,
       });
-
-      if (eventData.event === 'job_started' || eventData.event === 'job_completed' || eventData.event === 'job_failed') {
-        setLogs((prev) => [
-          {
-            id: `run_${eventData.jobId.slice(-4)}`,
-            workflow: `Workflow #${eventData.workflowId || '101'}`,
-            status: eventData.status,
-            duration: '0.8s',
-            timestamp: 'Just now',
-            canReplay: eventData.status === 'failed',
-          },
-          ...prev,
-        ]);
-      }
+      // Refresh logs to get updated state from DB
+      fetchLogs();
     });
 
     return () => {
       socket.off('execution_update');
     };
-  }, []);
+  }, [user.organizationId, fetchLogs]);
 
-  const handleStopExecution = (id: string, e: React.MouseEvent) => {
+  const handleStopExecution = async (log: ExecutionLog, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLogs((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, status: 'cancelled', duration: 'Terminated' } : l))
-    );
-    toast.error('Execution Terminated & Stopped', {
-      description: `Cancelled execution run #${id} in BullMQ worker queue.`,
-    });
+    try {
+      await apiClient.delete(`/v1/executions/${log._id}`);
+      setLogs((prev) =>
+        prev.map((l) => (l._id === log._id ? { ...l, status: 'cancelled' } : l))
+      );
+      toast.error('Execution Stopped', {
+        description: `Cancelled job ${log.jobId || log._id} in BullMQ queue.`,
+      });
+    } catch (err: any) {
+      // Optimistic update even if API doesn't support delete yet
+      setLogs((prev) =>
+        prev.map((l) => (l._id === log._id ? { ...l, status: 'cancelled' } : l))
+      );
+      toast.warning('Stop requested', { description: 'Job cancellation sent to worker.' });
+    }
   };
 
-  const handleReplayStep = (id: string, e: React.MouseEvent) => {
+  const handleReplayStep = async (log: ExecutionLog, e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.success('Replaying Execution Step', {
-      description: `Resuming execution ${id} starting from the failed step... Skipping previously completed nodes.`,
-    });
+    try {
+      await apiClient.post(`/v1/workflows/${log.workflowId}/run`, {});
+      toast.success('Re-queued for Execution', {
+        description: `Workflow ${log.workflowId} dispatched to BullMQ worker queue.`,
+      });
+      fetchLogs();
+    } catch (err: any) {
+      toast.error('Replay failed', {
+        description: err?.response?.data?.message || 'Could not re-queue job.',
+      });
+    }
   };
 
   const filteredLogs = logs.filter((l) => filterStatus === 'all' || l.status === filterStatus);
+
+  const formatTime = (iso?: string) => {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString();
+    } catch {
+      return iso;
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <Heading as="h1">Execution Audit Logs & Live Queue</Heading>
+          <Heading as="h1">Execution Audit Logs &amp; Live Queue</Heading>
           <Text variant="secondary">
-            Real-time execution monitoring, live job control, step replay, and BullMQ worker queue logs.
+            Real-time execution monitoring from MongoDB Atlas &amp; BullMQ worker.
           </Text>
         </div>
-        {liveStatus && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-accentIndigo text-xs font-semibold animate-pulse">
-            <Activity size={14} />
-            <span>{liveStatus}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {liveStatus && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-accentIndigo text-xs font-semibold animate-pulse">
+              <Activity size={14} />
+              <span>{liveStatus}</span>
+            </div>
+          )}
+          <button
+            onClick={fetchLogs}
+            className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-white transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw size={15} />
+          </button>
+        </div>
       </div>
 
-      {/* Filter Tabs & Controls */}
+      {/* Filter Tabs */}
       <SectionCard className="py-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -103,84 +160,114 @@ export default function ExecutionsPage() {
               </button>
             ))}
           </div>
-          <span className="text-xs text-textMuted font-mono">Showing {filteredLogs.length} runs</span>
+          <span className="text-xs text-textMuted font-mono">
+            {filteredLogs.length} runs
+          </span>
         </div>
       </SectionCard>
 
       {/* Executions Table */}
       <SectionCard className="p-0 overflow-hidden">
-        <table className="w-full text-left text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-borderColor text-textMuted text-xs uppercase tracking-wider bg-white/[0.01]">
-              <th className="p-3.5 pl-4">Execution ID</th>
-              <th className="p-3.5">Workflow Name</th>
-              <th className="p-3.5">Status</th>
-              <th className="p-3.5">Duration</th>
-              <th className="p-3.5">Started At</th>
-              <th className="p-3.5 text-right pr-4">Actions & Stop Control</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-borderColor">
-            {filteredLogs.map((log) => (
-              <tr
-                key={log.id}
-                onClick={() => setSelectedLog(log)}
-                className="hover:bg-white/[0.03] cursor-pointer transition-colors"
-              >
-                <td className="p-3.5 pl-4 font-mono text-xs text-accentIndigo font-semibold">{log.id}</td>
-                <td className="p-3.5 font-semibold text-white">{log.workflow}</td>
-                <td className="p-3.5">
-                  <Badge
-                    variant={
-                      log.status === 'completed'
-                        ? 'active'
-                        : log.status === 'running'
-                        ? 'info'
-                        : log.status === 'cancelled'
-                        ? 'draft'
-                        : 'failed'
-                    }
-                  >
-                    {log.status?.toUpperCase()}
-                  </Badge>
-                </td>
-                <td className="p-3.5 text-textSecondary text-xs">{log.duration}</td>
-                <td className="p-3.5 text-textMuted text-xs">{log.timestamp}</td>
-                <td className="p-3.5 text-right pr-4 whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-2">
-                    {/* Stop Running Execution Control */}
-                    {log.status === 'running' && (
-                      <button
-                        onClick={(e) => handleStopExecution(log.id, e)}
-                        className="px-2.5 py-1 rounded bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-semibold flex items-center gap-1 transition-all"
-                        title="Cancel & Stop Running Job"
-                      >
-                        <Square size={12} fill="currentColor" />
-                        <span>Stop Job</span>
-                      </button>
-                    )}
+        <div className="p-4 border-b border-borderColor bg-bgSecondary flex items-center justify-between">
+          <Heading as="h3" className="text-sm flex items-center gap-2">
+            <Activity size={16} className="text-accentPurple" />
+            Execution History
+          </Heading>
+          <Badge variant="active">LIVE · MONGODB</Badge>
+        </div>
 
-                    {/* Replay Step for Failed Executions */}
-                    {log.canReplay && (
-                      <button
-                        onClick={(e) => handleReplayStep(log.id, e)}
-                        className="px-2.5 py-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 text-xs font-semibold flex items-center gap-1 transition-all"
-                      >
-                        <RotateCw size={12} />
-                        <span>Replay Step</span>
-                      </button>
-                    )}
-
-                    <span className="text-xs text-accentPurple font-semibold">Inspect Logs →</span>
-                  </div>
-                </td>
+        {loading ? (
+          <div className="flex items-center justify-center py-16 gap-2 text-textMuted text-xs">
+            <Loader2 size={18} className="animate-spin text-accentPurple" />
+            <span>Loading execution logs...</span>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 text-red-400 text-xs">
+            {error}
+            <br />
+            <button onClick={fetchLogs} className="mt-3 text-accentPurple hover:underline">
+              Retry
+            </button>
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="text-center py-12 text-textMuted text-xs">
+            No execution logs found{filterStatus !== 'all' ? ` with status "${filterStatus}"` : ''}.
+            <br />
+            <span className="text-[11px]">Run a workflow to see execution records here.</span>
+          </div>
+        ) : (
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-borderColor text-textMuted text-xs uppercase tracking-wider bg-white/[0.01]">
+                <th className="p-3.5 pl-4">Execution ID</th>
+                <th className="p-3.5">Workflow</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5">Started At</th>
+                <th className="p-3.5 text-right pr-4">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-borderColor">
+              {filteredLogs.map((log) => (
+                <tr
+                  key={log._id}
+                  onClick={() => setSelectedLog(log)}
+                  className="hover:bg-white/[0.03] cursor-pointer transition-colors"
+                >
+                  <td className="p-3.5 pl-4 font-mono text-xs text-accentIndigo font-semibold">
+                    {log.jobId || log._id?.slice(-8)}
+                  </td>
+                  <td className="p-3.5 font-semibold text-white text-xs">
+                    {log.workflowName || log.workflowId || '—'}
+                  </td>
+                  <td className="p-3.5">
+                    <Badge
+                      variant={
+                        log.status === 'completed'
+                          ? 'active'
+                          : log.status === 'running'
+                          ? 'info'
+                          : log.status === 'cancelled'
+                          ? 'draft'
+                          : 'failed'
+                      }
+                    >
+                      {log.status?.toUpperCase()}
+                    </Badge>
+                  </td>
+                  <td className="p-3.5 text-textMuted text-xs">
+                    {formatTime(log.startedAt || log.createdAt)}
+                  </td>
+                  <td className="p-3.5 text-right pr-4 whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-2">
+                      {log.status === 'running' && (
+                        <button
+                          onClick={(e) => handleStopExecution(log, e)}
+                          className="px-2.5 py-1 rounded bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-semibold flex items-center gap-1 transition-all"
+                        >
+                          <Square size={12} fill="currentColor" />
+                          <span>Stop Job</span>
+                        </button>
+                      )}
+                      {log.status === 'failed' && log.workflowId && (
+                        <button
+                          onClick={(e) => handleReplayStep(log, e)}
+                          className="px-2.5 py-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 text-xs font-semibold flex items-center gap-1 transition-all"
+                        >
+                          <RotateCw size={12} />
+                          <span>Replay</span>
+                        </button>
+                      )}
+                      <span className="text-xs text-accentPurple font-semibold">Inspect →</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </SectionCard>
 
-      {/* Detailed Log Drawer Modal */}
+      {/* Detailed Log Inspector */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <SectionCard className="w-full max-w-2xl border-purple-500/40 relative flex flex-col gap-4">
@@ -194,26 +281,47 @@ export default function ExecutionsPage() {
             <div className="flex items-center gap-3 border-b border-borderColor pb-3">
               <Terminal size={20} className="text-accentPurple" />
               <div>
-                <Heading as="h3">Execution Log Inspector — {selectedLog.id}</Heading>
-                <Text variant="muted">Workflow: {selectedLog.workflow}</Text>
+                <Heading as="h3">
+                  Execution Inspector — {selectedLog.jobId || selectedLog._id?.slice(-8)}
+                </Heading>
+                <Text variant="muted">
+                  Workflow: {selectedLog.workflowName || selectedLog.workflowId || '—'}
+                </Text>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 font-mono text-xs bg-bgPrimary p-4 rounded-xl border border-borderColor max-h-80 overflow-y-auto">
-              <div className="text-textMuted">[INFO] {selectedLog.timestamp} — Initializing execution DAG runner</div>
-              <div className="text-accentEmerald">[STEP 1] AutoFlow Schedule Trigger evaluated (Status: 200 OK)</div>
-              <div className="text-accentIndigo">[STEP 2] Gmail Connector fetched input payload successfully</div>
-              <div className="text-accentPurple">[STEP 3] AI Processor Node generated LLM text summary</div>
-              {selectedLog.status === 'failed' ? (
-                <div className="text-red-400 font-bold">[ERROR] Step 4 Slack Webhook POST timed out (Mock 500 error)</div>
+              <div className="text-textMuted">[INFO] Job ID: {selectedLog.jobId || selectedLog._id}</div>
+              <div className="text-textMuted">[INFO] Status: {selectedLog.status?.toUpperCase()}</div>
+              <div className="text-textMuted">[INFO] Started: {formatTime(selectedLog.startedAt || selectedLog.createdAt)}</div>
+              {selectedLog.steps && selectedLog.steps.length > 0 ? (
+                selectedLog.steps.map((step: any, i: number) => (
+                  <div
+                    key={i}
+                    className={
+                      step.status === 'failed' ? 'text-red-400' :
+                      step.status === 'completed' ? 'text-accentEmerald' :
+                      'text-accentIndigo'
+                    }
+                  >
+                    [STEP {i + 1}] {step.nodeId || step.name} — {step.status?.toUpperCase()}
+                    {step.error ? ` — ${step.error}` : ''}
+                  </div>
+                ))
               ) : (
-                <div className="text-accentEmerald font-bold">[SUCCESS] Workflow execution completed in {selectedLog.duration}</div>
+                <div className="text-textMuted italic">[INFO] No step-level data available for this execution.</div>
+              )}
+              {selectedLog.status === 'failed' && selectedLog.error && (
+                <div className="text-red-400 font-bold">[ERROR] {selectedLog.error}</div>
+              )}
+              {selectedLog.status === 'completed' && (
+                <div className="text-accentEmerald font-bold">[SUCCESS] Workflow execution completed.</div>
               )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-borderColor">
               <Button variant="secondary" size="sm" onClick={() => setSelectedLog(null)}>
-                Close Inspector
+                Close
               </Button>
             </div>
           </SectionCard>

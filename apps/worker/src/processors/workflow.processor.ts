@@ -54,7 +54,8 @@ export async function processWorkflowJob(job: Job) {
       workflow.definition.edges,
       triggerPayload,
       replayFromNodeId,
-      existingResults
+      existingResults,
+      orgId
     );
 
     log.status = 'completed';

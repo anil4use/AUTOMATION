@@ -8,7 +8,8 @@ export class DAGRunner {
     edges: DAGEdge[],
     triggerPayload: Record<string, any>,
     replayFromNodeId?: string,
-    existingNodeResults: Record<string, any> = {}
+    existingNodeResults: Record<string, any> = {},
+    orgId?: string
   ) {
     const nodeResults: Record<string, any> = { ...existingNodeResults };
     let foundReplayStart = !replayFromNodeId;
@@ -31,7 +32,7 @@ export class DAGRunner {
 
       console.log(`[DAGRunner Engine] Executing node: ${node.name} (${node.id})`);
       const output = await RetryHandler.executeWithRetry(() =>
-        StepExecutor.executeStep(node, nodeResults, triggerPayload)
+        StepExecutor.executeStep(node, nodeResults, triggerPayload, orgId)
       );
 
       nodeResults[node.id] = { output, status: 'completed', completedAt: new Date().toISOString() };

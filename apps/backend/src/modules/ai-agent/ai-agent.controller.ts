@@ -4,9 +4,38 @@ import { AuthenticatedRequest } from '../../shared/types/common.types';
 import { sendResponse } from '../../shared/utils/response';
 
 export class AIAgentController {
+  static async getHistory(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const messages = await AIAgentService.getChatHistory(req.user!.organizationId, req.user!.userId);
+      return sendResponse(res, 200, true, messages, 'Chat history loaded from MongoDB Atlas');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async clearHistory(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      await AIAgentService.clearChatHistory(req.user!.organizationId, req.user!.userId);
+      return sendResponse(res, 200, true, null, 'Chat history cleared from MongoDB Atlas');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async chat(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const messages = req.body.messages || [{ role: 'user', content: req.body.prompt || '' }];
+      const data = await AIAgentService.processChat(messages, req.user!.organizationId, req.user!.userId);
+      return sendResponse(res, 200, true, data, 'AI chat response generated and saved to MongoDB Atlas');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async generate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const data = await AIAgentService.generateWorkflow(req.body.prompt, req.user!.organizationId);
+      const messages = [{ role: 'user' as const, content: req.body.prompt || '' }];
+      const data = await AIAgentService.processChat(messages, req.user!.organizationId, req.user!.userId);
       return sendResponse(res, 200, true, data, 'Workflow generated from AI prompt');
     } catch (err) {
       next(err);
