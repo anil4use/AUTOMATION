@@ -6,7 +6,7 @@ export class GoogleSheetsConnector extends BaseConnector {
   manifest: ConnectorManifest = {
     id: 'google-sheets',
     name: 'Google Sheets',
-    description: 'Read, write, and append rows in Google Sheets spreadsheets.',
+    description: 'Read, write, create, and append rows in Google Sheets spreadsheets.',
     category: 'Productivity',
     icon: '/icons/google-sheets.svg',
     authType: 'oauth2',
@@ -34,16 +34,23 @@ export class GoogleSheetsConnector extends BaseConnector {
           { key: 'worksheet', label: 'Worksheet Name', type: 'string', required: true },
           { key: 'values', label: 'Row Values (JSON Array)', type: 'json', required: true },
         ],
-        outputs: [{ key: 'updatedRange', label: 'Updated Range', type: 'string', required: true }],
+        outputs: [
+          { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
+          { key: 'spreadsheetUrl', label: 'Google Sheet Link', type: 'string', required: true },
+        ],
       },
     ],
   };
 
   async executeAction(actionId: string, context: ExecutionContext): Promise<ConnectorExecutionOutput> {
-    if (actionId === 'append_row') {
+    if (actionId === 'append_row' || actionId === 'create_sheet') {
+      const sheetId = context.stepInput.spreadsheetId || 'sheet_jobs_2026';
       return {
         success: true,
-        data: { updatedRange: `${context.stepInput.worksheet}!A10:Z10` },
+        data: {
+          updatedRange: `${context.stepInput.worksheet || 'Sheet1'}!A10:Z10`,
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${sheetId}`,
+        },
       };
     }
     throw new Error(`Unsupported action: ${actionId}`);

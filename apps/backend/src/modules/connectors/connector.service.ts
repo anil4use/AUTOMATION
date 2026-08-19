@@ -9,6 +9,7 @@ import {
   StripeConnector,
   WhatsAppConnector,
   HttpRequestConnector,
+  WebSearchConnector,
   OAuth2Strategy,
 } from '@automation/connector-sdk';
 import { ConnectorRepository } from './connector.repository';
@@ -18,6 +19,7 @@ import { env } from '../../config/env';
 
 const availableConnectors = [
   new AutoFlowScheduleConnector().manifest,
+  new WebSearchConnector().manifest,
   new GmailConnector().manifest,
   new SlackConnector().manifest,
   new GoogleSheetsConnector().manifest,

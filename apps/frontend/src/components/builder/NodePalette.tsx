@@ -8,6 +8,7 @@ export function NodePalette() {
 
   const connectors = [
     { id: 'autoflow-schedule', name: 'AutoFlow Schedule Trigger', category: 'Core Triggers', type: 'trigger', icon: Clock, operations: ['schedule_time', 'schedule_weekly', 'schedule_date', 'schedule_cron', 'inbound_webhook'] },
+    { id: 'web-search', name: 'Web Search & Scraper', category: 'Data & Search', type: 'action', icon: Search, operations: ['search_web', 'scrape_url'] },
     { id: 'gmail', name: 'Gmail', category: 'Communication', type: 'trigger', icon: Mail, operations: ['new_email', 'send_email'] },
     { id: 'slack', name: 'Slack', category: 'Communication', type: 'action', icon: MessageSquare, operations: ['send_message', 'post_channel'] },
     { id: 'google-sheets', name: 'Google Sheets', category: 'Productivity', type: 'trigger', icon: Table, operations: ['new_row', 'append_row'] },

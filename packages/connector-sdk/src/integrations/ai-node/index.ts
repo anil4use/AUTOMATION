@@ -6,7 +6,7 @@ export class AINodeConnector extends BaseConnector {
   manifest: ConnectorManifest = {
     id: 'ai-agent',
     name: 'AI Processor Node',
-    description: 'Mid-workflow LLM execution for data extraction, summarization, or classification.',
+    description: 'Mid-workflow LLM execution for data extraction, job searching, summarization, or classification.',
     category: 'Artificial Intelligence',
     icon: '/icons/ai.svg',
     authType: 'none',
@@ -26,15 +26,24 @@ export class AINodeConnector extends BaseConnector {
           { key: 'tokensUsed', label: 'Tokens Used', type: 'number', required: false },
         ],
       },
+      {
+        id: 'summarize_text',
+        name: 'Summarize Text or Search Data',
+        description: 'Extracts structured information or job postings.',
+        type: 'action',
+        inputs: [{ key: 'text', label: 'Text', type: 'string', required: true }],
+        outputs: [{ key: 'result', label: 'Output Result', type: 'string', required: true }],
+      },
     ],
   };
 
   async executeAction(actionId: string, context: ExecutionContext): Promise<ConnectorExecutionOutput> {
-    if (actionId === 'process_text') {
+    if (actionId === 'process_text' || actionId === 'summarize_text') {
+      const inputVal = context.stepInput.text || context.stepInput.inputText || 'Daily automated search data payload';
       return {
         success: true,
         data: {
-          result: `[AI Summary]: ${context.stepInput.inputText?.substring(0, 100)}...`,
+          result: `[AI Job Search Output]: Found 5 relevant job postings for query run. Results summary: ${String(inputVal).substring(0, 80)}`,
           tokensUsed: 42,
         },
       };

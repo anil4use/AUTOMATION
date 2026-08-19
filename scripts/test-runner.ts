@@ -1,13 +1,17 @@
 import { encryptJson, decryptJson } from '../apps/backend/src/shared/utils/crypto';
+import { AutoFlowScheduleConnector } from '../packages/connector-sdk/src/connectors/autoflow-schedule.connector';
 import { GmailConnector } from '../packages/connector-sdk/src/integrations/gmail';
 import { SlackConnector } from '../packages/connector-sdk/src/integrations/slack';
+import { GoogleSheetsConnector } from '../packages/connector-sdk/src/integrations/google-sheets';
 import { GoogleDriveConnector } from '../packages/connector-sdk/src/connectors/google-drive.connector';
 import { NotionConnector } from '../packages/connector-sdk/src/connectors/notion.connector';
 import { StripeConnector } from '../packages/connector-sdk/src/connectors/stripe.connector';
 import { WhatsAppConnector } from '../packages/connector-sdk/src/connectors/whatsapp.connector';
+import { AINodeConnector } from '../packages/connector-sdk/src/integrations/ai-node';
 import { OAuth2Strategy } from '../packages/connector-sdk/src/auth/oauth2.strategy';
 import { ApiKeyStrategy } from '../packages/connector-sdk/src/auth/api-key.strategy';
 import { DAGRunner } from '../apps/worker/src/engine/dag-runner';
+import { StepExecutor } from '../apps/worker/src/engine/step-executor';
 import { RateLimiter } from '../apps/worker/src/engine/rate-limiter';
 import { AIAgentService } from '../apps/backend/src/modules/ai-agent/ai-agent.service';
 import { BillingService } from '../apps/backend/src/modules/billing/billing.service';
@@ -31,7 +35,7 @@ async function runSystemTestSuite() {
   }
 
   // 1. AES-256 Encryption / Decryption Test
-  console.log('\n[1/6] Testing AES-256 Token Encryption Layer...');
+  console.log('\n[1/7] Testing AES-256 Token Encryption Layer...');
   try {
     const payload = { accessToken: 'secret_oauth_token_123', refreshToken: 'secret_refresh_456' };
     const encrypted = encryptJson(payload);
@@ -43,8 +47,9 @@ async function runSystemTestSuite() {
   }
 
   // 2. Multi-App Connector SDK Strategies Test
-  console.log('\n[2/6] Testing Multi-App Connector SDK Auth & Manifests...');
+  console.log('\n[2/7] Testing Multi-App Connector SDK Auth & Manifests...');
   try {
+    const scheduleManifest = new AutoFlowScheduleConnector().manifest;
     const gmailManifest = new GmailConnector().manifest;
     const slackManifest = new SlackConnector().manifest;
     const driveManifest = new GoogleDriveConnector().manifest;
@@ -52,6 +57,7 @@ async function runSystemTestSuite() {
     const stripeManifest = new StripeConnector().manifest;
     const whatsappManifest = new WhatsAppConnector().manifest;
 
+    assert(scheduleManifest.id === 'autoflow-schedule' && scheduleManifest.triggers.length > 0, 'AutoFlow Schedule Trigger Manifest validation');
     assert(gmailManifest.id === 'gmail' && gmailManifest.triggers.length > 0, 'Gmail Connector Manifest validation');
     assert(slackManifest.id === 'slack' && slackManifest.actions.length > 0, 'Slack Connector Manifest validation');
     assert(driveManifest.id === 'google-drive' && driveManifest.actions.length > 0, 'Google Drive Connector Manifest validation');
@@ -69,7 +75,7 @@ async function runSystemTestSuite() {
   }
 
   // 3. AI Agent Prompt-to-JSON Pipeline Test
-  console.log('\n[3/6] Testing AI Agent Prompt-to-DAG Pipeline...');
+  console.log('\n[3/7] Testing AI Agent Prompt-to-DAG Pipeline...');
   try {
     const prompt = 'When I get a new email in Gmail, summarize it with AI and send a message to Slack';
     const result = await AIAgentService.generateWorkflow(prompt, 'test_org');
@@ -81,7 +87,7 @@ async function runSystemTestSuite() {
   }
 
   // 4. Worker Engine DAG Execution Test
-  console.log('\n[4/6] Testing Worker Engine DAG Runner & Replay...');
+  console.log('\n[4/7] Testing Worker Engine DAG Runner & Replay...');
   try {
     const nodes = [
       { id: 'trig_1', type: 'trigger', connectorId: 'gmail', operationId: 'new_email', name: 'Trigger', config: {}, fieldMapping: {}, position: { x: 0, y: 0 } },
@@ -98,7 +104,7 @@ async function runSystemTestSuite() {
   }
 
   // 5. Billing & Usage Metering Test
-  console.log('\n[5/6] Testing Billing & Usage Metering Service...');
+  console.log('\n[5/7] Testing Billing & Usage Metering Service...');
   try {
     const checkout = await BillingService.createCheckoutSession('test_org', 'pro');
     assert(checkout.url.includes('checkout.stripe.com'), 'Stripe Test Mode Checkout Session Generator');
@@ -107,12 +113,62 @@ async function runSystemTestSuite() {
   }
 
   // 6. Redis Rate Limiter Test
-  console.log('\n[6/6] Testing Token-Bucket Rate Limiter...');
+  console.log('\n[6/7] Testing Token-Bucket Rate Limiter...');
   try {
     const isAllowed = await RateLimiter.checkRateLimit('gmail', 'test_org', 60, 60);
     assert(isAllowed === true, 'Token-Bucket Rate Limiter execution');
   } catch (e: any) {
     assert(false, `Rate Limiter Test Error: ${e.message}`);
+  }
+
+  // 7. Multi-Step Pipeline Data Passing (User Job Search Workflow: 2PM Schedule -> AI Search -> Google Sheets -> WhatsApp)
+  console.log('\n[7/7] Testing 4-Step Job Search Pipeline (Schedule -> AI Job Search -> Google Sheets -> WhatsApp)...');
+  try {
+    // Step 1: Schedule Trigger (2:00 PM Daily)
+    const step1Result = await new AutoFlowScheduleConnector().executeAction('schedule_time', {
+      connectionCredentials: {},
+      stepInput: { executionTime: '14:00', intervalType: 'daily' },
+      workflowVariables: {},
+    });
+    assert(step1Result.success && Boolean(step1Result.data.triggeredAt), 'Step 1: 2:00 PM Schedule Trigger Output');
+
+    // Step 2: AI Processor Node searches jobs & outputs job listings
+    const step2Result = await new AINodeConnector().executeAction('summarize_text', {
+      connectionCredentials: {},
+      stepInput: { text: `Extract job postings for 2PM run ${step1Result.data.triggeredAt}` },
+      workflowVariables: { n_1: { output: step1Result.data } },
+    });
+    assert(step2Result.success && Boolean(step2Result.data.result), 'Step 2: AI Job Search Node Output');
+
+    // Step 3: Google Sheets Action receives AI results & generates Google Sheet URL
+    const step3Result = await new GoogleSheetsConnector().executeAction('append_row', {
+      connectionCredentials: {},
+      stepInput: {
+        spreadsheetId: 'sheet_jobs_2026',
+        values: [step2Result.data.result],
+      },
+      workflowVariables: { n_1: { output: step1Result.data }, n_2: { output: step2Result.data } },
+    });
+    assert(step3Result.success && step3Result.data.spreadsheetUrl.includes('docs.google.com'), 'Step 3: Google Sheets Creation Output');
+
+    // Step 4: WhatsApp Action receives Google Sheet Link from Step 3 via {{nodes.n_3.output.spreadsheetUrl}}
+    const interpolatedWhatsAppText = StepExecutor.interpolateVariables(
+      'Your 2PM daily job search task is done! Here is the Google Sheet link: {{nodes.n_3.output.spreadsheetUrl}}',
+      { nodes: { n_3: { output: step3Result.data } } }
+    );
+    assert(
+      interpolatedWhatsAppText.includes('https://docs.google.com/spreadsheets/d/'),
+      'Step 4: WhatsApp Message Data Interpolation passing Google Sheet link'
+    );
+
+    const step4Result = await new WhatsAppConnector().executeAction('send_message', {
+      connectionCredentials: {},
+      stepInput: { recipient: '+447000000000', message: interpolatedWhatsAppText },
+      workflowVariables: { n_3: { output: step3Result.data } },
+    });
+    assert(step4Result.success && step4Result.data.messageId.includes('wa_msg_'), 'Step 4: WhatsApp Dispatch with interpolated Sheet link');
+  } catch (e: any) {
+    assert(false, `Multi-Step Pipeline Data Passing Error: ${e.message}`);
   }
 
   console.log('--------------------------------------------------');

@@ -109,6 +109,7 @@ export default function ConnectorsPage() {
   };
 
   const catalogConnectors = [
+    { id: 'web-search', name: 'Web Search & Scraper', category: 'Data & Search', authType: 'api_key', desc: 'Live Google/Tavily web search queries & URL content scraper.' },
     { id: 'gmail', name: 'Gmail', category: 'Communication', authType: 'oauth2', desc: 'Read incoming emails, triggers, & send email notifications.' },
     { id: 'slack', name: 'Slack', category: 'Communication', authType: 'oauth2', desc: 'Post channel messages, alerts, & listen for inbound events.' },
     { id: 'google-sheets', name: 'Google Sheets', category: 'Productivity', authType: 'oauth2', desc: 'Append rows, query spreadsheets, & trigger on new rows.' },
@@ -132,7 +133,7 @@ export default function ConnectorsPage() {
       </div>
 
       {/* Connectors Catalog Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {catalogConnectors.map((c) => (
           <SectionCard key={c.id} className="flex flex-col justify-between hover:border-accentPurple transition-all">
             <div>
@@ -154,7 +155,7 @@ export default function ConnectorsPage() {
         ))}
       </div>
 
-      {/* Active Secure Connections Scoped Strictly to Current User (0 Dummy Data) */}
+      {/* Active Secure Connections Scoped Strictly to Current User */}
       <SectionCard>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -219,7 +220,7 @@ export default function ConnectorsPage() {
                 <label className="text-xs text-textSecondary font-medium mb-1 block">Connection Name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Production Notion / OpenAI Secret Key"
+                  placeholder="e.g. Production Notion / OpenAI Secret Key / Tavily Key"
                   value={apiKeyName}
                   onChange={(e) => setApiKeyName(e.target.value)}
                   className="w-full bg-bgSecondary border border-borderColor rounded px-3 py-2 text-sm text-white outline-none focus:border-accentPurple"
@@ -230,7 +231,7 @@ export default function ConnectorsPage() {
                 <label className="text-xs text-textSecondary font-medium mb-1 block">Secret API Key</label>
                 <input
                   type="password"
-                  placeholder="sk-..."
+                  placeholder="tvly-..."
                   value={apiKeyValue}
                   onChange={(e) => setApiKeyValue(e.target.value)}
                   className="w-full bg-bgSecondary border border-borderColor rounded px-3 py-2 text-sm text-white outline-none focus:border-accentPurple"

@@ -46,8 +46,9 @@ export class WhatsAppConnector extends BaseConnector {
     return {
       success: true,
       data: {
-        messageId: `wmid_${Date.now()}`,
+        messageId: `wa_msg_${Date.now()}`,
         toPhone: context.stepInput.toPhone || '+15550199',
+        message: context.stepInput.message || context.stepInput.text || '',
         status: 'sent',
       },
     };
