@@ -41,4 +41,20 @@ export class AIAgentController {
       next(err);
     }
   }
+
+  static async copilot(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { nodes, edges, prompt, userPrompt } = req.body;
+      const data = await AIAgentService.processCopilotChat(
+        nodes || [],
+        edges || [],
+        userPrompt || prompt || '',
+        req.user!.organizationId,
+        req.user!.userId
+      );
+      return sendResponse(res, 200, true, data, 'Canvas mutated dynamically by AI Co-Pilot Assistant');
+    } catch (err) {
+      next(err);
+    }
+  }
 }

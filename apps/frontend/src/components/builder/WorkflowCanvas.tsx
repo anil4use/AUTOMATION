@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
+const VERTICAL_NODE_SPACING = 270;
+
 export function WorkflowCanvas({
   workflowId = 'new',
   initialNodes = null,
@@ -112,7 +114,7 @@ export function WorkflowCanvas({
       const dupNode: Node = {
         ...sourceNode,
         id: dupNodeId,
-        position: { x: 250, y: sourceNode.position.y + 180 },
+        position: { x: 250, y: sourceNode.position.y + VERTICAL_NODE_SPACING },
         data: {
           ...sourceNode.data,
           label: `${sourceNode.data.label} (Copy)`,
@@ -129,7 +131,7 @@ export function WorkflowCanvas({
         const isPast = n.position.y > sourceNode.position.y;
         return {
           ...n,
-          position: isPast ? { ...n.position, y: n.position.y + 180 } : n.position,
+          position: isPast ? { ...n.position, y: n.position.y + VERTICAL_NODE_SPACING } : n.position,
           data: {
             ...n.data,
             isLastInChain: isPast ? n.data.isLastInChain : false,
@@ -169,17 +171,14 @@ export function WorkflowCanvas({
         return newEdges;
       });
 
-      const remaining = currentNodes
-        .filter((n) => n.id !== nodeId)
-        .map((n) => (n.position.y > targetNode.position.y ? { ...n, position: { ...n.position, y: n.position.y - 180 } } : n));
-
-      const sorted = [...remaining].sort((a, b) => a.position.y - b.position.y);
-      return sorted.map((n, idx) => ({
+      const remaining = currentNodes.filter((n) => n.id !== nodeId);
+      return remaining.map((n, idx) => ({
         ...n,
+        position: { x: 250, y: 80 + idx * VERTICAL_NODE_SPACING },
         data: {
           ...n.data,
           stepNumber: idx + 1,
-          isLastInChain: idx === sorted.length - 1,
+          isLastInChain: idx === remaining.length - 1,
         },
       }));
     });
@@ -207,7 +206,7 @@ export function WorkflowCanvas({
         return bindNodeCallbacks({
           id: n.id || `node_${idx + 1}`,
           type: 'custom',
-          position: n.position || { x: 250, y: 80 + idx * 180 },
+          position: { x: 250, y: 80 + idx * VERTICAL_NODE_SPACING },
           data: {
             stepNumber: idx + 1,
             label: n.name || n.label || `Step ${idx + 1}`,

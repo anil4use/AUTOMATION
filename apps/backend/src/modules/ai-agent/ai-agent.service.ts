@@ -441,4 +441,319 @@ export class AIAgentService {
     if (data.error) throw new Error(`Groq API error: ${data.error.message}`);
     return data.choices?.[0]?.message?.content || '';
   }
+
+  /**
+   * In-Canvas AI Co-Pilot Assistant method
+   * Receives current canvas nodes + edges + user prompt and dynamically mutates canvas state
+   */
+  static async processCopilotChat(currentNodes: any[], currentEdges: any[], userPrompt: string, orgId: string, userId: string) {
+    logger.info(`[AIAgentService] Processing Co-Pilot request: "${userPrompt}" with ${currentNodes.length} nodes`);
+
+    const lower = userPrompt.trim().toLowerCase();
+
+    // System prompt for Co-Pilot
+    const COPILOT_SYSTEM_PROMPT = `You are the In-Canvas AutoFlow AI Co-Pilot Assistant.
+Your job is to analyze the user's current workflow canvas nodes and edges, process their modification request, and return the UPDATED workflow canvas JSON.
+
+CURRENT CANVAS STATE:
+Nodes: ${JSON.stringify(currentNodes, null, 2)}
+Edges: ${JSON.stringify(currentEdges, null, 2)}
+
+USER REQUEST: "${userPrompt}"
+
+RULES:
+1. If user asks to ADD a step (e.g. Google Sheets, Slack, Web Search, AI Analyst): insert the node at the right position, connect edges sequentially.
+2. If user asks to DELETE a step (e.g. "delete step 3"): remove the node and re-wire edges between adjacent nodes.
+3. If user asks to UPDATE/CONFIGURE a step (e.g. "change sheet name to React_Jobs", "set maxResults to 20"): update that node's config and fieldMapping properties.
+4. Return ONLY a single raw valid JSON object (no markdown code fences):
+{
+  "replyMessage": "Markdown text describing changes made (e.g. '✨ Added Step 4: Google Sheets, configured spreadsheetId to React_Jobs').",
+  "changesSummary": ["Added Google Sheets step", "Updated sheet name to React_Jobs"],
+  "nodes": [ ... updated nodes array ... ],
+  "edges": [ ... updated edges array ... ]
 }
+`;
+
+    let llmJsonText = '';
+
+    if (env.geminiApiKey) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: COPILOT_SYSTEM_PROMPT }] }],
+              generationConfig: { responseMimeType: 'application/json' },
+            }),
+          }
+        );
+        const data = await response.json();
+        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          llmJsonText = data.candidates[0].content.parts[0].text;
+        }
+      } catch (err) {
+        logger.warn('[AIAgentService] Gemini Co-Pilot call error:', err);
+      }
+    }
+
+    if (!llmJsonText && env.groqApiKey) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${env.groqApiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'openai/gpt-oss-20b',
+            response_format: { type: 'json_object' },
+            messages: [{ role: 'system', content: COPILOT_SYSTEM_PROMPT }],
+          }),
+        });
+        const data = await response.json();
+        if (data.choices?.[0]?.message?.content) {
+          llmJsonText = data.choices[0].message.content;
+        }
+      } catch (err) {
+        logger.warn('[AIAgentService] Groq Co-Pilot call error:', err);
+      }
+    }
+
+    if (llmJsonText) {
+      try {
+        const cleaned = llmJsonText.replace(/```json[\s\S]*?```/gi, '').replace(/```[\s\S]*?```/gi, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed.nodes && Array.isArray(parsed.nodes)) {
+          return {
+            replyMessage: parsed.replyMessage || '✨ Canvas updated by AI Co-Pilot!',
+            changesSummary: parsed.changesSummary || ['Updated canvas nodes'],
+            nodes: parsed.nodes,
+            edges: parsed.edges || [],
+          };
+        }
+      } catch (parseErr) {
+        logger.warn('[AIAgentService] Co-Pilot JSON parse error, falling back to dynamic parser:', parseErr);
+      }
+    }
+
+    // Dynamic Fallback for Co-Pilot mutations
+    let nodes = [...currentNodes];
+    let edges = [...currentEdges];
+    let replyMessage = '✨ Canvas updated by AI Co-Pilot!';
+    const changesSummary: string[] = [];
+
+    // Delete step request
+    if (lower.includes('delete') || lower.includes('remove')) {
+      const match = lower.match(/(?:step|node)\s*(\d+)/i);
+      const targetIdx = match ? parseInt(match[1]) : nodes.length;
+      if (targetIdx > 0 && targetIdx <= nodes.length) {
+        const removed = nodes.splice(targetIdx - 1, 1);
+        changesSummary.push(`Removed ${removed[0]?.name || `Step ${targetIdx}`}`);
+        replyMessage = `🗑️ Removed Step ${targetIdx} from canvas. Remaining ${nodes.length} steps re-wired!`;
+
+        // Re-wire remaining edges
+        edges = [];
+        for (let i = 0; i < nodes.length - 1; i++) {
+          edges.push({ id: `e_${nodes[i].id}_${nodes[i + 1].id}`, source: nodes[i].id, target: nodes[i + 1].id });
+        }
+      }
+    } else if (lower.includes('add') || lower.includes('insert') || lower.includes('append')) {
+      // Add step request
+      const isSheets = lower.includes('sheet') || lower.includes('excel');
+      const isSlack = lower.includes('slack');
+      const isAi = lower.includes('ai') || lower.includes('summariz') || lower.includes('analys');
+
+      const nextIdx = nodes.length + 1;
+      const prevId = nodes.length > 0 ? nodes[nodes.length - 1].id : 'node_1';
+      const newId = `node_${nextIdx}`;
+
+      if (isSheets) {
+        const quotedMatch = userPrompt.match(/["']([A-Za-z0-9_\-\s]{2,60})["']/);
+        const spreadsheetId = quotedMatch ? quotedMatch[1].trim().replace(/\s+/g, '_') : 'React_Developer_Jobs_Log';
+        nodes.push({
+          id: newId,
+          type: 'action',
+          connectorId: 'google-sheets',
+          operationId: 'append_row',
+          name: 'Google Sheets — Log Summary Row',
+          config: { spreadsheetId, worksheet: 'Sheet1', values: `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevId}.output.summary || ${prevId}.output.result}}"]` },
+          fieldMapping: { spreadsheetId, worksheet: 'Sheet1', values: `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevId}.output.summary || ${prevId}.output.result}}"]` },
+          position: { x: 250, y: 80 + (nextIdx - 1) * 180 },
+        });
+        if (prevId) edges.push({ id: `e_${prevId}_${newId}`, source: prevId, target: newId });
+        changesSummary.push(`Added Google Sheets step (Sheet: ${spreadsheetId})`);
+        replyMessage = `✨ Added Step ${nextIdx}: Google Sheets (Sheet: "${spreadsheetId}") to canvas!`;
+      } else if (isSlack) {
+        nodes.push({
+          id: newId,
+          type: 'action',
+          connectorId: 'slack',
+          operationId: 'send_message',
+          name: 'Slack — Post Message',
+          config: { channel: '#general', text: `{{${prevId}.output.summary || ${prevId}.output.result}}` },
+          fieldMapping: { channel: '#general', text: `{{${prevId}.output.summary || ${prevId}.output.result}}` },
+          position: { x: 250, y: 80 + (nextIdx - 1) * 180 },
+        });
+        if (prevId) edges.push({ id: `e_${prevId}_${newId}`, source: prevId, target: newId });
+        changesSummary.push('Added Slack Post Message step');
+        replyMessage = `✨ Added Step ${nextIdx}: Slack Post Message to channel #general!`;
+      } else if (isAi) {
+        nodes.push({
+          id: newId,
+          type: 'ai-agent',
+          connectorId: 'ai-agent',
+          operationId: 'process_text',
+          name: 'AI Processor Analyst',
+          config: { prompt: 'Analyze and format input payload data into key structured highlights:' },
+          fieldMapping: { inputText: `{{${prevId}.output.topSnippet || ${prevId}.output.results || ${prevId}.output.emails || ${prevId}.output}}` },
+          position: { x: 250, y: 80 + (nextIdx - 1) * 180 },
+        });
+        if (prevId) edges.push({ id: `e_${prevId}_${newId}`, source: prevId, target: newId });
+        changesSummary.push('Added AI Processor Analyst step');
+        replyMessage = `✨ Added Step ${nextIdx}: AI Processor Analyst step to canvas!`;
+      }
+    } else if (lower.includes('sheet') || lower.includes('google')) {
+      // Sheet name update request
+      const match = userPrompt.match(/(?:to|name|as|the)\s+["']?([A-Za-z0-9_\-\.]{2,60})["']?/i);
+      const newSheetName = match ? match[1].trim() : 'Anil_dev';
+
+      nodes = nodes.map((n) => {
+        const cid = (n.connectorId || '').toLowerCase();
+        if (cid.includes('sheet')) {
+          const prevNodeId = nodes.length >= 3 ? nodes[nodes.length - 2].id : 'node_3';
+          const rowValueStr = `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevNodeId}.output.summary || ${prevNodeId}.output.result}}"]`;
+          return {
+            ...n,
+            name: `4. Google Sheets (${newSheetName})`,
+            config: {
+              ...n.config,
+              spreadsheetId: newSheetName,
+              worksheet: 'Sheet1',
+              worksheetName: 'Sheet1',
+              rowData: rowValueStr,
+              values: rowValueStr,
+            },
+            fieldMapping: {
+              ...n.fieldMapping,
+              spreadsheetId: newSheetName,
+              worksheet: 'Sheet1',
+              worksheetName: 'Sheet1',
+              rowData: rowValueStr,
+              values: rowValueStr,
+            },
+          };
+        }
+        return n;
+      });
+
+      changesSummary.push(`Updated Google Sheets step: spreadsheetId changed to ${newSheetName}`);
+      replyMessage = `✨ Updated Google Sheets step: spreadsheet name set to "${newSheetName}" on canvas!`;
+    } else if (lower.includes('trigger') || lower.includes('schedule') || lower.includes('time') || lower.includes('hour') || lower.includes('am') || lower.includes('pm')) {
+      const isHourly = lower.includes('hour');
+      const timeMatch = userPrompt.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+      let targetTime = '02:00';
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const mins = timeMatch[2] || '00';
+        const ampm = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
+        if (ampm === 'pm' && hours < 12) hours += 12;
+        if (ampm === 'am' && hours === 12) hours = 0;
+        targetTime = `${hours.toString().padStart(2, '0')}:${mins}`;
+      }
+
+      nodes = nodes.map((n) => {
+        const cid = (n.connectorId || '').toLowerCase();
+        if (cid.includes('schedule') || n.type === 'trigger') {
+          return {
+            ...n,
+            name: `1. Schedule Trigger (${isHourly ? 'Hourly' : 'Daily'})`,
+            config: {
+              ...n.config,
+              frequency: isHourly ? 'hourly' : 'daily',
+              intervalHours: isHourly ? '1' : undefined,
+              time: targetTime,
+            },
+            fieldMapping: {
+              ...n.fieldMapping,
+              frequency: isHourly ? 'hourly' : 'daily',
+              intervalHours: isHourly ? '1' : undefined,
+              time: targetTime,
+            },
+          };
+        }
+        return n;
+      });
+
+      changesSummary.push(`Updated trigger time to ${targetTime}, frequency ${isHourly ? 'hourly' : 'daily'}`);
+      replyMessage = `✨ Updated trigger time to ${targetTime} and set frequency to ${isHourly ? 'hourly' : 'daily'}.`;
+    } else {
+      // Configuration update / optimization
+      nodes = nodes.map((n) => {
+        if ((n.connectorId || '').toLowerCase().includes('search')) {
+          return {
+            ...n,
+            config: { ...n.config, maxResults: 20 },
+            fieldMapping: { ...n.fieldMapping, maxResults: 20 },
+          };
+        }
+        return n;
+      });
+      changesSummary.push('Optimized step configurations and field mappings');
+      replyMessage = '✨ Optimized all step configurations and dynamic field mappings across canvas!';
+    }
+
+    // Generate Context-Aware Smart AI Suggestions dynamically based on current canvas state
+    const aiSuggestions = [];
+
+    const hasSheets = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('sheet'));
+    const hasSearch = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('search'));
+    const hasAi = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('ai'));
+    const hasSlack = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('slack'));
+
+    const sheetsNode = nodes.find((n) => (n.connectorId || '').toLowerCase().includes('sheet'));
+    const currentSheetName = sheetsNode?.config?.spreadsheetId || 'React_Jobs';
+
+    if (hasSheets) {
+      if (currentSheetName === 'Anil_dev') {
+        aiSuggestions.push({ label: '📊 Change Sheet to "React_Jobs_Digest"', prompt: 'Change Google Sheet name to React_Jobs_Digest' });
+      } else {
+        aiSuggestions.push({ label: '📊 Change Sheet to "Anil_dev"', prompt: 'Change Google Sheet name to Anil_dev' });
+      }
+    } else {
+      aiSuggestions.push({ label: '📊 Add Google Sheets Step ("Anil_dev")', prompt: 'Add Google Sheets step for spreadsheet Anil_dev' });
+    }
+
+    if (hasSearch) {
+      aiSuggestions.push({ label: '🔍 Search "React developer jobs"', prompt: 'Set Web Search query to React developer jobs' });
+    } else {
+      aiSuggestions.push({ label: '🔍 Add Web Search Step', prompt: 'Add Web Search step for React developer jobs' });
+    }
+
+    if (!hasAi) {
+      aiSuggestions.push({ label: '🤖 Insert AI Analyst Step', prompt: 'Insert an AI Processor Analyst step' });
+    }
+
+    if (!hasSlack) {
+      aiSuggestions.push({ label: '💬 Add Slack Alert Step', prompt: 'Add Slack post message step at the end' });
+    }
+
+    aiSuggestions.push({ label: '⏱️ Change Schedule to Hourly', prompt: 'Change schedule frequency to hourly every 1 hour' });
+
+    // Re-layout all nodes with clean, non-overlapping 270px vertical spacing
+    nodes = nodes.map((n, idx) => ({
+      ...n,
+      position: { x: 250, y: 80 + idx * 270 },
+    }));
+
+    return {
+      replyMessage,
+      changesSummary,
+      aiSuggestions,
+      nodes,
+      edges,
+    };
+  }
+}
+

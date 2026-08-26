@@ -1,9 +1,10 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkflowCanvas } from '@/components/builder/WorkflowCanvas';
 import { FieldMapper } from '@/components/builder/FieldMapper';
+import { AICopilotDrawer } from '@/components/builder/AICopilotDrawer';
 import { useUserRole } from '@/context/UserRoleContext';
-import { Play, Save, ArrowLeft, RefreshCw, Loader2, Sparkles } from 'lucide-react';
+import { Play, Save, ArrowLeft, RefreshCw, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { Node, Edge } from 'reactflow';
 import { apiClient } from '@/lib/api-client';
@@ -26,6 +27,80 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
   const [loadingWorkflow, setLoadingWorkflow] = useState<boolean>(params.id !== 'new');
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isCopilotOpen, setIsCopilotOpen] = useState<boolean>(false);
+
+  // Auto-Save Draft state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleApplyCopilotUpdate = useCallback((newNodes: any[], newEdges: any[]) => {
+    setInitialNodes(newNodes);
+    setInitialEdges(newEdges);
+    setCanvasNodes(newNodes);
+    setCanvasEdges(newEdges);
+  }, []);
+
+  // Debounced Auto-Save Draft engine to MongoDB Atlas & LocalStorage
+  useEffect(() => {
+    if (loadingWorkflow || canvasNodes.length === 0) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    setAutoSaveStatus('saving');
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const currentNodes = canvasNodes.map((n) => ({
+          id: n.id,
+          name: n.data?.name || n.data?.label || n.id,
+          connectorId: n.data?.connectorId || 'autoflow-schedule',
+          operationId: n.data?.operationId || 'execute',
+          type: n.data?.type || 'action',
+          config: n.data?.config || {},
+          fieldMapping: n.data?.fieldMapping || {},
+          position: n.position,
+        }));
+
+        const currentEdges = canvasEdges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+        }));
+
+        const payload = {
+          name: workflowName || `Workflow #${params.id}`,
+          description: workflowDesc || 'Automated workflow.',
+          status: 'draft',
+          definition: {
+            nodes: currentNodes,
+            edges: currentEdges,
+          },
+        };
+
+        // Backup to localStorage
+        localStorage.setItem('autoflow_current_draft', JSON.stringify(payload));
+
+        // Save draft to MongoDB Atlas
+        if (params.id !== 'new' && params.id.length === 24) {
+          await apiClient.put(`/v1/workflows/${params.id}`, payload);
+        }
+
+        const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setLastSavedTime(nowStr);
+        setAutoSaveStatus('saved');
+      } catch (err) {
+        console.warn('Auto-save draft error:', err);
+        setAutoSaveStatus('idle');
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [canvasNodes, canvasEdges, workflowName, workflowDesc, loadingWorkflow, params.id]);
 
   // Load Workflow from Backend API (if editing an existing workflow) or LocalStorage (if new AI draft)
   useEffect(() => {
@@ -224,13 +299,39 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
               placeholder="Workflow Name..."
               className="bg-transparent font-semibold text-sm text-white outline-none focus:border-b border-accentPurple"
             />
-            <span className="text-[10px] text-textMuted font-mono">
-              ID: {params.id} · MongoDB Atlas
-            </span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] text-textMuted font-mono">
+                ID: {params.id} · MongoDB Atlas
+              </span>
+              {autoSaveStatus === 'saving' && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-400 font-medium">
+                  <Loader2 size={10} className="animate-spin" />
+                  <span>Saving Draft...</span>
+                </span>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-medium">
+                  <CheckCircle2 size={10} />
+                  <span>Draft Auto-Saved ({lastSavedTime})</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsCopilotOpen((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              isCopilotOpen
+                ? 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-glow'
+                : 'bg-white/5 border-borderColor text-white hover:bg-white/10'
+            }`}
+          >
+            <Sparkles size={14} className="text-accentPurple" />
+            <span>AI Assistant Co-Pilot</span>
+          </button>
+
           <button
             onClick={handleTestRun}
             disabled={isExecuting}
@@ -258,14 +359,18 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
             disabled={isSaving}
             className="glow-button px-4 py-1.5 text-xs flex items-center gap-1.5 disabled:opacity-50"
           >
-            {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-            <span>{isSaving ? 'Saving...' : 'Save & Activate'}</span>
+            {isSaving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
+            <span>Save & Activate</span>
           </button>
         </div>
       </div>
 
-      {/* Main Canvas Workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Visual Canvas Area */}
+      <div className="flex-1 flex overflow-hidden">
         <WorkflowCanvas
           workflowId={params.id}
           initialNodes={initialNodes}
@@ -276,7 +381,16 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
         />
         <FieldMapper
           selectedNode={selectedNode}
+          onChangeApp={() => setSelectedNode(null)}
           onUpdateNodeData={handleUpdateNodeData}
+        />
+
+        <AICopilotDrawer
+          isOpen={isCopilotOpen}
+          onClose={() => setIsCopilotOpen(false)}
+          canvasNodes={canvasNodes}
+          canvasEdges={canvasEdges}
+          onApplyCanvasUpdate={handleApplyCopilotUpdate}
         />
       </div>
     </div>

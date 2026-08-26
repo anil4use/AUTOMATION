@@ -24,6 +24,96 @@ export interface WorkflowItem {
   lastRunAt?: string;
 }
 
+function LiveNextExecutionCountdown({ wf }: { wf: WorkflowItem }) {
+  const [timeLeftStr, setTimeLeftStr] = useState<string>('');
+
+  useEffect(() => {
+    if (wf.status !== 'active') return;
+
+    const computeTimeLeft = () => {
+      const nodes = wf.definition?.nodes || [];
+      const triggerNode = nodes.find((n) => n.type === 'trigger' || n.connectorId === 'autoflow-schedule') || nodes[0];
+      const config = triggerNode?.config || {};
+      const freq = config.frequency || 'daily';
+      const targetTimeStr = config.time || '20:00';
+
+      const now = new Date();
+
+      if (freq === 'hourly') {
+        const currentMins = now.getMinutes();
+        const currentSecs = now.getSeconds();
+        const remSecs = (60 - currentMins - 1) * 60 + (60 - currentSecs);
+        const minsLeft = Math.floor(remSecs / 60);
+        const secsLeft = remSecs % 60;
+        return `${minsLeft.toString().padStart(2, '0')}m : ${secsLeft.toString().padStart(2, '0')}s`;
+      }
+
+      if (freq === 'interval') {
+        const intervalMins = parseInt(config.intervalMinutes) || 15;
+        const currentMins = now.getMinutes();
+        const currentSecs = now.getSeconds();
+        const nextIntervalMin = Math.ceil((currentMins + 1) / intervalMins) * intervalMins;
+        const remSecs = (nextIntervalMin - currentMins - 1) * 60 + (60 - currentSecs);
+        const minsLeft = Math.floor(remSecs / 60);
+        const secsLeft = remSecs % 60;
+        return `${minsLeft.toString().padStart(2, '0')}m : ${secsLeft.toString().padStart(2, '0')}s`;
+      }
+
+      // Daily / Weekly Schedule: Parse targetTimeStr e.g. 20:00 or 09:00
+      const [hStr, mStr] = targetTimeStr.split(':');
+      const targetHour = parseInt(hStr) || 9;
+      const targetMin = parseInt(mStr) || 0;
+
+      const targetDate = new Date();
+      targetDate.setHours(targetHour, targetMin, 0, 0);
+
+      // If target time has passed today, target is tomorrow
+      if (targetDate.getTime() <= now.getTime()) {
+        targetDate.setDate(targetDate.getDate() + 1);
+      }
+
+      const diffMs = targetDate.getTime() - now.getTime();
+      if (diffMs <= 0) {
+        return '⚡ Triggering now...';
+      }
+
+      const totalSecs = Math.floor(diffMs / 1000);
+      const hours = Math.floor(totalSecs / 3600);
+      const minutes = Math.floor((totalSecs % 3600) / 60);
+      const seconds = totalSecs % 60;
+
+      const hStrFmt = hours > 0 ? `${hours.toString().padStart(2, '0')}h : ` : '';
+      return `${hStrFmt}${minutes.toString().padStart(2, '0')}m : ${seconds.toString().padStart(2, '0')}s`;
+    };
+
+    // Initial compute
+    setTimeLeftStr(computeTimeLeft());
+
+    // 1-second interval ticker
+    const timer = setInterval(() => {
+      setTimeLeftStr(computeTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [wf]);
+
+  if (wf.status !== 'active') {
+    return (
+      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-400 font-mono">
+        <PauseCircle size={11} />
+        <span>Paused</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30 text-[11px] text-accentIndigo font-mono font-semibold shadow-glow-sm">
+      <Clock size={11} className="animate-pulse text-sky-400" />
+      <span>{timeLeftStr || 'Calculating...'}</span>
+    </div>
+  );
+}
+
 export default function WorkflowsPage() {
   const { user } = useUserRole();
   const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
@@ -97,7 +187,7 @@ export default function WorkflowsPage() {
     const triggerNode = nodes.find((n) => n.type === 'trigger' || n.connectorId === 'autoflow-schedule') || nodes[0];
 
     if (!triggerNode) {
-      return { label: 'Daily Schedule', detail: 'Every day at 09:00 AM', nextRun: 'Tomorrow at 09:00 AM' };
+      return { label: 'Daily Schedule', detail: 'Every day at 09:00 AM' };
     }
 
     const cid = triggerNode.connectorId;
@@ -108,15 +198,15 @@ export default function WorkflowsPage() {
       const time = config.time || '09:00 AM';
       const interval = config.intervalMinutes || 60;
 
-      if (freq === 'hourly') return { label: 'Hourly Schedule', detail: 'Runs every 60 mins', nextRun: 'In 45 mins' };
-      if (freq === 'interval') return { label: `Interval (${interval}m)`, detail: `Runs every ${interval} mins`, nextRun: `In ${interval} mins` };
-      return { label: 'Daily Schedule', detail: `Every day at ${time}`, nextRun: `Tomorrow at ${time}` };
+      if (freq === 'hourly') return { label: 'Hourly Schedule', detail: 'Runs every 60 mins' };
+      if (freq === 'interval') return { label: `Interval (${interval}m)`, detail: `Runs every ${interval} mins` };
+      return { label: 'Daily Schedule', detail: `Every day at ${time}` };
     }
 
-    if (cid === 'gmail') return { label: 'Gmail Inbox Trigger', detail: 'On new unread email', nextRun: 'Real-time Event' };
-    if (cid === 'stripe') return { label: 'Stripe Webhook', detail: 'On payment succeeded', nextRun: 'Real-time Webhook' };
+    if (cid === 'gmail') return { label: 'Gmail Inbox Trigger', detail: 'On new unread email' };
+    if (cid === 'stripe') return { label: 'Stripe Webhook', detail: 'On payment succeeded' };
 
-    return { label: 'Scheduled Trigger', detail: 'Automated workflow', nextRun: 'Every day at 09:00 AM' };
+    return { label: 'Scheduled Trigger', detail: 'Automated workflow' };
   };
 
   const getConnectorBadge = (connectorId: string) => {
@@ -252,12 +342,9 @@ export default function WorkflowsPage() {
                         <div className="text-[11px] text-textMuted mt-0.5">{trigger.detail}</div>
                       </td>
 
-                      {/* Next Execution Timing */}
+                      {/* Next Execution Live Countdown Ticker */}
                       <td className="p-3.5 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] text-accentIndigo">
-                          <Calendar size={11} />
-                          <span>{wf.status === 'active' ? trigger.nextRun : 'Paused'}</span>
-                        </div>
+                        <LiveNextExecutionCountdown wf={wf} />
                       </td>
 
                       {/* Status Button */}
@@ -338,7 +425,7 @@ export default function WorkflowsPage() {
 
                           <button
                             onClick={() => handleDelete(wf)}
-                            className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                            className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-colors"
                             title="Delete Workflow"
                           >
                             <Trash2 size={14} />

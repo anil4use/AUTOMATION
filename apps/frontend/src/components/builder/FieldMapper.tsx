@@ -243,6 +243,18 @@ export const CONNECTOR_MANIFESTS: Record<string, {
   },
 };
 
+function normalizeConnectorId(rawId?: string): string {
+  if (!rawId) return 'autoflow-schedule';
+  const lower = rawId.toLowerCase();
+  if (lower.includes('sheet')) return 'google-sheets';
+  if (lower.includes('search') || lower.includes('web')) return 'web-search';
+  if (lower.includes('ai') || lower.includes('analys')) return 'ai-agent';
+  if (lower.includes('gmail') || lower.includes('mail')) return 'gmail';
+  if (lower.includes('slack')) return 'slack';
+  if (lower.includes('schedule') || lower.includes('time')) return 'autoflow-schedule';
+  return rawId;
+}
+
 export function FieldMapper({
   selectedNode,
   onChangeApp,
@@ -269,7 +281,7 @@ export function FieldMapper({
   useEffect(() => {
     if (selectedNode?.data) {
       const data = selectedNode.data;
-      const connId = data.connectorId || 'autoflow-schedule';
+      const connId = normalizeConnectorId(data.connectorId);
       const manifest = CONNECTOR_MANIFESTS[connId] || CONNECTOR_MANIFESTS['autoflow-schedule'];
 
       const initialOpId = data.operationId || manifest.operations[0]?.id || '';
@@ -290,6 +302,20 @@ export function FieldMapper({
       if (data.config?.time) {
         setDailyTime(data.config.time);
       }
+
+      if (existingConfig.frequency) {
+        setScheduleMode(existingConfig.frequency as any);
+      } else if (existingConfig.intervalHours) {
+        setScheduleMode('hourly');
+      } else if (existingConfig.intervalMinutes) {
+        setScheduleMode('interval');
+      } else if (existingConfig.dayOfWeek) {
+        setScheduleMode('weekly');
+      } else if (existingConfig.targetDate) {
+        setScheduleMode('date');
+      } else if (existingConfig.webhookUrl) {
+        setScheduleMode('webhook');
+      }
     }
   }, [selectedNode]);
 
@@ -304,7 +330,7 @@ export function FieldMapper({
   }
 
   const { data } = selectedNode;
-  const connectorId = data.connectorId || 'autoflow-schedule';
+  const connectorId = normalizeConnectorId(data.connectorId);
   const isScheduleNode = connectorId === 'autoflow-schedule';
   const manifest = CONNECTOR_MANIFESTS[connectorId] || CONNECTOR_MANIFESTS['autoflow-schedule'];
 
@@ -554,7 +580,7 @@ export function FieldMapper({
                           handleFieldChange('intervalHours', e.target.value);
                           handleFieldChange('frequency', 'hourly');
                         }}
-                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none mb-2"
                       >
                         <option value="1">Every 1 Hour (60 mins)</option>
                         <option value="2">Every 2 Hours</option>
@@ -563,6 +589,18 @@ export function FieldMapper({
                         <option value="6">Every 6 Hours</option>
                         <option value="12">Every 12 Hours</option>
                       </select>
+
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Start Time / Time of Day</label>
+                      <input
+                        type="time"
+                        value={dailyTime}
+                        onChange={(e) => {
+                          setDailyTime(e.target.value);
+                          handleFieldChange('time', e.target.value);
+                          handleFieldChange('frequency', 'hourly');
+                        }}
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      />
                     </div>
                   </div>
                 )}
