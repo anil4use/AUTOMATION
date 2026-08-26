@@ -134,15 +134,13 @@ export class GoogleSheetsConnector extends BaseConnector {
       };
     }
 
-    const spreadsheetId = this.extractSpreadsheetId(context.stepInput.spreadsheetId);
-    if (!spreadsheetId) {
-      throw new Error('Google Sheets Error: "spreadsheetId" or Google Sheet Link is required.');
-    }
+    let rawId = context.stepInput.spreadsheetId || context.stepInput.spreadsheetName || 'Daily_Email_Summaries_Log';
+    let spreadsheetId = await this.ensureRealSpreadsheetId(token, rawId);
 
     // 2. Action: APPEND ROW
     if (actionId === 'append_row') {
-      const sheetName = context.stepInput.worksheet || 'Sheet1';
-      const rawValues = context.stepInput.values;
+      const sheetName = context.stepInput.worksheet || context.stepInput.worksheetName || 'Sheet1';
+      const rawValues = context.stepInput.values || context.stepInput.rowData;
 
       let parsedRow: any[] = [];
       if (Array.isArray(rawValues)) {
@@ -157,7 +155,7 @@ export class GoogleSheetsConnector extends BaseConnector {
       }
 
       const range = `${sheetName}!A1`;
-      const res = await fetch(
+      let res = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
         {
           method: 'POST',
@@ -169,16 +167,35 @@ export class GoogleSheetsConnector extends BaseConnector {
         }
       );
 
-      const data = await res.json();
+      let data = await res.json();
+      if (!res.ok && res.status === 404) {
+        // Retry by auto-creating spreadsheet if 404
+        const newId = await this.createNewSpreadsheet(token, rawId);
+        spreadsheetId = newId;
+        res = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ values: [parsedRow] }),
+          }
+        );
+        data = await res.json();
+      }
+
       if (!res.ok) throw new Error(`Google Sheets Append Error (${res.status}): ${data.error?.message || res.statusText}`);
 
       return {
         success: true,
         data: {
+          spreadsheetId,
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
           updatedRange: data.updates?.updatedRange || `${sheetName}!A:A`,
           updatedRows: data.updates?.updatedRows || 1,
           updatedColumns: data.updates?.updatedColumns || parsedRow.length,
-          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
         },
       };
     }
@@ -273,6 +290,52 @@ export class GoogleSheetsConnector extends BaseConnector {
     }
 
     throw new Error(`Unsupported Google Sheets action: ${actionId}`);
+  }
+
+  /** Resolves raw string input to a real 44-char Google Spreadsheet ID. Searches Google Drive or auto-creates if missing. */
+  private async ensureRealSpreadsheetId(token: string, input: string): Promise<string> {
+    const extracted = this.extractSpreadsheetId(input);
+    // If it looks like a valid 44-character Google Sheet ID, return it directly
+    if (/^[a-zA-Z0-9-_]{25,60}$/.test(extracted) && !extracted.includes(' ') && !extracted.includes('_Log')) {
+      return extracted;
+    }
+
+    const searchTitle = (input || 'Daily_Email_Summaries_Log').trim();
+    try {
+      const driveRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${searchTitle}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const driveData = await driveRes.json();
+      if (driveRes.ok && driveData.files && driveData.files.length > 0) {
+        return driveData.files[0].id;
+      }
+    } catch {}
+
+    // Auto-create spreadsheet if not found on Drive
+    return await this.createNewSpreadsheet(token, searchTitle);
+  }
+
+  /** Creates a brand new Google Spreadsheet on user's Google Drive */
+  private async createNewSpreadsheet(token: string, title: string): Promise<string> {
+    const searchTitle = title || 'Daily_Email_Summaries_Log';
+    const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: { title: searchTitle },
+        sheets: [{ properties: { title: 'Sheet1' } }],
+      }),
+    });
+    const createData = await createRes.json();
+    if (createRes.ok && createData.spreadsheetId) {
+      console.log(`[GoogleSheetsConnector] Auto-created new Google Spreadsheet: "${searchTitle}" (ID: ${createData.spreadsheetId})`);
+      return createData.spreadsheetId;
+    }
+    throw new Error(`Google Sheets Creation Error: ${createData.error?.message || 'Could not auto-create spreadsheet'}`);
   }
 
   /** Ensures access token exists, otherwise throws a real descriptive error */

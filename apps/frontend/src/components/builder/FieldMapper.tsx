@@ -276,7 +276,16 @@ export function FieldMapper({
       setSelectedOperationId(initialOpId);
 
       const existingConfig = data.config || {};
-      setConfigValues(existingConfig);
+      const existingMapping = data.fieldMapping || {};
+      const combined = { ...existingConfig, ...existingMapping };
+
+      // Normalize field aliases for UI input fields
+      if (combined.worksheetName && !combined.worksheet) combined.worksheet = combined.worksheetName;
+      if (combined.worksheet && !combined.worksheetName) combined.worksheetName = combined.worksheet;
+      if (combined.values && !combined.rowData) combined.rowData = typeof combined.values === 'string' ? combined.values : JSON.stringify(combined.values);
+      if (combined.rowData && !combined.values) combined.values = combined.rowData;
+
+      setConfigValues(combined);
 
       if (data.config?.time) {
         setDailyTime(data.config.time);

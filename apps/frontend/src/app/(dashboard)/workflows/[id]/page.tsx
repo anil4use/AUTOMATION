@@ -1,22 +1,90 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { WorkflowCanvas } from '@/components/builder/WorkflowCanvas';
 import { FieldMapper } from '@/components/builder/FieldMapper';
 import { useUserRole } from '@/context/UserRoleContext';
-import { Play, Save, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Play, Save, ArrowLeft, RefreshCw, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { Node } from 'reactflow';
+import { Node, Edge } from 'reactflow';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function WorkflowBuilderPage({ params }: { params: { id: string } }) {
   const { user } = useUserRole();
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [isExecuting, setIsExecuting] = useState(false);
   const router = useRouter();
 
-  const handleUpdateNodeData = (nodeId: string, updatedData: Partial<any>) => {
+  const [workflowName, setWorkflowName] = useState<string>('');
+  const [workflowDesc, setWorkflowDesc] = useState<string>('');
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [updatedNodeData, setUpdatedNodeData] = useState<{ nodeId: string; data: Partial<any> } | null>(null);
+  const [canvasNodes, setCanvasNodes] = useState<Node[]>([]);
+  const [canvasEdges, setCanvasEdges] = useState<Edge[]>([]);
+  const [initialNodes, setInitialNodes] = useState<any[] | null>(null);
+  const [initialEdges, setInitialEdges] = useState<any[] | null>(null);
+
+  const [loadingWorkflow, setLoadingWorkflow] = useState<boolean>(params.id !== 'new');
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Load Workflow from Backend API (if editing an existing workflow) or LocalStorage (if new AI draft)
+  useEffect(() => {
+    async function loadWorkflow() {
+      if (params.id !== 'new') {
+        try {
+          setLoadingWorkflow(true);
+          const res = await apiClient.get(`/v1/workflows/${params.id}`);
+          const wf = res.data.data;
+          setWorkflowName(wf.name || `Workflow #${params.id}`);
+          setWorkflowDesc(wf.description || '');
+
+          if (wf.definition?.nodes && wf.definition.nodes.length > 0) {
+            setInitialNodes(wf.definition.nodes);
+            setInitialEdges(wf.definition.edges || []);
+          }
+        } catch (err: any) {
+          console.error('Failed to load workflow by ID:', err);
+          toast.error('Could not load workflow', {
+            description: err?.response?.data?.message || 'Failed to fetch workflow definition from MongoDB.',
+          });
+        } finally {
+          setLoadingWorkflow(false);
+        }
+      } else {
+        // New Workflow — check if AI generator draft exists in localStorage
+        try {
+          const savedDraftStr = localStorage.getItem('autoflow_draft_workflow');
+          if (savedDraftStr) {
+            const draft = JSON.parse(savedDraftStr);
+            setWorkflowName(draft.name || `Workflow_${Date.now().toString().slice(-4)}`);
+            setWorkflowDesc(draft.description || 'AI-generated workflow template.');
+            if (draft.nodes && draft.nodes.length > 0) {
+              setInitialNodes(draft.nodes);
+              setInitialEdges(draft.edges || []);
+            }
+            localStorage.removeItem('autoflow_draft_workflow');
+          } else {
+            setWorkflowName(`Workflow_${Date.now().toString().slice(-4)}`);
+            setWorkflowDesc('Automated workflow configured via AutoFlow visual builder.');
+          }
+        } catch (e) {
+          console.error('Draft parse error:', e);
+        }
+        setLoadingWorkflow(false);
+      }
+    }
+    loadWorkflow();
+  }, [params.id]);
+
+  const handleCanvasChange = useCallback((nodes: Node[], edges: Edge[]) => {
+    setCanvasNodes(nodes);
+    setCanvasEdges(edges);
+  }, []);
+
+  const handleUpdateNodeData = (nodeId: string, dataUpdate: Partial<any>) => {
+    setUpdatedNodeData({ nodeId, data: dataUpdate });
+
+    // Instantly update selectedNode if it matches
     if (selectedNode && selectedNode.id === nodeId) {
       setSelectedNode((prev) =>
         prev
@@ -24,7 +92,7 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
               ...prev,
               data: {
                 ...prev.data,
-                ...updatedData,
+                ...dataUpdate,
               },
             }
           : null
@@ -35,72 +103,108 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
   const handleTestRun = async () => {
     setIsExecuting(true);
     try {
-      // Execute live DAG pipeline on Express API + BullMQ Worker
-      await apiClient.post(`/v1/workflows/${params.id}/execute`, {
-        triggerPayload: { triggeredAt: new Date().toISOString(), runId: `manual_${Date.now()}` },
+      // Format current canvas nodes for execution
+      const currentNodes = canvasNodes.map((n) => ({
+        id: n.id,
+        name: n.data?.name || n.data?.label || n.id,
+        connectorId: n.data?.connectorId || 'autoflow-schedule',
+        operationId: n.data?.operationId || 'execute',
+        type: n.data?.type || 'action',
+        config: n.data?.config || {},
+        fieldMapping: n.data?.fieldMapping || {},
+      }));
+
+      const currentEdges = canvasEdges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      }));
+
+      const res = await apiClient.post(`/v1/workflows/${params.id}/execute`, {
+        triggerPayload: { manualTrigger: true, isTestRun: true, triggeredAt: new Date().toISOString() },
+        definition: { nodes: currentNodes, edges: currentEdges },
+        nodes: currentNodes,
+        edges: currentEdges,
       });
-      toast.success('Workflow Triggered Successfully!', {
-        description: `Executed DAG for ${user.email}. Check System Logs Stream (/system-logs) for live step outputs.`,
+
+      const data = res.data.data;
+      toast.success('Live Execution Completed!', {
+        description: `Ran ${currentNodes.length} DAG steps for ${user.email}. Timers bypassed! Check Execution Logs.`,
       });
     } catch (err: any) {
-      toast.success('Test Run Enqueued & Executed', {
-        description: `Triggered execution for Workflow #${params.id}. All steps executed in worker engine.`,
+      toast.error('Execution Failed', {
+        description: err?.response?.data?.message || err?.message || 'Could not execute workflow.',
       });
     } finally {
       setIsExecuting(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (targetStatus: 'active' | 'draft' = 'active') => {
+    setIsSaving(true);
     try {
-      let draft: any = null;
-      try {
-        const saved = localStorage.getItem('autoflow_draft_workflow');
-        if (saved) draft = JSON.parse(saved);
-      } catch {}
+      const currentNodes = canvasNodes.map((n) => ({
+        id: n.id,
+        name: n.data?.name || n.data?.label || n.id,
+        connectorId: n.data?.connectorId || 'autoflow-schedule',
+        operationId: n.data?.operationId || 'execute',
+        type: n.data?.type || 'action',
+        config: n.data?.config || {},
+        fieldMapping: n.data?.fieldMapping || {},
+        position: n.position,
+      }));
 
-      const workflowName = draft?.name || (params.id === 'new' ? `Workflow_${Date.now().toString().slice(-4)}` : `Workflow #${params.id}`);
-      const workflowDesc = draft?.description || 'Automated workflow configured via AutoFlow visual builder.';
+      const currentEdges = canvasEdges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      }));
 
       const payload = {
-        name: workflowName,
-        description: workflowDesc,
-        status: 'active',
+        name: workflowName || `Workflow #${params.id}`,
+        description: workflowDesc || 'Automated workflow.',
+        status: targetStatus,
         definition: {
-          nodes: draft?.nodes || [
-            { id: 'node_1', connectorId: 'autoflow-schedule', operationId: 'schedule_time', type: 'trigger' },
-            { id: 'node_2', connectorId: 'gmail', operationId: 'new_email', type: 'action' },
-            { id: 'node_3', connectorId: 'ai-agent', operationId: 'process_text', type: 'ai-agent' },
-            { id: 'node_4', connectorId: 'gmail', operationId: 'send_email', type: 'action' },
-          ],
-          edges: draft?.edges || [
-            { id: 'e_1_2', source: 'node_1', target: 'node_2' },
-            { id: 'e_2_3', source: 'node_2', target: 'node_3' },
-            { id: 'e_3_4', source: 'node_3', target: 'node_4' },
-          ],
+          nodes: currentNodes,
+          edges: currentEdges,
         },
       };
 
       if (params.id === 'new') {
-        await apiClient.post('/v1/workflows', payload);
+        const res = await apiClient.post('/v1/workflows', payload);
+        const createdWf = res.data.data;
+        localStorage.removeItem('autoflow_draft_workflow');
+        toast.success(`Workflow Saved as ${targetStatus.toUpperCase()} in MongoDB`, {
+          description: `Created workflow. Status set to ${targetStatus.toUpperCase()}.`,
+        });
+        setTimeout(() => {
+          router.push(`/workflows/${createdWf._id || createdWf.id}`);
+        }, 600);
       } else {
         await apiClient.put(`/v1/workflows/${params.id}`, payload);
+        localStorage.removeItem('autoflow_draft_workflow');
+        toast.success(`Workflow Saved as ${targetStatus.toUpperCase()} in MongoDB`, {
+          description: `Updated workflow #${params.id}. Status set to ${targetStatus.toUpperCase()}.`,
+        });
       }
-
-      toast.success('Workflow Definition Saved & Activated in MongoDB', {
-        description: `Saved to database under ${user.email}. Status set to RUNNING.`,
-      });
-
-      setTimeout(() => {
-        router.push('/workflows');
-      }, 800);
     } catch (e: any) {
       console.error('Save workflow error:', e);
       toast.error('Save Workflow Failed', {
-        description: e?.response?.data?.message || 'Could not save workflow to MongoDB.',
+        description: e?.response?.data?.message || 'Could not save workflow definition to MongoDB.',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (loadingWorkflow) {
+    return (
+      <div className="flex-1 h-[calc(100vh-112px)] flex items-center justify-center gap-3 bg-bgCanvas text-textMuted text-xs">
+        <Loader2 size={20} className="animate-spin text-accentPurple" />
+        <span>Loading workflow definition from MongoDB Atlas...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-112px)] -m-6">
@@ -110,39 +214,64 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
           <Link href="/workflows" className="text-textSecondary hover:text-white transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <span className="font-semibold text-sm text-white">
-            {params.id === 'new' ? 'New Automation Workflow' : `Workflow #${params.id}`}
-          </span>
+          <div className="flex flex-col">
+            <input
+              type="text"
+              value={workflowName}
+              onChange={(e) => setWorkflowName(e.target.value)}
+              placeholder="Workflow Name..."
+              className="bg-transparent font-semibold text-sm text-white outline-none focus:border-b border-accentPurple"
+            />
+            <span className="text-[10px] text-textMuted font-mono">
+              ID: {params.id} · MongoDB Atlas
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2.5">
           <button
             onClick={handleTestRun}
             disabled={isExecuting}
-            className="glass-card px-3.5 py-1.5 text-xs flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-50"
+            className="glass-card px-3 py-1.5 text-xs flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-50"
           >
             {isExecuting ? (
-              <RefreshCw size={14} className="text-accentEmerald animate-spin" />
+              <RefreshCw size={13} className="text-accentEmerald animate-spin" />
             ) : (
-              <Play size={14} className="text-accentEmerald" />
+              <Play size={13} className="text-accentEmerald" />
             )}
-            <span>{isExecuting ? 'Running DAG...' : 'Test Run (Trigger Now)'}</span>
+            <span>{isExecuting ? 'Executing Steps...' : 'Test Run (Trigger Now)'}</span>
           </button>
-          <button onClick={handleSave} className="glow-button px-4 py-1.5 text-xs flex items-center gap-1.5">
-            <Save size={14} />
-            <span>Save & Activate Workflow</span>
+
+          <button
+            onClick={() => handleSave('draft')}
+            disabled={isSaving}
+            className="px-3.5 py-1.5 rounded-lg bg-white/5 border border-borderColor text-white text-xs font-semibold hover:bg-white/10 transition-all disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <Save size={13} className="text-amber-400" />
+            <span>Save Draft</span>
+          </button>
+
+          <button
+            onClick={() => handleSave('active')}
+            disabled={isSaving}
+            className="glow-button px-4 py-1.5 text-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            <span>{isSaving ? 'Saving...' : 'Save & Activate'}</span>
           </button>
         </div>
       </div>
 
       {/* Main Canvas Workspace */}
       <div className="flex flex-1 overflow-hidden">
-        <React.Suspense fallback={<div className="flex-1 bg-bgCanvas flex items-center justify-center text-xs text-textMuted">Loading Canvas...</div>}>
-          <WorkflowCanvas
-            workflowId={params.id}
-            onSelectNode={(node) => setSelectedNode(node)}
-            onUpdateNodeData={handleUpdateNodeData}
-          />
-        </React.Suspense>
+        <WorkflowCanvas
+          workflowId={params.id}
+          initialNodes={initialNodes}
+          initialEdges={initialEdges}
+          onSelectNode={(node) => setSelectedNode(node)}
+          onCanvasChange={handleCanvasChange}
+          updatedNodeData={updatedNodeData}
+        />
         <FieldMapper
           selectedNode={selectedNode}
           onUpdateNodeData={handleUpdateNodeData}

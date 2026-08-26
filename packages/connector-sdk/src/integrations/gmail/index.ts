@@ -189,9 +189,9 @@ export class GmailConnector extends BaseConnector {
       throw new Error(`Gmail API Connection Error: No active Google OAuth access token found for ${userEmail}. Please click "Connect Gmail" in the Connectors tab to authenticate your Google Account.`);
     }
 
-    // 2. Action: READ / SEARCH EMAILS
-    if (actionId === 'read_emails') {
-      const query = context.stepInput.query || 'label:INBOX';
+    // 2. Action / Trigger: READ / SEARCH / NEW EMAILS
+    if (actionId === 'read_emails' || actionId === 'new_email' || actionId === 'search_emails' || actionId === 'list_emails') {
+      const query = context.stepInput.query || context.stepInput.searchQuery || 'is:unread label:INBOX';
       const maxResults = Number(context.stepInput.maxResults) || 5;
 
       const token = this.requireAccessToken(accessToken, userEmail);
@@ -217,11 +217,22 @@ export class GmailConnector extends BaseConnector {
         }
       }
 
+      const firstEmail = emails[0] || {
+        id: 'no_recent_email',
+        subject: 'No unread emails found',
+        from: userEmail,
+        to: userEmail,
+        body: 'No recent unread emails matching query.',
+        snippet: 'No recent emails found.',
+        date: new Date().toISOString(),
+      };
+
       return {
         success: true,
         data: {
           count: emails.length,
           emails,
+          ...firstEmail,
         },
       };
     }

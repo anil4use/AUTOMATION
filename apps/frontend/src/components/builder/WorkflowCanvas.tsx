@@ -17,76 +17,65 @@ import { CustomNode } from './CustomNodes';
 import { CustomEdge } from './CustomEdge';
 import { AppPickerModal, AppOption } from './AppPickerModal';
 import { toast } from 'sonner';
-import { useSearchParams } from 'next/navigation';
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
-const templateMap: Record<string, { nodes: Node[]; edges: Edge[] }> = {
-  wf_101: {
-    nodes: [
-      { id: 'n_1', type: 'custom', position: { x: 250, y: 80 }, data: { stepNumber: 1, label: 'AutoFlow Schedule Trigger', connectorId: 'autoflow-schedule', operationId: 'schedule_time', type: 'trigger' } },
-      { id: 'n_2', type: 'custom', position: { x: 250, y: 260 }, data: { stepNumber: 2, label: 'Gmail Read Attachments', connectorId: 'gmail', operationId: 'new_email', type: 'action' } },
-      { id: 'n_3', type: 'custom', position: { x: 250, y: 440 }, data: { stepNumber: 3, label: 'Google Drive Save File', connectorId: 'google-drive', operationId: 'upload_file', type: 'action' } },
-      { id: 'n_4', type: 'custom', position: { x: 250, y: 620 }, data: { stepNumber: 4, label: 'Google Sheets Log Row', connectorId: 'google-sheets', operationId: 'append_row', type: 'action' } },
-      { id: 'n_5', type: 'custom', position: { x: 250, y: 800 }, data: { stepNumber: 5, label: 'Slack Notify Channel', connectorId: 'slack', operationId: 'send_message', type: 'action', isLastInChain: true } },
-    ],
-    edges: [
-      { id: 'e_1_2', source: 'n_1', target: 'n_2', type: 'custom' },
-      { id: 'e_2_3', source: 'n_2', target: 'n_3', type: 'custom' },
-      { id: 'e_3_4', source: 'n_3', target: 'n_4', type: 'custom' },
-      { id: 'e_4_5', source: 'n_4', target: 'n_5', type: 'custom' },
-    ],
-  },
-  wf_102: {
-    nodes: [
-      { id: 'n_1', type: 'custom', position: { x: 250, y: 80 }, data: { stepNumber: 1, label: 'Stripe Payment Succeeded', connectorId: 'stripe', operationId: 'payment_succeeded', type: 'trigger' } },
-      { id: 'n_2', type: 'custom', position: { x: 250, y: 260 }, data: { stepNumber: 2, label: 'Notion Create Page Record', connectorId: 'notion', operationId: 'create_page', type: 'action' } },
-      { id: 'n_3', type: 'custom', position: { x: 250, y: 440 }, data: { stepNumber: 3, label: 'WhatsApp Send Receipt', connectorId: 'whatsapp', operationId: 'send_message', type: 'action', isLastInChain: true } },
-    ],
-    edges: [
-      { id: 'e_1_2', source: 'n_1', target: 'n_2', type: 'custom' },
-      { id: 'e_2_3', source: 'n_2', target: 'n_3', type: 'custom' },
-    ],
-  },
-  wf_103: {
-    nodes: [
-      { id: 'n_1', type: 'custom', position: { x: 250, y: 80 }, data: { stepNumber: 1, label: 'WhatsApp Inbound Message', connectorId: 'whatsapp', operationId: 'new_message', type: 'trigger' } },
-      { id: 'n_2', type: 'custom', position: { x: 250, y: 260 }, data: { stepNumber: 2, label: 'AI Summarize Lead Intent', connectorId: 'ai-agent', operationId: 'summarize_text', type: 'ai-agent' } },
-      { id: 'n_3', type: 'custom', position: { x: 250, y: 440 }, data: { stepNumber: 3, label: 'Google Sheets Append Row', connectorId: 'google-sheets', operationId: 'append_row', type: 'action', isLastInChain: true } },
-    ],
-    edges: [
-      { id: 'e_1_2', source: 'n_1', target: 'n_2', type: 'custom' },
-      { id: 'e_2_3', source: 'n_2', target: 'n_3', type: 'custom' },
-    ],
-  },
-};
-
 export function WorkflowCanvas({
   workflowId = 'new',
+  initialNodes = null,
+  initialEdges = null,
   onSelectNode,
-  onUpdateNodeData,
+  onCanvasChange,
+  updatedNodeData = null,
 }: {
   workflowId?: string;
+  initialNodes?: any[] | null;
+  initialEdges?: any[] | null;
   onSelectNode?: (node: Node) => void;
-  onUpdateNodeData?: (nodeId: string, updatedData: Partial<any>) => void;
+  onCanvasChange?: (nodes: Node[], edges: Edge[]) => void;
+  updatedNodeData?: { nodeId: string; data: Partial<any> } | null;
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [insertContext, setInsertContext] = useState<{ type: 'append' | 'insert'; sourceNodeId?: string; targetEdgeId?: string } | null>(null);
 
-  // Sync external node updates
-  useEffect(() => {
-    if (onUpdateNodeData) {
-      // Expose node data updater ref
-    }
-  }, [onUpdateNodeData]);
-
-  // Preserve onSelectNode ref without triggering re-render cascades
   const onSelectNodeRef = useRef(onSelectNode);
   useEffect(() => {
     onSelectNodeRef.current = onSelectNode;
   }, [onSelectNode]);
+
+  const onCanvasChangeRef = useRef(onCanvasChange);
+  useEffect(() => {
+    onCanvasChangeRef.current = onCanvasChange;
+  }, [onCanvasChange]);
+
+  // Sync node edits from FieldMapper
+  useEffect(() => {
+    if (updatedNodeData) {
+      setNodes((prevNodes) =>
+        prevNodes.map((n) => {
+          if (n.id === updatedNodeData.nodeId) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                ...updatedNodeData.data,
+              },
+            };
+          }
+          return n;
+        })
+      );
+    }
+  }, [updatedNodeData, setNodes]);
+
+  // Notify parent whenever nodes or edges change
+  useEffect(() => {
+    if (onCanvasChangeRef.current) {
+      onCanvasChangeRef.current(nodes, edges);
+    }
+  }, [nodes, edges]);
 
   const handleOpenAppendModal = useCallback((nodeId: string) => {
     setInsertContext({ type: 'append', sourceNodeId: nodeId });
@@ -98,7 +87,7 @@ export function WorkflowCanvas({
 
   const handleRenameNode = useCallback((nodeId: string, newLabel: string) => {
     setNodes((prevNodes) =>
-      prevNodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n))
+      prevNodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel, name: newLabel } } : n))
     );
     toast.success('Step Renamed', { description: `Updated label to "${newLabel}".` });
   }, [setNodes]);
@@ -197,7 +186,6 @@ export function WorkflowCanvas({
     toast.error('Step Deleted');
   }, [handleOpenInsertModal, setEdges, setNodes]);
 
-  // Stable node callback binder
   const bindNodeCallbacks = useCallback((n: Node) => ({
     ...n,
     data: {
@@ -210,30 +198,16 @@ export function WorkflowCanvas({
     },
   }), [handleOpenAppendModal, handleRenameNode, handleEditNode, handleDuplicateNode, handleDeleteNode]);
 
-  const searchParams = useSearchParams();
-  const isDraftParam = searchParams.get('draft') === 'true';
-
-  // Run DAG hydration on workflowId or draft param change
+  // Hydrate canvas on initialNodes / initialEdges load or workflowId change
   useEffect(() => {
-    const template = templateMap[workflowId];
-    let draftWf: any = null;
-    try {
-      const savedDraftStr = localStorage.getItem('autoflow_draft_workflow');
-      if (savedDraftStr) {
-        draftWf = JSON.parse(savedDraftStr);
-      }
-    } catch (e) {
-      console.error('Draft parsing error:', e);
-    }
-
-    if (draftWf && draftWf.nodes && draftWf.nodes.length > 0) {
-      const hydratedNodes: Node[] = draftWf.nodes.map((n: any, idx: number) => {
+    if (initialNodes && initialNodes.length > 0) {
+      const hydratedNodes: Node[] = initialNodes.map((n: any, idx: number) => {
         const isTrigger = idx === 0 || n.type === 'trigger';
-        const isLast = idx === draftWf.nodes.length - 1;
+        const isLast = idx === initialNodes.length - 1;
         return bindNodeCallbacks({
           id: n.id || `node_${idx + 1}`,
           type: 'custom',
-          position: { x: 250, y: 80 + idx * 180 },
+          position: n.position || { x: 250, y: 80 + idx * 180 },
           data: {
             stepNumber: idx + 1,
             label: n.name || n.label || `Step ${idx + 1}`,
@@ -248,26 +222,33 @@ export function WorkflowCanvas({
         });
       });
 
-      const hydratedEdges: Edge[] = (draftWf.edges || []).map((e: any) => ({
-        id: e.id || `e_${e.source}_${e.target}`,
-        source: e.source,
-        target: e.target,
-        type: 'custom',
-        data: { onInsertStep: handleOpenInsertModal },
-      }));
+      let hydratedEdges: Edge[] = [];
+      if (initialEdges && initialEdges.length > 0) {
+        hydratedEdges = initialEdges.map((e: any) => ({
+          id: e.id || `e_${e.source}_${e.target}`,
+          source: e.source,
+          target: e.target,
+          type: 'custom',
+          data: { onInsertStep: handleOpenInsertModal },
+        }));
+      } else {
+        // Auto-generate linear edges if edges array was empty
+        for (let i = 0; i < hydratedNodes.length - 1; i++) {
+          hydratedEdges.push({
+            id: `e_${hydratedNodes[i].id}_${hydratedNodes[i + 1].id}`,
+            source: hydratedNodes[i].id,
+            target: hydratedNodes[i + 1].id,
+            type: 'custom',
+            data: { onInsertStep: handleOpenInsertModal },
+          });
+        }
+      }
 
       setNodes(hydratedNodes);
       setEdges(hydratedEdges);
-      toast.success('AI Workflow Draft Loaded onto Canvas!', {
-        description: `Loaded ${hydratedNodes.length} auto-configured DAG steps.`,
-      });
-    } else if (template) {
-      const hEdges = template.edges.map((e) => ({ ...e, data: { ...e.data, onInsertStep: handleOpenInsertModal } }));
-      const hNodes = template.nodes.map(bindNodeCallbacks);
-      setNodes(hNodes);
-      setEdges(hEdges);
     } else {
-      const defaultNode: Node = {
+      // Default single trigger step for new manual workflows
+      const singleTriggerNode = bindNodeCallbacks({
         id: 'node_trigger',
         type: 'custom',
         position: { x: 250, y: 80 },
@@ -280,12 +261,12 @@ export function WorkflowCanvas({
           type: 'trigger',
           isLastInChain: true,
         },
-      };
-      setNodes([bindNodeCallbacks(defaultNode)]);
+      });
+
+      setNodes([singleTriggerNode]);
       setEdges([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowId, isDraftParam]);
+  }, [workflowId, initialNodes, initialEdges, bindNodeCallbacks, handleOpenInsertModal, setEdges, setNodes]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => {
