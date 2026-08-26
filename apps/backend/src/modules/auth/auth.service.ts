@@ -119,25 +119,41 @@ export class AuthService {
     return await AuthService.googleAuth({ email, name });
   }
 
-  static async googleAuth(input: { email: string; name?: string; avatar?: string }) {
-    let user = await AuthRepository.findByEmail(input.email);
+  static async googleAuth(input: { email: string; name?: string; avatar?: string; idToken?: string }) {
+    let email = input.email;
+    let name = input.name;
+
+    if (input.idToken) {
+      try {
+        const parts = input.idToken.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+          if (payload.email) email = payload.email;
+          if (payload.name && !name) name = payload.name;
+        }
+      } catch (e) {
+        console.warn('[AuthService] Could not parse idToken payload:', e);
+      }
+    }
+
+    let user = await AuthRepository.findByEmail(email);
     let orgId: string;
 
     if (!user) {
       // Auto-create organization and user for Google Account
-      const name = input.name || input.email.split('@')[0];
-      const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-org-' + Date.now().toString().slice(-4);
+      const userName = name || email.split('@')[0];
+      const slug = userName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-org-' + Date.now().toString().slice(-4);
       const org = await AuthRepository.createOrganization({
-        name: `${name}'s Org`,
+        name: `${userName}'s Org`,
         slug,
         plan: 'free',
       });
 
       const passwordHash = await bcrypt.hash(`google_auth_${Date.now()}_${Math.random()}`, 10);
       user = await AuthRepository.createUser({
-        email: input.email,
+        email,
         passwordHash,
-        name,
+        name: userName,
         organizationId: org._id,
         role: 'admin',
       });

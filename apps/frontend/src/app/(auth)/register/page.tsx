@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Zap, AlertCircle, CheckCircle2, ShieldCheck, X, Plus } from 'lucide-react';
 import { useUserRole } from '@/context/UserRoleContext';
 import { apiClient } from '@/lib/api-client';
+import { signInWithGoogleFirebase } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 export default function RegisterPage() {
@@ -23,17 +24,60 @@ export default function RegisterPage() {
     { email: 'anil.work@autoflow.io', name: 'Anil (Work)', avatar: 'AW' },
   ];
 
-  const handleRedirectToGoogleOAuth = async () => {
+  const handleGoogleSignUp = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
-      const res = await apiClient.get('/v1/auth/google/url');
-      const { url, isConfigured } = res.data.data;
-      if (isConfigured && url && url.startsWith('https://accounts.google.com')) {
-        window.location.href = url;
-      } else {
-        setIsModalOpen(true);
+      // 1. Primary: Use Firebase Google Auth Popup
+      const { user: fbUser, idToken } = await signInWithGoogleFirebase();
+      if (fbUser && fbUser.email) {
+        const res = await apiClient.post('/v1/auth/google', {
+          email: fbUser.email,
+          name: fbUser.displayName || fbUser.email.split('@')[0],
+          idToken,
+          avatar: fbUser.photoURL,
+        });
+
+        const { user: registeredUser, token } = res.data.data;
+        login(
+          registeredUser.email,
+          registeredUser.role || 'admin',
+          registeredUser.name,
+          registeredUser.id,
+          registeredUser.organizationId,
+          token
+        );
+
+        toast.success(`Registered with Google Account`, {
+          description: `Welcome, ${registeredUser.name} (${registeredUser.email}). Workspace connectors ready.`,
+        });
+
+        router.push('/dashboard');
+        return;
       }
-    } catch {
+    } catch (fbErr: any) {
+      console.warn('[RegisterPage] Firebase Auth popup issue:', fbErr);
+
+      if (fbErr?.code === 'auth/popup-closed-by-user' || fbErr?.code === 'auth/cancelled-popup-request') {
+        toast.info('Sign-up cancelled', { description: 'Google sign-up popup was closed.' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 2. Secondary: Try backend Google OAuth URL redirect
+      try {
+        const res = await apiClient.get('/v1/auth/google/url');
+        const { url, isConfigured } = res.data.data;
+        if (isConfigured && url && url.startsWith('https://accounts.google.com')) {
+          window.location.href = url;
+          return;
+        }
+      } catch {
+        // Fallback to manual selection modal
+      }
+
+      // 3. Fallback: Open interactive account modal
       setIsModalOpen(true);
     } finally {
       setIsSubmitting(false);
@@ -122,8 +166,8 @@ export default function RegisterPage() {
         <button
           type="button"
           disabled={isSubmitting}
-          onClick={handleRedirectToGoogleOAuth}
-          className="w-full py-3.5 px-4 rounded-xl bg-white text-gray-900 font-semibold text-sm flex items-center justify-center gap-3 hover:bg-gray-100 transition-all shadow-lg active:scale-[0.99]"
+          onClick={handleGoogleSignUp}
+          className="w-full py-3.5 px-4 rounded-xl bg-white text-gray-900 font-semibold text-sm flex items-center justify-center gap-3 hover:bg-gray-100 transition-all shadow-lg active:scale-[0.99] disabled:opacity-50"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -131,14 +175,14 @@ export default function RegisterPage() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
           </svg>
-          <span>Sign Up with Google Account</span>
+          <span>{isSubmitting ? 'Connecting to Google...' : 'Sign Up with Google Account'}</span>
         </button>
 
         {/* Trust Badges */}
         <div className="mt-6 pt-5 border-t border-borderColor/60 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[11px] text-textSecondary">
             <CheckCircle2 size={13} className="text-accentEmerald shrink-0" />
-            <span>Select any Google Account from account chooser</span>
+            <span>Firebase Auth Popup & Google Account Selector</span>
           </div>
           <div className="flex items-center gap-2 text-[11px] text-textSecondary">
             <ShieldCheck size={13} className="text-accentEmerald shrink-0" />
@@ -242,7 +286,7 @@ export default function RegisterPage() {
             )}
 
             <div className="text-center text-[10px] text-gray-400">
-              AutoFlow secures your credentials via Google OAuth2 standards.
+              AutoFlow secures your credentials via Firebase & Google OAuth2 standards.
             </div>
           </div>
         </div>

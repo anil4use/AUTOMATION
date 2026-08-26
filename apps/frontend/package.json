@@ -16,6 +16,7 @@
     "@reactflow/core": "^11.10.4",
     "axios": "^1.6.7",
     "clsx": "^2.1.1",
+    "firebase": "^12.18.0",
     "lucide-react": "^0.330.0",
     "next": "^14.1.0",
     "react": "^18.2.0",
