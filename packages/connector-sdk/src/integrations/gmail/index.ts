@@ -202,6 +202,11 @@ export class GmailConnector extends BaseConnector {
 
       const searchData = await searchRes.json();
       if (!searchRes.ok) {
+        if (searchRes.status === 401) {
+          throw new Error(
+            `Google OAuth Session Expired (401): Your Google OAuth token for "${userEmail}" has expired. Please visit http://localhost:3000/connectors and click "Connect Gmail" to log in and get a fresh token.`
+          );
+        }
         throw new Error(`Gmail Search Error (${searchRes.status}): ${searchData.error?.message || 'Failed to query emails'}`);
       }
 

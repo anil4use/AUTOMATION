@@ -146,20 +146,25 @@ export class StepExecutor {
   static interpolateVariables(template: any, context: any): any {
     if (typeof template !== 'string') return template;
 
-    return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (fullMatch, path) => {
-      const keys = path.split('.');
-      let val = StepExecutor.getValueFromPath(context, keys);
+    return template.replace(/\{\{\s*(.*?)\s*\}\}/g, (fullMatch, rawExpr) => {
+      // Support || fallback expressions (e.g. "node_2.output.summary || node_2.output.result")
+      const alternatives = rawExpr.split('||').map((s: string) => s.trim());
 
-      if (val === undefined && (keys[0] === 'steps' || keys[0] === 'nodes')) {
-        val = StepExecutor.getValueFromPath(context.nodes || context.steps, keys.slice(1));
-      }
+      for (const altPath of alternatives) {
+        const keys = altPath.split('.');
+        let val = StepExecutor.getValueFromPath(context, keys);
 
-      if (val === undefined && keys[0] === 'trigger') {
-        val = StepExecutor.getValueFromPath(context.trigger, keys.slice(1));
-      }
+        if (val === undefined && (keys[0] === 'steps' || keys[0] === 'nodes')) {
+          val = StepExecutor.getValueFromPath(context.nodes || context.steps, keys.slice(1));
+        }
 
-      if (val !== undefined && val !== null) {
-        return typeof val === 'object' ? JSON.stringify(val) : String(val);
+        if (val === undefined && keys[0] === 'trigger') {
+          val = StepExecutor.getValueFromPath(context.trigger, keys.slice(1));
+        }
+
+        if (val !== undefined && val !== null && val !== '') {
+          return typeof val === 'object' ? JSON.stringify(val) : String(val);
+        }
       }
 
       return fullMatch;
