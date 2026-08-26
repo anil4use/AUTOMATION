@@ -36,7 +36,7 @@ export class WorkflowController {
 
   static async update(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const data = await WorkflowService.updateWorkflow(req.params.id, req.user!.organizationId, req.body);
+      const data = await WorkflowService.updateWorkflow(req.params.id, req.user!.organizationId, req.user!.userId, req.body);
       return sendResponse(res, 200, true, data, 'Workflow updated');
     } catch (err) {
       next(err);

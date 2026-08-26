@@ -261,7 +261,7 @@ export function FieldMapper({
   const [isExecuting, setIsExecuting] = useState(false);
 
   // Schedule Trigger Modes & Fields
-  const [scheduleMode, setScheduleMode] = useState<'daily' | 'weekly' | 'date' | 'cron' | 'webhook'>('daily');
+  const [scheduleMode, setScheduleMode] = useState<'hourly' | 'daily' | 'interval' | 'weekly' | 'date' | 'cron' | 'webhook'>('daily');
   const [dailyTime, setDailyTime] = useState('09:00');
   const [webhookCopied, setWebhookCopied] = useState(false);
 
@@ -518,17 +518,22 @@ export function FieldMapper({
             {isScheduleNode ? (
               <div className="flex flex-col gap-4">
                 <div className="text-xs font-semibold text-white">AutoFlow Schedule Configuration:</div>
-                <div className="grid grid-cols-2 gap-1.5 bg-bgPrimary p-1 rounded-xl border border-borderColor">
+                <div className="grid grid-cols-3 gap-1.5 bg-bgPrimary p-1 rounded-xl border border-borderColor">
                   {[
+                    { id: 'hourly', label: 'Hourly' },
                     { id: 'daily', label: 'Daily' },
+                    { id: 'interval', label: 'Every X Mins' },
                     { id: 'weekly', label: 'Weekly' },
                     { id: 'date', label: 'Specific Date' },
                     { id: 'webhook', label: 'Webhook URL' },
                   ].map((m) => (
                     <button
                       key={m.id}
-                      onClick={() => setScheduleMode(m.id as any)}
-                      className={`py-1.5 text-xs font-medium rounded-lg transition-all ${
+                      onClick={() => {
+                        setScheduleMode(m.id as any);
+                        handleFieldChange('frequency', m.id);
+                      }}
+                      className={`py-1.5 text-[11px] font-medium rounded-lg transition-all ${
                         scheduleMode === m.id
                           ? 'bg-accentPurple text-white shadow font-semibold'
                           : 'text-textMuted hover:text-white'
@@ -538,6 +543,29 @@ export function FieldMapper({
                     </button>
                   ))}
                 </div>
+
+                {scheduleMode === 'hourly' && (
+                  <div className="flex flex-col gap-3 p-3.5 bg-white/[0.02] rounded-xl border border-borderColor">
+                    <div>
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Repeat Interval (Hours)</label>
+                      <select
+                        value={configValues.intervalHours || '1'}
+                        onChange={(e) => {
+                          handleFieldChange('intervalHours', e.target.value);
+                          handleFieldChange('frequency', 'hourly');
+                        }}
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      >
+                        <option value="1">Every 1 Hour (60 mins)</option>
+                        <option value="2">Every 2 Hours</option>
+                        <option value="3">Every 3 Hours</option>
+                        <option value="4">Every 4 Hours</option>
+                        <option value="6">Every 6 Hours</option>
+                        <option value="12">Every 12 Hours</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {scheduleMode === 'daily' && (
                   <div className="flex flex-col gap-3 p-3.5 bg-white/[0.02] rounded-xl border border-borderColor">
@@ -549,6 +577,83 @@ export function FieldMapper({
                         onChange={(e) => {
                           setDailyTime(e.target.value);
                           handleFieldChange('time', e.target.value);
+                          handleFieldChange('frequency', 'daily');
+                        }}
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {scheduleMode === 'interval' && (
+                  <div className="flex flex-col gap-3 p-3.5 bg-white/[0.02] rounded-xl border border-borderColor">
+                    <div>
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Execution Interval (Minutes)</label>
+                      <select
+                        value={configValues.intervalMinutes || '15'}
+                        onChange={(e) => {
+                          handleFieldChange('intervalMinutes', e.target.value);
+                          handleFieldChange('frequency', 'interval');
+                        }}
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      >
+                        <option value="5">Every 5 Minutes</option>
+                        <option value="10">Every 10 Minutes</option>
+                        <option value="15">Every 15 Minutes</option>
+                        <option value="30">Every 30 Minutes</option>
+                        <option value="45">Every 45 Minutes</option>
+                        <option value="60">Every 60 Minutes (1 hour)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {scheduleMode === 'weekly' && (
+                  <div className="flex flex-col gap-3 p-3.5 bg-white/[0.02] rounded-xl border border-borderColor">
+                    <div>
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Day of Week</label>
+                      <select
+                        value={configValues.dayOfWeek || 'monday'}
+                        onChange={(e) => {
+                          handleFieldChange('dayOfWeek', e.target.value);
+                          handleFieldChange('frequency', 'weekly');
+                        }}
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none mb-2"
+                      >
+                        <option value="monday">Every Monday</option>
+                        <option value="tuesday">Every Tuesday</option>
+                        <option value="wednesday">Every Wednesday</option>
+                        <option value="thursday">Every Thursday</option>
+                        <option value="friday">Every Friday</option>
+                        <option value="saturday">Every Saturday</option>
+                        <option value="sunday">Every Sunday</option>
+                      </select>
+
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Trigger Time</label>
+                      <input
+                        type="time"
+                        value={dailyTime}
+                        onChange={(e) => {
+                          setDailyTime(e.target.value);
+                          handleFieldChange('time', e.target.value);
+                          handleFieldChange('frequency', 'weekly');
+                        }}
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {scheduleMode === 'date' && (
+                  <div className="flex flex-col gap-3 p-3.5 bg-white/[0.02] rounded-xl border border-borderColor">
+                    <div>
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Target Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        value={configValues.targetDate || ''}
+                        onChange={(e) => {
+                          handleFieldChange('targetDate', e.target.value);
+                          handleFieldChange('frequency', 'date');
                         }}
                         className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
                       />

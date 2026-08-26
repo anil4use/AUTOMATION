@@ -173,10 +173,18 @@ export class StepExecutor {
 
   private static getValueFromPath(obj: any, pathKeys: string[]): any {
     let current = obj;
-    for (const key of pathKeys) {
+    for (let i = 0; i < pathKeys.length; i++) {
+      const key = pathKeys[i];
       if (current === undefined || current === null) return undefined;
-      if (typeof current === 'object' && !(key in current) && current.output && typeof current.output === 'object' && key in current.output) {
-        current = current.output[key];
+
+      if (typeof current === 'object' && !(key in current) && current.output && typeof current.output === 'object') {
+        if (key in current.output) {
+          current = current.output[key];
+        } else if (i === pathKeys.length - 1 && (current.output.summary || current.output.result || current.output.topSnippet || current.output.emails)) {
+          current = current.output.summary || current.output.result || current.output.topSnippet || current.output.emails;
+        } else {
+          current = current[key];
+        }
       } else {
         current = current[key];
       }

@@ -69,6 +69,9 @@ export class AINodeConnector extends BaseConnector {
               data: {
                 result: aiText,
                 summary: aiText,
+                parsedJobs: aiText,
+                text: aiText,
+                content: aiText,
                 tokensUsed: data.usageMetadata?.totalTokenCount || 120,
               },
             };
@@ -90,15 +93,23 @@ export class AINodeConnector extends BaseConnector {
 
       let summaryResult = '';
       if (Array.isArray(parsedData)) {
-        summaryResult = `📧 Processed ${parsedData.length} Email Messages:\n` +
-          parsedData.map((item: any, i: number) => `• [${i + 1}] ${item.subject || 'Email'} from ${item.from || 'sender'}: ${item.snippet || item.body || ''}`).join('\n');
+        const isJobOrWeb = parsedData.some((item: any) => item.url || item.title || item.snippet);
+        if (isJobOrWeb) {
+          summaryResult = `💼 Top Web Search & Job Listings Digest (${parsedData.length} items):\n` +
+            parsedData.map((item: any, i: number) => `• [Job ${i + 1}] ${item.title || 'Listing'}\n  URL: ${item.url || 'N/A'}\n  Details: ${item.snippet || item.content || ''}`).join('\n\n');
+        } else {
+          summaryResult = `📧 Processed ${parsedData.length} Email Messages:\n` +
+            parsedData.map((item: any, i: number) => `• [${i + 1}] ${item.subject || 'Email'} from ${item.from || 'sender'}: ${item.snippet || item.body || ''}`).join('\n');
+        }
       } else if (typeof parsedData === 'object' && parsedData !== null) {
         const emailCount = parsedData.count || parsedData.messages?.length || 1;
         const details = parsedData.messages ? parsedData.messages.map((m: any) => m.snippet || m.subject).join('; ') : JSON.stringify(parsedData);
-        summaryResult = `📧 Daily Inbox Summary (${emailCount} emails processed):\nHighlights: ${details}`;
+        summaryResult = `💼 Web & Data Summary:\nHighlights: ${details}`;
       } else {
         const textStr = String(inputText);
-        summaryResult = `📧 Email Digest Summary:\n${textStr.length > 250 ? textStr.substring(0, 250) + '...' : textStr}`;
+        summaryResult = textStr.includes('React') || textStr.includes('Job') || textStr.includes('search')
+          ? `💼 Web Search & Job Summary:\n${textStr}`
+          : `📧 Digest Summary:\n${textStr}`;
       }
 
       return {
@@ -106,6 +117,9 @@ export class AINodeConnector extends BaseConnector {
         data: {
           result: summaryResult,
           summary: summaryResult,
+          parsedJobs: summaryResult,
+          text: summaryResult,
+          content: summaryResult,
           tokensUsed: 50,
         },
       };

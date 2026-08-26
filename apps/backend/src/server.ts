@@ -4,7 +4,7 @@ import { env } from './config/env';
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 
-async function bootstrap() {
+async function bootstrap(retries = 3) {
   try {
     // 1. Connect to Database Infrastructure
     await connectDatabase();
@@ -19,7 +19,12 @@ async function bootstrap() {
     });
   } catch (error) {
     logger.error('Failed to start modular backend server:', error);
-    process.exit(1);
+    if (retries > 0) {
+      logger.info(`[Server] Retrying MongoDB connection in 2 seconds (${retries} attempts left)...`);
+      setTimeout(() => bootstrap(retries - 1), 2000);
+    } else {
+      process.exit(1);
+    }
   }
 }
 

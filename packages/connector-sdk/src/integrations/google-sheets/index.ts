@@ -193,6 +193,53 @@ export class GoogleSheetsConnector extends BaseConnector {
         data = await res.json();
       }
 
+      // Handle 400 "Unable to parse range" (worksheet tab does not exist)
+      if (!res.ok && res.status === 400 && data.error?.message?.includes('Unable to parse range')) {
+        try {
+          // Auto-create missing worksheet tab via batchUpdate
+          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              requests: [{ addSheet: { properties: { title: sheetName } } }],
+            }),
+          });
+        } catch {}
+
+        // Retry append to the newly created worksheet tab
+        res = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ values: [parsedRow] }),
+          }
+        );
+        data = await res.json();
+
+        // Final fallback: append directly to A1 without tab prefix
+        if (!res.ok) {
+          res = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ values: [parsedRow] }),
+            }
+          );
+          data = await res.json();
+        }
+      }
+
       if (!res.ok) throw new Error(`Google Sheets Append Error (${res.status}): ${data.error?.message || res.statusText}`);
 
       return {

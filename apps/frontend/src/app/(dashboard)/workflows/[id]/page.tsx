@@ -170,22 +170,24 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
         },
       };
 
+      let savedWf: any = null;
       if (params.id === 'new') {
         const res = await apiClient.post('/v1/workflows', payload);
-        const createdWf = res.data.data;
-        localStorage.removeItem('autoflow_draft_workflow');
-        toast.success(`Workflow Saved as ${targetStatus.toUpperCase()} in MongoDB`, {
-          description: `Created workflow. Status set to ${targetStatus.toUpperCase()}.`,
-        });
-        setTimeout(() => {
-          router.push(`/workflows/${createdWf._id || createdWf.id}`);
-        }, 600);
+        savedWf = res.data.data;
       } else {
-        await apiClient.put(`/v1/workflows/${params.id}`, payload);
-        localStorage.removeItem('autoflow_draft_workflow');
-        toast.success(`Workflow Saved as ${targetStatus.toUpperCase()} in MongoDB`, {
-          description: `Updated workflow #${params.id}. Status set to ${targetStatus.toUpperCase()}.`,
-        });
+        const res = await apiClient.put(`/v1/workflows/${params.id}`, payload);
+        savedWf = res.data.data;
+      }
+
+      localStorage.removeItem('autoflow_draft_workflow');
+      toast.success(`Workflow Saved as ${targetStatus.toUpperCase()} in MongoDB`, {
+        description: `Workflow "${savedWf?.name || workflowName}" saved successfully in MongoDB Atlas.`,
+      });
+
+      if (params.id === 'new' && savedWf && (savedWf._id || savedWf.id)) {
+        setTimeout(() => {
+          router.push(`/workflows/${savedWf._id || savedWf.id}`);
+        }, 600);
       }
     } catch (e: any) {
       console.error('Save workflow error:', e);

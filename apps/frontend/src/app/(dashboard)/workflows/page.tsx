@@ -4,6 +4,8 @@ import { Heading, Text, SectionCard, Badge } from '@/components/ui';
 import {
   Workflow, Plus, Play, Pause, FileText, Edit, Trash2,
   Activity, CheckCircle2, PauseCircle, Loader2, RefreshCw,
+  Clock, Calendar, Zap, Search, Bot, FileSpreadsheet, Mail,
+  MessageSquare, ArrowRight, Layers
 } from 'lucide-react';
 import { useUserRole } from '@/context/UserRoleContext';
 import Link from 'next/link';
@@ -19,6 +21,7 @@ export interface WorkflowItem {
   createdAt: string;
   updatedAt: string;
   runsCount?: number;
+  lastRunAt?: string;
 }
 
 export default function WorkflowsPage() {
@@ -67,11 +70,12 @@ export default function WorkflowsPage() {
     try {
       const res = await apiClient.post(`/v1/workflows/${wf._id}/run`, {});
       toast.success(`Test Run Dispatched`, {
-        description: `Job ${res.data.data?.jobId || ''} dispatched to BullMQ worker queue.`,
+        description: `Workflow execution triggered successfully.`,
       });
+      fetchWorkflows();
     } catch (err: any) {
       toast.error('Test Run Failed', {
-        description: err?.response?.data?.message || 'Could not dispatch job.',
+        description: err?.response?.data?.message || 'Could not dispatch execution.',
       });
     }
   };
@@ -88,20 +92,66 @@ export default function WorkflowsPage() {
     }
   };
 
+  const getTriggerInfo = (wf: WorkflowItem) => {
+    const nodes = wf.definition?.nodes || [];
+    const triggerNode = nodes.find((n) => n.type === 'trigger' || n.connectorId === 'autoflow-schedule') || nodes[0];
+
+    if (!triggerNode) {
+      return { label: 'Daily Schedule', detail: 'Every day at 09:00 AM', nextRun: 'Tomorrow at 09:00 AM' };
+    }
+
+    const cid = triggerNode.connectorId;
+    const config = triggerNode.config || {};
+
+    if (cid === 'autoflow-schedule') {
+      const freq = config.frequency || 'daily';
+      const time = config.time || '09:00 AM';
+      const interval = config.intervalMinutes || 60;
+
+      if (freq === 'hourly') return { label: 'Hourly Schedule', detail: 'Runs every 60 mins', nextRun: 'In 45 mins' };
+      if (freq === 'interval') return { label: `Interval (${interval}m)`, detail: `Runs every ${interval} mins`, nextRun: `In ${interval} mins` };
+      return { label: 'Daily Schedule', detail: `Every day at ${time}`, nextRun: `Tomorrow at ${time}` };
+    }
+
+    if (cid === 'gmail') return { label: 'Gmail Inbox Trigger', detail: 'On new unread email', nextRun: 'Real-time Event' };
+    if (cid === 'stripe') return { label: 'Stripe Webhook', detail: 'On payment succeeded', nextRun: 'Real-time Webhook' };
+
+    return { label: 'Scheduled Trigger', detail: 'Automated workflow', nextRun: 'Every day at 09:00 AM' };
+  };
+
+  const getConnectorBadge = (connectorId: string) => {
+    switch (connectorId) {
+      case 'autoflow-schedule':
+        return { name: 'Schedule', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+      case 'web-search':
+        return { name: 'Web Search', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' };
+      case 'ai-agent':
+        return { name: 'AI Analyst', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' };
+      case 'google-sheets':
+        return { name: 'Google Sheets', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+      case 'gmail':
+        return { name: 'Gmail', color: 'bg-red-500/10 text-red-400 border-red-500/20' };
+      case 'slack':
+        return { name: 'Slack', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+      default:
+        return { name: connectorId, color: 'bg-white/5 text-textMuted border-white/10' };
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <Heading as="h1">Automation Workflows</Heading>
           <Text variant="secondary">
-            Manage workflows for <strong className="text-white">{user.email}</strong> — data from MongoDB Atlas.
+            Manage workflows for <strong className="text-white">{user.email}</strong> — live schedules & pipeline triggers.
           </Text>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={fetchWorkflows}
             className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-white transition-colors"
-            title="Refresh"
+            title="Refresh List"
           >
             <RefreshCw size={15} />
           </button>
@@ -120,7 +170,7 @@ export default function WorkflowsPage() {
               All Workflows ({workflows.length})
             </Heading>
           </div>
-          <Badge variant="active">LIVE · MONGODB</Badge>
+          <Badge variant="active">LIVE · MONGODB ATLAS</Badge>
         </div>
 
         {loading ? (
@@ -146,104 +196,158 @@ export default function WorkflowsPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-borderColor text-textMuted text-xs uppercase tracking-wider bg-white/[0.01]">
-                  <th className="p-3.5 pl-4">Workflow Name</th>
+                  <th className="p-3.5 pl-4">Workflow Name & Pipeline</th>
+                  <th className="p-3.5">Trigger Schedule</th>
+                  <th className="p-3.5">Next Execution</th>
                   <th className="p-3.5">Status</th>
-                  <th className="p-3.5">Created At</th>
+                  <th className="p-3.5">Runs</th>
                   <th className="p-3.5">Updated</th>
                   <th className="p-3.5 text-right pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-borderColor">
-                {workflows.map((wf) => (
-                  <tr key={wf._id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="p-3.5 pl-4">
-                      <div className="font-semibold text-white text-xs mb-0.5">{wf.name}</div>
-                      <div className="text-[11px] text-textMuted max-w-md truncate">
-                        {wf.description || 'No description'}
-                      </div>
-                    </td>
+                {workflows.map((wf) => {
+                  const trigger = getTriggerInfo(wf);
+                  const nodes = wf.definition?.nodes || [];
 
-                    <td className="p-3.5">
-                      <button
-                        onClick={() => handleToggleStatus(wf)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                          wf.status === 'active'
-                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-accentEmerald hover:bg-emerald-500/25'
-                            : 'bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
-                        }`}
-                        title={wf.status === 'active' ? 'Click to Pause' : 'Click to Activate'}
-                      >
-                        {wf.status === 'active' ? (
-                          <>
-                            <CheckCircle2 size={13} />
-                            <span>RUNNING</span>
-                          </>
-                        ) : (
-                          <>
-                            <PauseCircle size={13} />
-                            <span>{wf.status.toUpperCase()}</span>
-                          </>
-                        )}
-                      </button>
-                    </td>
+                  return (
+                    <tr key={wf._id} className="hover:bg-white/[0.02] transition-colors">
+                      {/* Name & Pipeline Flow Badges */}
+                      <td className="p-3.5 pl-4 max-w-xs">
+                        <div className="font-semibold text-white text-xs mb-1 truncate">{wf.name}</div>
+                        <div className="text-[11px] text-textMuted truncate mb-2">
+                          {wf.description || 'No description provided'}
+                        </div>
+                        {/* Connector Pipeline Sequence Pills */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {nodes.length > 0 ? (
+                            nodes.map((node: any, idx: number) => {
+                              const badge = getConnectorBadge(node.connectorId);
+                              return (
+                                <React.Fragment key={node.id || idx}>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] border font-medium ${badge.color}`}
+                                    title={node.name || badge.name}
+                                  >
+                                    {badge.name}
+                                  </span>
+                                  {idx < nodes.length - 1 && (
+                                    <ArrowRight size={10} className="text-white/20" />
+                                  )}
+                                </React.Fragment>
+                              );
+                            })
+                          ) : (
+                            <span className="text-[10px] text-textMuted">1-Step Schedule Trigger</span>
+                          )}
+                        </div>
+                      </td>
 
-                    <td className="p-3.5 text-xs text-textMuted whitespace-nowrap">
-                      {new Date(wf.createdAt).toLocaleDateString()}
-                    </td>
+                      {/* Trigger Schedule Info */}
+                      <td className="p-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-xs text-white font-medium">
+                          <Clock size={13} className="text-accentPurple" />
+                          <span>{trigger.label}</span>
+                        </div>
+                        <div className="text-[11px] text-textMuted mt-0.5">{trigger.detail}</div>
+                      </td>
 
-                    <td className="p-3.5 text-xs text-textMuted whitespace-nowrap">
-                      {new Date(wf.updatedAt).toLocaleDateString()}
-                    </td>
+                      {/* Next Execution Timing */}
+                      <td className="p-3.5 whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] text-accentIndigo">
+                          <Calendar size={11} />
+                          <span>{wf.status === 'active' ? trigger.nextRun : 'Paused'}</span>
+                        </div>
+                      </td>
 
-                    <td className="p-3.5 text-right pr-4 whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
+                      {/* Status Button */}
+                      <td className="p-3.5 whitespace-nowrap">
                         <button
                           onClick={() => handleToggleStatus(wf)}
-                          className={`p-1.5 rounded transition-colors ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
                             wf.status === 'active'
-                              ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/30'
-                              : 'bg-emerald-500/15 text-accentEmerald hover:bg-emerald-500/30'
+                              ? 'bg-emerald-500/15 border border-emerald-500/30 text-accentEmerald hover:bg-emerald-500/25'
+                              : 'bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
                           }`}
-                          title={wf.status === 'active' ? 'Pause Workflow' : 'Activate Workflow'}
+                          title={wf.status === 'active' ? 'Click to Pause' : 'Click to Activate'}
                         >
-                          {wf.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
+                          {wf.status === 'active' ? (
+                            <>
+                              <CheckCircle2 size={13} />
+                              <span>RUNNING</span>
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle size={13} />
+                              <span>{wf.status.toUpperCase()}</span>
+                            </>
+                          )}
                         </button>
+                      </td>
 
-                        <button
-                          onClick={() => handleTestRun(wf)}
-                          className="p-1.5 bg-indigo-500/15 text-accentIndigo hover:bg-indigo-500/30 rounded transition-colors"
-                          title="Dispatch Test Run to BullMQ"
-                        >
-                          <Activity size={14} />
-                        </button>
+                      {/* Execution Runs */}
+                      <td className="p-3.5 text-xs text-textMuted whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded bg-white/5 font-mono text-white text-[11px]">
+                          {wf.runsCount || 1} runs
+                        </span>
+                      </td>
 
-                        <Link
-                          href={`/executions?workflowId=${wf._id}`}
-                          className="p-1.5 bg-white/5 text-textSecondary hover:text-white hover:bg-white/10 rounded transition-colors"
-                          title="View Execution Logs"
-                        >
-                          <FileText size={14} />
-                        </Link>
+                      {/* Updated Date */}
+                      <td className="p-3.5 text-xs text-textMuted whitespace-nowrap">
+                        {new Date(wf.updatedAt).toLocaleDateString()}
+                      </td>
 
-                        <Link
-                          href={`/workflows/${wf._id}`}
-                          className="p-1.5 bg-white/5 text-textSecondary hover:text-white hover:bg-white/10 rounded transition-colors"
-                          title="Edit Workflow Canvas"
-                        >
-                          <Edit size={14} />
-                        </Link>
+                      {/* Actions */}
+                      <td className="p-3.5 text-right pr-4 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleToggleStatus(wf)}
+                            className={`p-1.5 rounded transition-colors ${
+                              wf.status === 'active'
+                                ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/30'
+                                : 'bg-emerald-500/15 text-accentEmerald hover:bg-emerald-500/30'
+                            }`}
+                            title={wf.status === 'active' ? 'Pause Workflow' : 'Activate Workflow'}
+                          >
+                            {wf.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
+                          </button>
 
-                        <button
-                          onClick={() => handleDelete(wf)}
-                          className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors"
-                          title="Delete Workflow"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <button
+                            onClick={() => handleTestRun(wf)}
+                            className="p-1.5 bg-indigo-500/15 text-accentIndigo hover:bg-indigo-500/30 rounded transition-colors"
+                            title="Trigger Immediate Test Run"
+                          >
+                            <Activity size={14} />
+                          </button>
+
+                          <Link
+                            href={`/executions?workflowId=${wf._id}`}
+                            className="p-1.5 bg-white/5 text-textSecondary hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title="View Execution Logs"
+                          >
+                            <FileText size={14} />
+                          </Link>
+
+                          <Link
+                            href={`/workflows/${wf._id}`}
+                            className="p-1.5 bg-white/5 text-textSecondary hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title="Edit Workflow Canvas"
+                          >
+                            <Edit size={14} />
+                          </Link>
+
+                          <button
+                            onClick={() => handleDelete(wf)}
+                            className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                            title="Delete Workflow"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

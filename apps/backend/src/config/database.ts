@@ -3,9 +3,14 @@ import { env } from './env';
 import { logger } from './logger';
 
 export async function connectDatabase(): Promise<typeof mongoose> {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose;
+  }
+
   try {
     const conn = await mongoose.connect(env.mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
     });
     logger.info(`[Database] Connected to MongoDB Atlas at ${conn.connection.host}`);
     return conn;
