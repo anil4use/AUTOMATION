@@ -146,11 +146,18 @@ export class GoogleSheetsConnector extends BaseConnector {
       if (Array.isArray(rawValues)) {
         parsedRow = rawValues;
       } else if (typeof rawValues === 'string') {
-        try {
-          parsedRow = JSON.parse(rawValues);
-          if (!Array.isArray(parsedRow)) parsedRow = [rawValues];
-        } catch {
-          parsedRow = rawValues.split(',').map((s) => s.trim());
+        const str = rawValues.trim();
+        if (str.startsWith('[') && str.endsWith(']')) {
+          try {
+            parsedRow = JSON.parse(str);
+            if (!Array.isArray(parsedRow)) parsedRow = [str];
+          } catch {
+            // Handle unescaped newlines or quotes inside JSON array string
+            const inner = str.slice(1, -1);
+            parsedRow = inner.split(/,\s*(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map((s) => s.trim().replace(/^["']|["']$/g, ''));
+          }
+        } else {
+          parsedRow = str.split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''));
         }
       }
 

@@ -261,19 +261,29 @@ export class AIAgentService {
         } else if (cid === 'web-search') {
           operationId = 'search_web';
           name = 'Web Search & Scraper';
-          config = { query: 'Latest news & updates' };
+          const searchQuery = lower.includes('react') ? 'React developer jobs' : lastUserMessage;
+          config = { query: searchQuery, maxResults: 5 };
+          fieldMapping = { query: searchQuery };
         } else if (cid === 'ai-agent') {
           operationId = 'process_text';
           const isEmailSummary = suggestedConnectors.includes('gmail-read');
-          name = isEmailSummary ? 'AI Email Summarizer' : 'AI Message Generator';
+          const isWebSummary = suggestedConnectors.includes('web-search');
+
+          name = isEmailSummary
+            ? 'AI Email Summarizer'
+            : isWebSummary
+            ? 'AI Job & Web Analyst'
+            : 'AI Content Generator';
+
           config = {
             prompt: isEmailSummary
               ? 'Summarize the following emails into a concise, readable digest. Group by sender. Highlight important action items.'
+              : isWebSummary
+              ? 'Analyze the web search results. Extract top job listings into structured bullet points with Job Title, Company, Location, Salary Range, and Application URL:'
               : 'Generate a helpful, concise, professional response based on the input.',
           };
-          // Reference the previous node's output
           const prevNodeId = `node_${idx}`;
-          fieldMapping = { inputText: `{{${prevNodeId}.output.emails || ${prevNodeId}.output.body || ${prevNodeId}.output}}` };
+          fieldMapping = { inputText: `{{${prevNodeId}.output.topSnippet || ${prevNodeId}.output.results || ${prevNodeId}.output.emails || ${prevNodeId}.output}}` };
         } else if (cid === 'whatsapp') {
           operationId = 'send_message';
           name = 'WhatsApp Business — Send Message';
@@ -309,16 +319,38 @@ export class AIAgentService {
         } else if (cid === 'google-sheets') {
           operationId = 'append_row';
           name = 'Google Sheets — Log Summary Row';
-          const rowValueStr = `["{{trigger.output.triggeredAt}}", "Email Summary Digest", "{{node_${aiNodeIdx}.output.summary || node_${aiNodeIdx}.output.result}}"]`;
+          const isWebSummary = suggestedConnectors.includes('web-search');
+
+          // Dynamically extract sheet name from prompt (e.g. named "React_Developer_Jobs_Log")
+          const quotedMatch = lastUserMessage.match(/["']([A-Za-z0-9_\-\s]{2,60})["']/);
+          const namedMatch = lastUserMessage.match(/named\s+["']?([A-Za-z0-9_\-]+)["']?/i) ||
+                             lastUserMessage.match(/spreadsheet\s+["']?([A-Za-z0-9_\-]+)["']?/i);
+
+          let spreadsheetId = isWebSummary ? 'React_Developer_Jobs_Log' : 'Daily_Email_Summaries_Log';
+          if (quotedMatch && quotedMatch[1] && quotedMatch[1].toLowerCase() !== 'named' && quotedMatch[1].length > 2) {
+            spreadsheetId = quotedMatch[1].trim().replace(/\s+/g, '_');
+          } else if (namedMatch && namedMatch[1] && namedMatch[1].toLowerCase() !== 'named') {
+            spreadsheetId = namedMatch[1].trim();
+          }
+
+          const digestLabel = isWebSummary ? 'React Developer Jobs Digest' : 'Email Summary Digest';
+          const rowValueStr = `["{{trigger.output.triggeredAt}}", "${digestLabel}", "{{node_${aiNodeIdx}.output.summary || node_${aiNodeIdx}.output.result}}"]`;
+
           config = {
-            spreadsheetId: 'Daily_Email_Summaries_Log',
+            spreadsheetId,
+            spreadsheetName: spreadsheetId,
             worksheet: 'Sheet1',
+            worksheetName: 'Sheet1',
             values: rowValueStr,
+            rowData: rowValueStr,
           };
           fieldMapping = {
-            spreadsheetId: 'Daily_Email_Summaries_Log',
+            spreadsheetId,
+            spreadsheetName: spreadsheetId,
             worksheet: 'Sheet1',
+            worksheetName: 'Sheet1',
             values: rowValueStr,
+            rowData: rowValueStr,
           };
         } else if (cid === 'google-drive') {
           operationId = 'upload_file';

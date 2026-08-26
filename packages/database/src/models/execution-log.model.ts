@@ -13,7 +13,7 @@ export interface IExecutionLog extends Document {
 
 const ExecutionLogSchema = new Schema<IExecutionLog>(
   {
-    workflowId: { type: Schema.Types.ObjectId, ref: 'Workflow', required: true, index: true },
+    workflowId: { type: Schema.Types.ObjectId, ref: 'Workflow', required: false, index: true },
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
     status: { type: String, enum: ['pending', 'running', 'completed', 'failed', 'retrying'], default: 'pending', index: true },
     triggerPayload: { type: Schema.Types.Mixed, default: {} },
