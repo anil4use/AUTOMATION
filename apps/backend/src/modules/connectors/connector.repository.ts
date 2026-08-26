@@ -17,6 +17,10 @@ export class ConnectorRepository {
     return await ConnectionModel.findOneAndUpdate({ _id: id, organizationId: orgId }, { $set: data }, { new: true });
   }
 
+  static async findByOrgAndConnector(orgId: string, connectorId: string) {
+    return await ConnectionModel.findOne({ organizationId: orgId, connectorId, status: 'connected' }).sort({ updatedAt: -1 });
+  }
+
   static async deleteConnection(id: string, orgId: string) {
     return await ConnectionModel.deleteOne({ _id: id, organizationId: orgId });
   }

@@ -10,11 +10,13 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@automation/shared-types": "*"
+    "@automation/shared-types": "*",
+    "@types/nodemailer": "^8.0.1",
+    "nodemailer": "^9.0.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "typescript": "^5.4.0",
-    "rimraf": "^5.0.0"
+    "rimraf": "^5.0.0",
+    "typescript": "^5.4.0"
   }
 }

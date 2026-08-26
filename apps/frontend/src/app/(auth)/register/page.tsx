@@ -30,12 +30,13 @@ export default function RegisterPage() {
 
     try {
       // 1. Primary: Use Firebase Google Auth Popup
-      const { user: fbUser, idToken } = await signInWithGoogleFirebase();
+      const { user: fbUser, idToken, accessToken } = await signInWithGoogleFirebase();
       if (fbUser && fbUser.email) {
         const res = await apiClient.post('/v1/auth/google', {
           email: fbUser.email,
           name: fbUser.displayName || fbUser.email.split('@')[0],
           idToken,
+          accessToken,
           avatar: fbUser.photoURL,
         });
 

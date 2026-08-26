@@ -7,6 +7,8 @@ export * from './integrations/ai-node';
 
 export * from './connectors/autoflow-schedule.connector';
 export * from './connectors/google-drive.connector';
+export * from './connectors/google-calendar.connector';
+export * from './connectors/google-docs.connector';
 export * from './connectors/notion.connector';
 export * from './connectors/stripe.connector';
 export * from './connectors/whatsapp.connector';

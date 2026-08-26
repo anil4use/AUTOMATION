@@ -72,4 +72,14 @@ export class ConnectorController {
       next(err);
     }
   }
+
+  static async testConnection(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { connectorId } = req.params;
+      const data = await ConnectorService.testConnection(connectorId, req.user!.organizationId, req.body);
+      return sendResponse(res, 200, true, data, 'Connection test successful');
+    } catch (err) {
+      next(err);
+    }
+  }
 }

@@ -14,15 +14,22 @@ const firebaseConfig = {
 // Initialize Firebase App singleton for Next.js SSR / Client rendering
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firebase Auth & Google Provider
+// Initialize Firebase Auth & Google Provider with Gmail & Workspace scopes
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.modify');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.send');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+googleProvider.addScope('https://www.googleapis.com/auth/documents');
 
 /**
  * Triggers Google Auth Popup using Firebase Auth.
- * Returns the authenticated user profile and Google ID Token.
+ * Returns the authenticated user profile, Google ID Token, and Google Access Token.
  */
 export async function signInWithGoogleFirebase(): Promise<{ user: User; idToken: string; accessToken?: string }> {
   try {

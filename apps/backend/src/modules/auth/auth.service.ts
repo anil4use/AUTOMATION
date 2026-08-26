@@ -12,27 +12,30 @@ export class AuthService {
    * Ensures that every account has default connected Google & Workspace connectors
    * linked to the user's registered email address (e.g. Gmail, Google Sheets, Google Drive, Slack).
    */
-  private static async ensureDefaultGoogleAccountConnections(orgId: string, userId: string, email: string) {
+  private static async ensureDefaultGoogleAccountConnections(orgId: string, userId: string, email: string, accessToken?: string) {
     try {
       const existing = await ConnectionModel.find({ organizationId: orgId });
-      const existingIds = new Set(existing.map((c) => c.connectorId));
+      const existingMap = new Map(existing.map((c) => [c.connectorId, c]));
 
       const defaultConnectors = [
         { connectorId: 'gmail', name: `Gmail Google Account (${email})`, authType: 'oauth2' },
         { connectorId: 'google-sheets', name: `Google Sheets (${email})`, authType: 'oauth2' },
         { connectorId: 'google-drive', name: `Google Drive (${email})`, authType: 'oauth2' },
+        { connectorId: 'google-calendar', name: `Google Calendar (${email})`, authType: 'oauth2' },
+        { connectorId: 'google-docs', name: `Google Docs (${email})`, authType: 'oauth2' },
         { connectorId: 'slack', name: `Slack Workspace (${email})`, authType: 'oauth2' },
       ];
 
       for (const conn of defaultConnectors) {
-        if (!existingIds.has(conn.connectorId)) {
-          const encryptedCredentials = encryptJson({
-            accessToken: `default_access_token_${conn.connectorId}`,
-            userEmail: email,
-            accountOwner: email,
-            connectedAt: new Date().toISOString(),
-          });
+        const encryptedCredentials = encryptJson({
+          accessToken: accessToken || `default_access_token_${conn.connectorId}`,
+          userEmail: email,
+          accountOwner: email,
+          connectedAt: new Date().toISOString(),
+        });
 
+        const existingConn = existingMap.get(conn.connectorId);
+        if (!existingConn) {
           await ConnectionModel.create({
             organizationId: orgId,
             userId,
@@ -42,6 +45,11 @@ export class AuthService {
             encryptedCredentials,
             status: 'connected',
           });
+        } else if (accessToken && (!existingConn.encryptedCredentials || existingConn.encryptedCredentials.includes('default_access_token'))) {
+          // Upgrade existing default connection with real OAuth access token
+          existingConn.encryptedCredentials = encryptedCredentials;
+          existingConn.status = 'connected';
+          await existingConn.save();
         }
       }
     } catch (err) {
@@ -119,7 +127,7 @@ export class AuthService {
     return await AuthService.googleAuth({ email, name });
   }
 
-  static async googleAuth(input: { email: string; name?: string; avatar?: string; idToken?: string }) {
+  static async googleAuth(input: { email: string; name?: string; avatar?: string; idToken?: string; accessToken?: string }) {
     let email = input.email;
     let name = input.name;
 
@@ -162,8 +170,8 @@ export class AuthService {
       orgId = user.organizationId.toString();
     }
 
-    // Auto-link default Google account connectors for this email in MongoDB Atlas
-    await AuthService.ensureDefaultGoogleAccountConnections(orgId, user._id.toString(), user.email);
+    // Auto-link default Google account connectors with real OAuth access token for this email in MongoDB
+    await AuthService.ensureDefaultGoogleAccountConnections(orgId, user._id.toString(), user.email, input.accessToken);
 
     const payload = { userId: user._id.toString(), organizationId: orgId, role: user.role, email: user.email };
     const token = jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn as any });

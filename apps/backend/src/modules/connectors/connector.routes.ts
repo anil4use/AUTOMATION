@@ -14,5 +14,6 @@ router.get('/oauth/authorize/:connectorId', ConnectorController.authorizeOAuth a
 router.post('/oauth/callback/:connectorId', validationMiddleware(oauthCallbackSchema), ConnectorController.handleOAuthCallback as any);
 router.post('/connections/api-key', validationMiddleware(createApiKeyConnectionSchema), ConnectorController.createApiKeyConnection as any);
 router.delete('/connections/:id', ConnectorController.deleteConnection as any);
+router.post('/test/:connectorId', ConnectorController.testConnection as any);
 
 export default router;
