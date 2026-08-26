@@ -15,6 +15,9 @@ export * from './connectors/whatsapp.connector';
 export * from './connectors/http-request.connector';
 export * from './connectors/web-search.connector';
 
+export * from './engine/step-executor';
+export * from './engine/dag-runner';
+
 export * from './auth/oauth2.strategy';
 export * from './auth/api-key.strategy';
 export * from './auth/webhook.strategy';

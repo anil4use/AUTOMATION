@@ -294,28 +294,41 @@ export default function ExecutionsPage() {
               <div className="text-textMuted">[INFO] Job ID: {selectedLog.jobId || selectedLog._id}</div>
               <div className="text-textMuted">[INFO] Status: {selectedLog.status?.toUpperCase()}</div>
               <div className="text-textMuted">[INFO] Started: {formatTime(selectedLog.startedAt || selectedLog.createdAt)}</div>
-              {selectedLog.steps && selectedLog.steps.length > 0 ? (
-                selectedLog.steps.map((step: any, i: number) => (
-                  <div
-                    key={i}
-                    className={
-                      step.status === 'failed' ? 'text-red-400' :
-                      step.status === 'completed' ? 'text-accentEmerald' :
-                      'text-accentIndigo'
-                    }
-                  >
-                    [STEP {i + 1}] {step.nodeId || step.name} — {step.status?.toUpperCase()}
-                    {step.error ? ` — ${step.error}` : ''}
+              {(() => {
+                const nodeRes = (selectedLog as any).nodeResults || {};
+                const stepsList = selectedLog.steps || Object.values(nodeRes);
+                if (stepsList.length === 0) {
+                  return <div className="text-textMuted italic">[INFO] No step-level data recorded for this execution.</div>;
+                }
+                return stepsList.map((step: any, i: number) => (
+                  <div key={i} className="p-2.5 rounded bg-white/5 border border-borderColor/40 flex flex-col gap-1.5 mb-1">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className={step.status === 'failed' ? 'text-red-400' : 'text-emerald-400'}>
+                        [STEP {i + 1}] {step.name || step.nodeId || `Node ${i + 1}`} {step.connectorId ? `(${step.connectorId})` : ''}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {step.durationMs !== undefined ? `${step.durationMs}ms` : ''} · {step.status?.toUpperCase()}
+                      </span>
+                    </div>
+                    {step.error && <div className="text-red-300 font-semibold text-[11px]">Error: {step.error}</div>}
+                    {step.output && (
+                      <pre className="mt-1 p-2 bg-black/60 rounded text-[10px] text-emerald-300/90 overflow-x-auto max-h-36">
+                        {JSON.stringify(step.output, null, 2)}
+                      </pre>
+                    )}
                   </div>
-                ))
-              ) : (
-                <div className="text-textMuted italic">[INFO] No step-level data available for this execution.</div>
-              )}
+                ));
+              })()}
               {selectedLog.status === 'failed' && selectedLog.error && (
-                <div className="text-red-400 font-bold">[ERROR] {selectedLog.error}</div>
+                <div className="text-red-400 font-bold p-2 bg-red-500/10 border border-red-500/30 rounded">
+                  [WORKFLOW ERROR] {selectedLog.error}
+                </div>
               )}
               {selectedLog.status === 'completed' && (
-                <div className="text-accentEmerald font-bold">[SUCCESS] Workflow execution completed.</div>
+                <div className="text-accentEmerald font-bold text-[11px] p-2 bg-emerald-500/10 border border-emerald-500/30 rounded flex items-center justify-between">
+                  <span>[WORKFLOW SUCCESS] All steps executed live successfully.</span>
+                  <span>{new Date().toLocaleTimeString()}</span>
+                </div>
               )}
             </div>
 

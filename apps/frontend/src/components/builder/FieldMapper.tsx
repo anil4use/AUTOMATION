@@ -4,6 +4,7 @@ import { Heading, Text, Button, Badge } from '@/components/ui';
 import { Sliders, Lock, Copy, Check, ChevronDown, ShieldCheck, Play, Sparkles } from 'lucide-react';
 import { Node } from 'reactflow';
 import { useUserRole } from '@/context/UserRoleContext';
+import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export const CONNECTOR_MANIFESTS: Record<string, {
@@ -257,6 +258,7 @@ export function FieldMapper({
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<any>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
 
   // Schedule Trigger Modes & Fields
   const [scheduleMode, setScheduleMode] = useState<'daily' | 'weekly' | 'date' | 'cron' | 'webhook'>('daily');
@@ -357,21 +359,38 @@ export function FieldMapper({
     { label: 'Run ID', var: '{{nodes.node_trigger.output.runId}}' },
   ];
 
-  const handleRunTest = () => {
-    setTestResult({
-      status: 'success',
-      statusCode: 200,
-      timestamp: new Date().toISOString(),
-      outputData: {
-        id: `res_${Date.now()}`,
-        message: 'Step executed successfully in worker sandbox.',
-        connector: manifest.name,
+  const handleRunTest = async () => {
+    setIsExecuting(true);
+    setTestResult(null);
+    try {
+      const res = await apiClient.post('/v1/workflows/test-step', {
+        connectorId: connectorId,
         operationId: selectedOperationId,
-        configuredFields: configValues,
-        userEmail: user.email,
-      },
-    });
-    toast.success('Test Execution Completed', { description: 'Step output generated successfully.' });
+        configValues,
+      });
+
+      const data = res.data.data;
+      setTestResult({
+        status: 'success',
+        statusCode: 200,
+        timestamp: data?.executedAt || new Date().toISOString(),
+        outputData: data?.outputData,
+      });
+      toast.success('Step Executed Live', {
+        description: `Executed ${selectedOperationId} via real ${manifest.name} API.`,
+      });
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Step execution failed.';
+      setTestResult({
+        status: 'error',
+        statusCode: err?.response?.status || 400,
+        timestamp: new Date().toISOString(),
+        error: errorMsg,
+      });
+      toast.error('Step Execution Failed', { description: errorMsg });
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const copyWebhookUrl = () => {
