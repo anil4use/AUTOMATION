@@ -51,36 +51,54 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
-      const newWf = {
-        id: params.id === 'new' ? `wf_${Date.now().toString().slice(-4)}` : params.id,
-        name: params.id === 'new' ? `${user.name || 'User'} Custom Workflow` : `Workflow #${params.id}`,
-        desc: 'Custom user automation workflow DAG configured via visual builder.',
-        status: 'active' as const,
-        connectors: ['AutoFlow Schedule', 'Gmail', 'Slack'],
-        runsCount: 1,
-        createdAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        lastRunAt: 'Just now',
-        userEmail: user.email,
+      let draft: any = null;
+      try {
+        const saved = localStorage.getItem('autoflow_draft_workflow');
+        if (saved) draft = JSON.parse(saved);
+      } catch {}
+
+      const workflowName = draft?.name || (params.id === 'new' ? `Workflow_${Date.now().toString().slice(-4)}` : `Workflow #${params.id}`);
+      const workflowDesc = draft?.description || 'Automated workflow configured via AutoFlow visual builder.';
+
+      const payload = {
+        name: workflowName,
+        description: workflowDesc,
+        status: 'active',
+        definition: {
+          nodes: draft?.nodes || [
+            { id: 'node_1', connectorId: 'autoflow-schedule', operationId: 'schedule_time', type: 'trigger' },
+            { id: 'node_2', connectorId: 'gmail', operationId: 'new_email', type: 'action' },
+            { id: 'node_3', connectorId: 'ai-agent', operationId: 'process_text', type: 'ai-agent' },
+            { id: 'node_4', connectorId: 'gmail', operationId: 'send_email', type: 'action' },
+          ],
+          edges: draft?.edges || [
+            { id: 'e_1_2', source: 'node_1', target: 'node_2' },
+            { id: 'e_2_3', source: 'node_2', target: 'node_3' },
+            { id: 'e_3_4', source: 'node_3', target: 'node_4' },
+          ],
+        },
       };
 
-      const storageKey = `autoflow_real_workflows_${user.email}`;
-      const existingStr = localStorage.getItem(storageKey);
-      const existing = existingStr ? JSON.parse(existingStr) : [];
-      const updated = [newWf, ...existing.filter((w: any) => w.id !== newWf.id)];
-      localStorage.setItem(storageKey, JSON.stringify(updated));
+      if (params.id === 'new') {
+        await apiClient.post('/v1/workflows', payload);
+      } else {
+        await apiClient.put(`/v1/workflows/${params.id}`, payload);
+      }
 
-      toast.success('Workflow Definition Saved & Activated', {
-        description: `Saved under ${user.email}. Status set to RUNNING.`,
+      toast.success('Workflow Definition Saved & Activated in MongoDB', {
+        description: `Saved to database under ${user.email}. Status set to RUNNING.`,
       });
 
       setTimeout(() => {
         router.push('/workflows');
-      }, 1000);
-    } catch (e) {
+      }, 800);
+    } catch (e: any) {
       console.error('Save workflow error:', e);
-      toast.success('Workflow Saved', { description: `Workflow #${params.id} saved.` });
+      toast.error('Save Workflow Failed', {
+        description: e?.response?.data?.message || 'Could not save workflow to MongoDB.',
+      });
     }
   };
 

@@ -72,37 +72,20 @@ export default function ConnectorsPage() {
       const res = await apiClient.get(`/v1/connectors/oauth/authorize/${connector.id}`);
       const { url } = res.data.data;
 
-      // Extract authorization code or auto-grant code
-      let code = `auto_granted_${connector.id}_${Date.now()}`;
-      
-      if (url && url.includes('code=')) {
-        try {
-          const parsedUrl = new URL(url);
-          code = parsedUrl.searchParams.get('code') || code;
-        } catch {
-          // Keep default code if URL parsing fails
-        }
-      } else if (url && url.startsWith('https://accounts.google.com') && !url.includes('google_client_id_placeholder')) {
-        // Open real Google OAuth consent screen only if valid client ID is present
-        window.open(url, '_blank', 'width=600,height=700');
-        toast.info(`Connecting ${connector.name}`, {
-          description: 'Complete authorization in popup window.',
+      if (!url || url.includes('placeholder') || url.includes('YOUR_') || url.includes('undefined')) {
+        toast.error(`Real ${connector.name} OAuth Not Configured`, {
+          description: `To connect your real ${connector.name} account, add ${connector.id.toUpperCase()}_CLIENT_ID and ${connector.id.toUpperCase()}_CLIENT_SECRET in apps/backend/.env file.`,
+          duration: 6000,
         });
         setConnectingConnectorId(null);
         return;
       }
 
-      // Complete OAuth token exchange & AES-256 encryption directly into MongoDB
-      await apiClient.post(`/v1/connectors/oauth/callback/${connector.id}`, { code });
-
-      toast.success(`${connector.name} Connected & Authorized!`, {
-        description: `OAuth2 tokens encrypted via AES-256-CBC and linked to ${user.email}.`,
-      });
-
-      await fetchConnections();
+      // Redirect to real Google/Slack OAuth login consent screen
+      window.location.href = url;
     } catch (err: any) {
-      toast.error(`OAuth Connection Failed`, {
-        description: err?.response?.data?.message || 'Could not authenticate connector.',
+      toast.error(`OAuth Redirect Failed`, {
+        description: err?.response?.data?.message || `Could not initiate OAuth for ${connector.name}. Check backend environment keys.`,
       });
     } finally {
       setConnectingConnectorId(null);
