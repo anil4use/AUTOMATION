@@ -14,6 +14,7 @@ export * from './connectors/stripe.connector';
 export * from './connectors/whatsapp.connector';
 export * from './connectors/http-request.connector';
 export * from './connectors/web-search.connector';
+export * from './connectors/condition.connector';
 
 export * from './engine/step-executor';
 export * from './engine/dag-runner';

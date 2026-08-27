@@ -12,6 +12,7 @@ import { HttpRequestConnector } from '../connectors/http-request.connector';
 import { AINodeConnector } from '../integrations/ai-node';
 import { WebSearchConnector } from '../connectors/web-search.connector';
 import { AutoFlowScheduleConnector } from '../connectors/autoflow-schedule.connector';
+import { ConditionConnector } from '../connectors/condition.connector';
 import * as crypto from 'crypto';
 
 export const connectorRegistry: Record<string, any> = {
@@ -29,6 +30,8 @@ export const connectorRegistry: Record<string, any> = {
   'ai-agent': new AINodeConnector(),
   'ai-node': new AINodeConnector(),
   'web-search': new WebSearchConnector(),
+  'autoflow-condition': new ConditionConnector(),
+  condition: new ConditionConnector(),
 };
 
 export class StepExecutor {

@@ -224,6 +224,44 @@ export const CONNECTOR_MANIFESTS: Record<string, {
     ],
   },
 
+  'autoflow-condition': {
+    name: 'If / Else Logic Condition',
+    operations: [
+      {
+        id: 'if_else',
+        label: 'If / Else Rule Evaluation',
+        type: 'action',
+        fields: [
+          { id: 'leftValue', label: 'Value to Test (Dynamic Variable token)', type: 'input', placeholder: 'e.g. {{nodes.node_2.output.title}}' },
+          {
+            id: 'operator',
+            label: 'Comparison Operator',
+            type: 'select',
+            options: [
+              { value: 'contains', label: 'Contains text' },
+              { value: 'equals', label: 'Equals (==)' },
+              { value: 'not_equals', label: 'Not Equals (!=)' },
+              { value: 'greater_than', label: 'Greater Than (>)' },
+              { value: 'less_than', label: 'Less Than (<)' },
+              { value: 'is_empty', label: 'Is Empty / Null' },
+              { value: 'is_not_empty', label: 'Is Not Empty' },
+            ],
+            defaultValue: 'contains',
+          },
+          { id: 'rightValue', label: 'Comparison Target Value', type: 'input', placeholder: 'e.g. React or Senior' },
+        ],
+      },
+      {
+        id: 'filter',
+        label: 'Filter Array Items',
+        type: 'action',
+        fields: [
+          { id: 'arrayData', label: 'Input Array Data', type: 'input', placeholder: 'e.g. {{nodes.node_2.output.results}}' },
+          { id: 'matchValue', label: 'Match Keyword', type: 'input', placeholder: 'e.g. Remote' },
+        ],
+      },
+    ],
+  },
   'autoflow-schedule': {
     name: 'AutoFlow Schedule Trigger',
     operations: [
@@ -246,6 +284,7 @@ export const CONNECTOR_MANIFESTS: Record<string, {
 function normalizeConnectorId(rawId?: string): string {
   if (!rawId) return 'autoflow-schedule';
   const lower = rawId.toLowerCase();
+  if (lower.includes('condition') || lower.includes('if_else') || lower.includes('logic')) return 'autoflow-condition';
   if (lower.includes('sheet')) return 'google-sheets';
   if (lower.includes('search') || lower.includes('web')) return 'web-search';
   if (lower.includes('ai') || lower.includes('analys')) return 'ai-agent';

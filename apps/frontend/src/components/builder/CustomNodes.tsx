@@ -1,6 +1,6 @@
 import React, { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Mail, MessageSquare, Table, Sparkles, Zap, HardDrive, FileText, CreditCard, Send, Globe, Clock, Plus, MoreVertical, Edit2, Sliders, Copy, Trash2, Check, X } from 'lucide-react';
+import { Mail, MessageSquare, Table, Sparkles, Zap, HardDrive, FileText, CreditCard, Send, Globe, Clock, Plus, MoreVertical, Edit2, Sliders, Copy, Trash2, Check, X, GitFork } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
   'autoflow-schedule': Clock,
@@ -13,6 +13,8 @@ const iconMap: Record<string, any> = {
   whatsapp: Send,
   'http-request': Globe,
   'ai-agent': Sparkles,
+  'autoflow-condition': GitFork,
+  condition: GitFork,
 };
 
 export const CustomNode = memo(({ data, selected, id }: NodeProps) => {
@@ -207,12 +209,40 @@ export const CustomNode = memo(({ data, selected, id }: NodeProps) => {
         </div>
       )}
 
-      {/* Bottom Connection Handle */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-3.5 h-3.5 !bg-accentPurple !border-2 !border-bgPrimary hover:scale-125 transition-transform"
-      />
+      {/* Bottom Connection Handles for Condition vs Standard Nodes */}
+      {data.connectorId === 'autoflow-condition' || data.connectorId === 'condition' ? (
+        <div className="flex items-center justify-between px-6 pt-2 border-t border-white/10 mt-2 text-[10px] font-bold">
+          <div className="flex items-center gap-1 text-emerald-400 relative">
+            <Check size={12} />
+            <span>TRUE</span>
+            <Handle
+              type="source"
+              id="true"
+              position={Position.Bottom}
+              style={{ left: '25%' }}
+              className="w-3.5 h-3.5 !bg-emerald-500 !border-2 !border-bgPrimary hover:scale-125 transition-transform"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 text-red-400 relative">
+            <span>FALSE</span>
+            <X size={12} />
+            <Handle
+              type="source"
+              id="false"
+              position={Position.Bottom}
+              style={{ left: '75%' }}
+              className="w-3.5 h-3.5 !bg-red-500 !border-2 !border-bgPrimary hover:scale-125 transition-transform"
+            />
+          </div>
+        </div>
+      ) : (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="w-3.5 h-3.5 !bg-accentPurple !border-2 !border-bgPrimary hover:scale-125 transition-transform"
+        />
+      )}
     </div>
   );
 });
