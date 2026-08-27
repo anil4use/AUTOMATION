@@ -295,8 +295,25 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     return responseData;
   }
 
-  /** Dynamic Fallback Generator without hardcoded restrictions */
+  /** Dynamic Fallback Generator matching exact prompt intents */
   private static async buildDynamicFallbackWorkflow(lastUserMessage: string, lower: string, orgId: string) {
+    const cleanLower = lower.replace(/[^a-z0-9\s]/g, '').trim();
+    const isGreeting =
+      ['hi', 'hello', 'hey', 'yo', 'greetings', 'good morning', 'good afternoon', 'good evening', 'hiii', 'heyy', 'sup'].includes(cleanLower) ||
+      cleanLower.length <= 3;
+
+    if (isGreeting) {
+      return {
+        replyMessage:
+          "Hello! 👋 I am your AutoFlow AI Copilot. You can ask me questions about the platform, inspect your workflow execution logs, or describe an automation pipeline to build (e.g. *'When a new email arrives in Gmail, summarize with AI and send a notification to Slack'*). How can I assist you today?",
+        isGreeting: true,
+        workflowDraft: null,
+        suggestedConnectors: [],
+        userConnectionsStatus: [],
+      };
+    }
+
+    const isWhatsApp = lower.includes('whatsapp');
     const isGithub = lower.includes('git') || lower.includes('repo');
     const isWebSearch = lower.includes('search') || lower.includes('scraper') || lower.includes('job') || lower.includes('web');
     const isSlack = lower.includes('slack');
@@ -316,16 +333,20 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     }
 
     const suggestedConnectors: string[] = ['autoflow-schedule'];
-    if (isGithub) suggestedConnectors.push('github');
-    else if (isWebSearch) suggestedConnectors.push('web-search');
-    else if (isGmail) suggestedConnectors.push('gmail-read');
-    else suggestedConnectors.push('web-search');
+    if (isWhatsApp) {
+      suggestedConnectors.push('whatsapp');
+    } else {
+      if (isGithub) suggestedConnectors.push('github');
+      else if (isWebSearch) suggestedConnectors.push('web-search');
+      else if (isGmail) suggestedConnectors.push('gmail-read');
+      else suggestedConnectors.push('web-search');
 
-    suggestedConnectors.push('ai-agent');
+      suggestedConnectors.push('ai-agent');
 
-    if (isSheets) suggestedConnectors.push('google-sheets');
-    else if (isSlack) suggestedConnectors.push('slack');
-    else suggestedConnectors.push('google-sheets');
+      if (isSheets) suggestedConnectors.push('google-sheets');
+      else if (isSlack) suggestedConnectors.push('slack');
+      else suggestedConnectors.push('google-sheets');
+    }
 
     const nodes: any[] = [];
     const edges: any[] = [];
@@ -347,6 +368,11 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
         const searchQuery = lower.includes('react') ? 'React developer jobs' : lastUserMessage;
         config = { query: searchQuery, maxResults };
         fieldMapping = { query: searchQuery, maxResults };
+      } else if (cid === 'whatsapp') {
+        operationId = 'send_message';
+        name = 'WhatsApp — Send Message Notification';
+        config = { recipient: '+1234567890', message: 'Scheduled AutoFlow Daily Message' };
+        fieldMapping = { recipient: '+1234567890', message: 'Scheduled AutoFlow Daily Message' };
       } else if (cid === 'github') {
         operationId = 'get_commits';
         name = 'GitHub — Fetch Repository Commits';
@@ -424,22 +450,20 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     }
   }
 
-  /** Direct Gemini API call returning raw JSON */
+  /** Direct Gemini 3.6 Flash API call returning raw JSON */
   private static async callGeminiJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
     const promptText = systemPrompt || DYNAMIC_WORKFLOW_SYSTEM_PROMPT;
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.geminiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [
-            { role: 'user', parts: [{ text: promptText }] },
-            ...messages.map((m) => ({
-              role: m.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: m.content }],
-            })),
-          ],
+          systemInstruction: { parts: [{ text: promptText }] },
+          contents: messages.map((m) => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }],
+          })),
           generationConfig: { responseMimeType: 'application/json' },
         }),
       }
@@ -449,7 +473,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
-  /** Direct Groq API call returning raw JSON */
+  /** Direct Groq API call returning raw JSON using groq/compound */
   private static async callGroqJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
     const promptText = systemPrompt || DYNAMIC_WORKFLOW_SYSTEM_PROMPT;
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -459,7 +483,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
         Authorization: `Bearer ${env.groqApiKey}`,
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b',
+        model: 'groq/compound',
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: promptText },
