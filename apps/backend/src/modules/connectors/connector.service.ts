@@ -17,13 +17,13 @@ import {
   UniversalConnector,
   OAuth2Strategy,
   connectorRegistry,
+  ProviderVerifier,
+  ALL_50_CONNECTOR_MANIFESTS,
 } from '@automation/connector-sdk';
 import { ConnectorRepository } from './connector.repository';
 import { encryptJson, decryptJson } from '../../shared/utils/crypto';
 import { AppError } from '../../shared/errors/app.error';
 import { env } from '../../config/env';
-
-import { ALL_50_CONNECTOR_MANIFESTS } from '@automation/connector-sdk';
 
 export class ConnectorService {
   static getAvailableConnectors() {
@@ -81,13 +81,20 @@ export class ConnectorService {
   }
 
   static async createApiKeyConnection(orgId: string, userId: string, connectorId: string, name: string, apiKey: string) {
-    const encryptedCredentials = encryptJson({ apiKey, createdAt: new Date().toISOString() });
+    // Live Pre-Save Provider Verification & Format Guard
+    const verification = await ProviderVerifier.verifyCredentials(connectorId, apiKey);
+
+    const encryptedCredentials = encryptJson({
+      apiKey,
+      accountName: verification.accountName,
+      verifiedAt: new Date().toISOString(),
+    });
 
     return await ConnectorRepository.createConnection({
       organizationId: orgId,
       userId,
       connectorId,
-      name,
+      name: verification.accountName || name,
       authType: 'api_key',
       encryptedCredentials,
       status: 'connected',
@@ -274,20 +281,16 @@ export class ConnectorService {
       };
     }
 
-    // Generic real Live API test for all 50+ enterprise connectors
-    const connector = connectorRegistry[connectorId] || new UniversalConnector();
-    const result = await connector.executeAction('execute', {
-      connectionCredentials: credentials,
-      workflowVariables: { connectorId },
-      stepInput: testInput || {},
-    });
+    // Real Live API test using ProviderVerifier
+    const key = credentials.apiKey || credentials.accessToken;
+    const verification = await ProviderVerifier.verifyCredentials(connectorId, key || '');
 
     return {
       status: 'success',
       connectorId,
-      account: conn.name || `${connectorId.toUpperCase()} Account`,
-      output: result.data,
-      message: `Live API Verified for '${connectorId.toUpperCase()}'! Real AES-256 credentials decrypted and validated.`,
+      account: verification.accountName || conn.name,
+      output: verification.details || { verifiedAt: new Date().toISOString() },
+      message: verification.message || `Live API Verified for '${connectorId.toUpperCase()}'!`,
     };
   }
 }

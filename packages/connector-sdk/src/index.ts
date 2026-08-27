@@ -25,3 +25,4 @@ export * from './engine/dag-runner';
 export * from './auth/oauth2.strategy';
 export * from './auth/api-key.strategy';
 export * from './auth/webhook.strategy';
+export * from './auth/provider-verifier';

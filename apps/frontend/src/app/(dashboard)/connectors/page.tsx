@@ -34,47 +34,50 @@ interface AppAuthSpec {
   label: string;
   placeholder: string;
   help: string;
+  docUrl: string;
 }
 
 const APP_AUTH_SPECS: Record<string, AppAuthSpec> = {
-  github: { label: 'GitHub Personal Access Token', placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate at GitHub -> Settings -> Developer Settings -> Personal Access Tokens (classic) with "repo" & "user" scopes.' },
-  gitlab: { label: 'GitLab Personal Access Token', placeholder: 'glpat-xxxxxxxxxxxxxxxxxxxx', help: 'Generate at GitLab -> Preferences -> Access Tokens.' },
-  slack: { label: 'Slack Bot User OAuth Token', placeholder: 'xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxx', help: 'Copy from Slack API Dashboard -> OAuth & Permissions -> Bot User OAuth Token.' },
-  discord: { label: 'Discord Bot Token', placeholder: 'MTAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy from Discord Developer Portal -> Bot -> Reset Token.' },
-  telegram: { label: 'Telegram Bot Token', placeholder: '123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ', help: 'Create a bot via @BotFather on Telegram to receive your HTTP API Token.' },
-  whatsapp: { label: 'WhatsApp Permanent System Token', placeholder: 'EAAGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate token at Facebook Developer Dashboard -> WhatsApp -> API Setup.' },
-  openai: { label: 'OpenAI Secret API Key', placeholder: 'sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at platform.openai.com -> API Keys.' },
-  anthropic: { label: 'Anthropic Claude API Key', placeholder: 'sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at console.anthropic.com -> API Keys.' },
-  gemini: { label: 'Google Gemini API Key', placeholder: 'AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at Google AI Studio (aistudio.google.com).' },
-  groq: { label: 'Groq Cloud Sub-Second API Key', placeholder: 'gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at console.groq.com -> API Keys.' },
-  elevenlabs: { label: 'ElevenLabs Voice API Key', placeholder: 'xi-api-key-xxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy key from ElevenLabs Profile Settings -> API Keys.' },
-  huggingface: { label: 'Hugging Face Access Token', placeholder: 'hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy token from huggingface.co/settings/tokens.' },
-  stripe: { label: 'Stripe Secret Key', placeholder: 'sk_test_51xxxxxxxxxxxxxxxx or sk_live_51xxxx', help: 'Copy key from dashboard.stripe.com -> Developers -> API Keys.' },
-  razorpay: { label: 'Razorpay Key ID & Key Secret', placeholder: 'rzp_test_xxxx:secret_xxxx', help: 'Generate keys at dashboard.razorpay.com -> Settings -> API Keys.' },
-  shopify: { label: 'Shopify Admin API Access Token', placeholder: 'shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create app at Shopify Admin -> Settings -> Apps & Admin API Integrations.' },
-  postgresql: { label: 'PostgreSQL Connection URI / JSON', placeholder: 'postgresql://username:password@localhost:5432/dbname', help: 'Format: postgresql://username:password@host:port/database_name.' },
-  mysql: { label: 'MySQL Connection URI / JSON', placeholder: 'mysql://username:password@localhost:3306/dbname', help: 'Format: mysql://username:password@host:port/database_name.' },
-  mongodb: { label: 'MongoDB Connection URI', placeholder: 'mongodb+srv://username:password@cluster.mongodb.net/dbname', help: 'Copy URI from MongoDB Atlas -> Database -> Connect.' },
-  redis: { label: 'Redis Connection URI', placeholder: 'redis://:password@localhost:6379', help: 'Format: redis://:password@host:port.' },
-  supabase: { label: 'Supabase Anon / Service Role Key', placeholder: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...', help: 'Copy key from Supabase Dashboard -> Project Settings -> API.' },
-  firebase: { label: 'Firebase Service Account / API Key', placeholder: '{"type": "service_account", "project_id": "..."}', help: 'Generate private key JSON from Firebase Console -> Service Accounts.' },
-  'aws-s3': { label: 'AWS S3 Credentials (AccessKey:SecretKey:Region:Bucket)', placeholder: 'AKIAXXXXXX:SecretKey123:us-east-1:my-bucket-name', help: 'IAM User credentials with s3:PutObject and s3:GetObject permissions.' },
-  hubspot: { label: 'HubSpot Private App Token', placeholder: 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', help: 'Create Private App at HubSpot -> Settings -> Integrations -> Private Apps.' },
-  salesforce: { label: 'Salesforce Security Token / Session ID', placeholder: '00Dxx0000000000!ARxxxxxxxxxxxxxxxx', help: 'Reset security token at Salesforce Settings -> My Personal Information.' },
-  notion: { label: 'Notion Internal Integration Secret', placeholder: 'secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create integration at notion.so/my-integrations.' },
-  airtable: { label: 'Airtable Personal Access Token', placeholder: 'patxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx', help: 'Create token at airtable.com/create/tokens.' },
-  jira: { label: 'Atlassian API Token', placeholder: 'ATATT3xFfGF0xxxxxxxxxxxxxxxx', help: 'Create token at id.atlassian.com/manage-profile/security/api-tokens.' },
-  linear: { label: 'Linear Personal Access Token', placeholder: 'lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create token at linear.app/settings/api.' },
-  clickup: { label: 'ClickUp Personal API Token', placeholder: 'pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy token from ClickUp Settings -> Apps -> API Token.' },
-  trello: { label: 'Trello API Key & Token', placeholder: 'key:token', help: 'Generate key & token at trello.com/app-key.' },
-  twilio: { label: 'Twilio Account SID & Auth Token', placeholder: 'ACxxxxxxxxxxxxxxxx:authtokenxxxx', help: 'Copy Account SID and Auth Token from Twilio Console.' },
-  sendgrid: { label: 'SendGrid API Key', placeholder: 'SG.xxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx', help: 'Create key at app.sendgrid.com -> Settings -> API Keys.' },
-  mailchimp: { label: 'Mailchimp API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', help: 'Create key at admin.mailchimp.com -> Account -> API Keys.' },
-  resend: { label: 'Resend API Key', placeholder: 're_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create key at resend.com/api-keys.' },
-  'google-analytics': { label: 'GA4 Service Account JSON Key', placeholder: '{"type": "service_account", ...}', help: 'Generate key from Google Cloud Console with GA4 read permissions.' },
-  calendly: { label: 'Calendly Personal Access Token', placeholder: 'eyJhbGciOiJKV1QiLC...', help: 'Generate token at my.calendly.com/integrations/api_subscriptions.' },
-  typeform: { label: 'Typeform Personal Access Token', placeholder: 'tfp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate token at admin.typeform.com/account.' },
-  zoom: { label: 'Zoom S2S OAuth Credentials (id:secret:account)', placeholder: 'client_id:client_secret:account_id', help: 'Create Server-to-Server OAuth App at marketplace.zoom.us.' },
+  github: { label: 'GitHub Personal Access Token', placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate classic token with "repo" & "user" scopes.', docUrl: 'https://github.com/settings/tokens/new' },
+  gitlab: { label: 'GitLab Personal Access Token', placeholder: 'glpat-xxxxxxxxxxxxxxxxxxxx', help: 'Generate personal access token with "api" scope.', docUrl: 'https://gitlab.com/-/user_settings/personal_access_tokens' },
+  slack: { label: 'Slack Bot User OAuth Token', placeholder: 'xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxx', help: 'Copy Bot User OAuth Token under OAuth & Permissions.', docUrl: 'https://api.slack.com/apps' },
+  discord: { label: 'Discord Bot Token', placeholder: 'MTAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy Bot token from Discord Developer Portal.', docUrl: 'https://discord.com/developers/applications' },
+  telegram: { label: 'Telegram Bot Token', placeholder: '123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ', help: 'Create bot via @BotFather on Telegram.', docUrl: 'https://t.me/BotFather' },
+  whatsapp: { label: 'WhatsApp Permanent System Token', placeholder: 'EAAGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate token at Facebook Developer Dashboard.', docUrl: 'https://developers.facebook.com/apps/' },
+  openai: { label: 'OpenAI Secret API Key', placeholder: 'sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate new secret key on OpenAI Platform.', docUrl: 'https://platform.openai.com/api-keys' },
+  anthropic: { label: 'Anthropic Claude API Key', placeholder: 'sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate API key in Anthropic Console.', docUrl: 'https://console.anthropic.com/settings/keys' },
+  gemini: { label: 'Google Gemini API Key', placeholder: 'AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Get free Gemini key from Google AI Studio.', docUrl: 'https://aistudio.google.com/app/apikey' },
+  groq: { label: 'Groq Cloud Sub-Second API Key', placeholder: 'gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate Llama 3 key in Groq Cloud Console.', docUrl: 'https://console.groq.com/keys' },
+  elevenlabs: { label: 'ElevenLabs Voice API Key', placeholder: 'xi-api-key-xxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy key from ElevenLabs Profile Settings.', docUrl: 'https://elevenlabs.io/app/settings/api-keys' },
+  huggingface: { label: 'Hugging Face Access Token', placeholder: 'hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy User Access Token from Hugging Face Settings.', docUrl: 'https://huggingface.co/settings/tokens' },
+  stripe: { label: 'Stripe Secret Key', placeholder: 'sk_test_51xxxxxxxxxxxxxxxx or sk_live_51xxxx', help: 'Copy Secret key under Developers -> API Keys.', docUrl: 'https://dashboard.stripe.com/apikeys' },
+  razorpay: { label: 'Razorpay Key ID & Key Secret', placeholder: 'rzp_test_xxxx:secret_xxxx', help: 'Generate API Keys in Razorpay Dashboard Settings.', docUrl: 'https://dashboard.razorpay.com/app/keys' },
+  shopify: { label: 'Shopify Admin API Access Token', placeholder: 'shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create app in Shopify Admin -> Settings -> Apps.', docUrl: 'https://admin.shopify.com/store/apps' },
+  postgresql: { label: 'PostgreSQL Connection URI / JSON', placeholder: 'postgresql://username:password@localhost:5432/dbname', help: 'Format: postgresql://user:pass@host:port/db.', docUrl: 'https://www.postgresql.org/docs/' },
+  mysql: { label: 'MySQL Connection URI / JSON', placeholder: 'mysql://username:password@localhost:3306/dbname', help: 'Format: mysql://user:pass@host:port/db.', docUrl: 'https://dev.mysql.com/doc/' },
+  mongodb: { label: 'MongoDB Connection URI', placeholder: 'mongodb+srv://username:password@cluster.mongodb.net/dbname', help: 'Copy URI from MongoDB Atlas -> Database -> Connect.', docUrl: 'https://cloud.mongodb.com/' },
+  redis: { label: 'Redis Connection URI', placeholder: 'redis://:password@localhost:6379', help: 'Format: redis://:password@host:port.', docUrl: 'https://app.redislabs.com/' },
+  supabase: { label: 'Supabase Anon / Service Role Key', placeholder: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...', help: 'Copy API key from Supabase Project Settings -> API.', docUrl: 'https://supabase.com/dashboard/project/_/settings/api' },
+  firebase: { label: 'Firebase Service Account / API Key', placeholder: '{"type": "service_account", "project_id": "..."}', help: 'Generate private key JSON from Firebase Console.', docUrl: 'https://console.firebase.google.com/' },
+  'aws-s3': { label: 'AWS S3 Credentials (AccessKey:SecretKey:Region:Bucket)', placeholder: 'AKIAXXXXXX:SecretKey123:us-east-1:my-bucket-name', help: 'IAM User credentials with s3 permissions.', docUrl: 'https://console.aws.amazon.com/iam/home#/security_credentials' },
+  hubspot: { label: 'HubSpot Private App Token', placeholder: 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', help: 'Create Private App at HubSpot -> Integrations.', docUrl: 'https://app.hubspot.com/private-apps' },
+  salesforce: { label: 'Salesforce Security Token / Session ID', placeholder: '00Dxx0000000000!ARxxxxxxxxxxxxxxxx', help: 'Reset security token under Salesforce Settings.', docUrl: 'https://login.salesforce.com/' },
+  notion: { label: 'Notion Internal Integration Secret', placeholder: 'secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create internal integration at notion.so/my-integrations.', docUrl: 'https://www.notion.so/my-integrations' },
+  airtable: { label: 'Airtable Personal Access Token', placeholder: 'patxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx', help: 'Create token at airtable.com/create/tokens.', docUrl: 'https://airtable.com/create/tokens' },
+  jira: { label: 'Atlassian API Token', placeholder: 'ATATT3xFfGF0xxxxxxxxxxxxxxxx', help: 'Create API token under Atlassian Account Security.', docUrl: 'https://id.atlassian.com/manage-profile/security/api-tokens' },
+  linear: { label: 'Linear Personal Access Token', placeholder: 'lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create personal token under Linear Settings -> API.', docUrl: 'https://linear.app/settings/api' },
+  clickup: { label: 'ClickUp Personal API Token', placeholder: 'pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy token from ClickUp Settings -> Apps.', docUrl: 'https://app.clickup.com/settings/apps' },
+  trello: { label: 'Trello API Key & Token', placeholder: 'key:token', help: 'Generate key & token at trello.com/app-key.', docUrl: 'https://trello.com/app-key' },
+  twilio: { label: 'Twilio Account SID & Auth Token', placeholder: 'ACxxxxxxxxxxxxxxxx:authtokenxxxx', help: 'Copy Account SID & Auth Token from Twilio Console.', docUrl: 'https://console.twilio.com/' },
+  sendgrid: { label: 'SendGrid API Key', placeholder: 'SG.xxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx', help: 'Create key in SendGrid -> Settings -> API Keys.', docUrl: 'https://app.sendgrid.com/settings/api_keys' },
+  mailchimp: { label: 'Mailchimp API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', help: 'Create key in Mailchimp Account -> API Keys.', docUrl: 'https://us1.admin.mailchimp.com/account/api/' },
+  resend: { label: 'Resend API Key', placeholder: 're_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create key in Resend Dashboard.', docUrl: 'https://resend.com/api-keys' },
+  'google-analytics': { label: 'GA4 Service Account JSON Key', placeholder: '{"type": "service_account", ...}', help: 'Generate service account key in GCP Console.', docUrl: 'https://console.cloud.google.com/iam-admin/serviceaccounts' },
+  calendly: { label: 'Calendly Personal Access Token', placeholder: 'eyJhbGciOiJKV1QiLC...', help: 'Generate token under Calendly Integrations.', docUrl: 'https://calendly.com/integrations/api_subscriptions' },
+  typeform: { label: 'Typeform Personal Access Token', placeholder: 'tfp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate token under Typeform Account Settings.', docUrl: 'https://admin.typeform.com/account' },
+  zoom: { label: 'Zoom S2S OAuth Credentials (id:secret:account)', placeholder: 'client_id:client_secret:account_id', help: 'Create S2S OAuth App in Zoom Marketplace.', docUrl: 'https://marketplace.zoom.us/user/build' },
+  outlook: { label: 'Microsoft Azure App Registration', placeholder: 'client_id:client_secret:tenant_id', help: 'Register app in Azure Portal -> App Registrations.', docUrl: 'https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps' },
+  'ms-teams': { label: 'Microsoft Azure App Registration', placeholder: 'client_id:client_secret:tenant_id', help: 'Register app in Azure Portal -> App Registrations.', docUrl: 'https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps' },
 };
 
 export default function ConnectorsPage() {
@@ -114,6 +117,39 @@ export default function ConnectorsPage() {
   const [testEventTitle, setTestEventTitle] = useState('AutoFlow Verification Sync');
   const [testResult, setTestResult] = useState<any>(null);
   const [isTestingAction, setIsTestingAction] = useState(false);
+
+  // Multi-Field Custom Connection Form States
+  const [dbHost, setDbHost] = useState('localhost');
+  const [dbPort, setDbPort] = useState('5432');
+  const [dbName, setDbName] = useState('production_db');
+  const [dbUser, setDbUser] = useState('postgres');
+  const [dbPass, setDbPass] = useState('');
+
+  const [awsAccessKeyId, setAwsAccessKeyId] = useState('');
+  const [awsSecretKey, setAwsSecretKey] = useState('');
+  const [awsRegion, setAwsRegion] = useState('us-east-1');
+  const [awsBucket, setAwsBucket] = useState('');
+
+  const [twilioSid, setTwilioSid] = useState('');
+  const [twilioToken, setTwilioToken] = useState('');
+
+  const [razorpayKeyId, setRazorpayKeyId] = useState('');
+  const [razorpaySecret, setRazorpaySecret] = useState('');
+
+  const [shopifyDomain, setShopifyDomain] = useState('');
+  const [shopifyToken, setShopifyToken] = useState('');
+
+  const [zoomAccountId, setZoomAccountId] = useState('');
+  const [zoomClientId, setZoomClientId] = useState('');
+  const [zoomClientSecret, setZoomClientSecret] = useState('');
+
+  const [jiraDomain, setJiraDomain] = useState('');
+  const [jiraEmail, setJiraEmail] = useState('');
+  const [jiraToken, setJiraToken] = useState('');
+
+  // Interactive Test UI States
+  const [aiTestPrompt, setAiTestPrompt] = useState('Explain AI automation in 1 sentence.');
+  const [slackTestMessage, setSlackTestMessage] = useState('AutoFlow Connection Verified Live!');
 
   const fetchConnectors = useCallback(async () => {
     try {
@@ -181,8 +217,30 @@ export default function ConnectorsPage() {
 
   const handleSaveApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!apiKeyValue.trim()) {
-      toast.error('API Key required', { description: 'Please enter a valid API key or secret token.' });
+    let finalKey = apiKeyValue.trim();
+
+    if (apiKeyConnectorId === 'postgresql') {
+      finalKey = `postgresql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`;
+    } else if (apiKeyConnectorId === 'mysql') {
+      finalKey = `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`;
+    } else if (apiKeyConnectorId === 'redis') {
+      finalKey = `redis://:${dbPass}@${dbHost}:${dbPort}`;
+    } else if (apiKeyConnectorId === 'aws-s3') {
+      finalKey = `${awsAccessKeyId}:${awsSecretKey}:${awsRegion}:${awsBucket}`;
+    } else if (apiKeyConnectorId === 'twilio') {
+      finalKey = `${twilioSid}:${twilioToken}`;
+    } else if (apiKeyConnectorId === 'razorpay') {
+      finalKey = `${razorpayKeyId}:${razorpaySecret}`;
+    } else if (apiKeyConnectorId === 'shopify') {
+      finalKey = `${shopifyDomain}:${shopifyToken}`;
+    } else if (apiKeyConnectorId === 'zoom') {
+      finalKey = `${zoomClientId}:${zoomClientSecret}:${zoomAccountId}`;
+    } else if (apiKeyConnectorId === 'jira') {
+      finalKey = `${jiraDomain}:${jiraEmail}:${jiraToken}`;
+    }
+
+    if (!finalKey || finalKey.length < 3) {
+      toast.error('Invalid Credentials', { description: 'Please complete all required form fields.' });
       return;
     }
 
@@ -190,19 +248,19 @@ export default function ConnectorsPage() {
     try {
       await apiClient.post('/v1/connectors/connections/api-key', {
         connectorId: apiKeyConnectorId,
-        name: apiKeyName || `${apiKeyConnectorId.toUpperCase()} Key`,
-        apiKey: apiKeyValue.trim(),
+        name: apiKeyName || `${apiKeyConnectorId.toUpperCase()} Account`,
+        apiKey: finalKey,
       });
 
-      toast.success('Connection Saved & Encrypted in MongoDB Atlas', {
-        description: `API Key encrypted via AES-256 for ${apiKeyConnectorId.toUpperCase()}.`,
+      toast.success('Connection Saved & Encrypted Live!', {
+        description: `Credentials verified and encrypted via AES-256 for ${apiKeyConnectorId.toUpperCase()}.`,
       });
 
       setIsApiKeyModalOpen(false);
       fetchConnections();
     } catch (err: any) {
-      toast.error('Failed to save connection', {
-        description: err?.response?.data?.message || err?.message || 'Could not save credentials.',
+      toast.error('Connection Verification Failed', {
+        description: err?.response?.data?.message || err?.message || 'Could not verify or save credentials.',
       });
     } finally {
       setSavingKey(false);
@@ -621,7 +679,7 @@ export default function ConnectorsPage() {
                     </span>
 
                     {isAlreadyConnected ? (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <button
                           onClick={() => handleOpenTestModal(c)}
                           className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-all flex items-center gap-1"
@@ -630,13 +688,25 @@ export default function ConnectorsPage() {
                           <Play size={11} />
                           <span>Test API</span>
                         </button>
+
                         <button
                           onClick={() => c.authType === 'oauth2' ? handleConnectOAuth(c) : handleOpenApiKeyModal(c)}
-                          className="p-1.5 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-white hover:bg-white/10 transition-colors"
+                          className="px-2 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-semibold hover:bg-purple-500/30 transition-all flex items-center gap-1"
                           title="Re-authenticate Account"
                         >
-                          <RefreshCw size={12} />
+                          <RefreshCw size={11} />
+                          <span>Re-auth</span>
                         </button>
+
+                        {activeConn && (
+                          <button
+                            onClick={() => handleDeleteConnection(activeConn._id, activeConn.name)}
+                            className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors"
+                            title="Disconnect Account"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <button
@@ -724,20 +794,30 @@ export default function ConnectorsPage() {
                         <td className="p-3.5 text-right pr-4">
                           <div className="flex items-center justify-end gap-2">
                             {catalogItem && (
-                              <button
-                                onClick={() => handleOpenTestModal(catalogItem)}
-                                className="px-2.5 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-all flex items-center gap-1"
-                              >
-                                <Play size={11} />
-                                <span>Test API</span>
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleOpenTestModal(catalogItem)}
+                                  className="px-2.5 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-all flex items-center gap-1"
+                                >
+                                  <Play size={11} />
+                                  <span>Test API</span>
+                                </button>
+                                <button
+                                  onClick={() => catalogItem.authType === 'oauth2' ? handleConnectOAuth(catalogItem) : handleOpenApiKeyModal(catalogItem)}
+                                  className="px-2.5 py-1 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold hover:bg-purple-500/25 transition-all flex items-center gap-1"
+                                >
+                                  <RefreshCw size={11} />
+                                  <span>Re-auth</span>
+                                </button>
+                              </>
                             )}
                             <button
                               onClick={() => handleDeleteConnection(conn._id, conn.name)}
-                              className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                              className="px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded text-xs font-semibold transition-colors flex items-center gap-1"
                               title="Delete Connection"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={12} />
+                              <span>Disconnect</span>
                             </button>
                           </div>
                         </td>
@@ -871,27 +951,128 @@ export default function ConnectorsPage() {
                   required
                 />
               </div>
-              <div>
-                <label className="text-[11px] font-semibold text-textMuted block mb-1">
-                  {APP_AUTH_SPECS[apiKeyConnectorId]?.label || 'API Key / Bearer Token'}
-                </label>
-                <input
-                  type="password"
-                  value={apiKeyValue}
-                  onChange={(e) => setApiKeyValue(e.target.value)}
-                  placeholder={APP_AUTH_SPECS[apiKeyConnectorId]?.placeholder || 'Enter secret key / token...'}
-                  className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple font-mono text-[11px]"
-                  required
-                />
-              </div>
-
-              {/* Dynamic App Help Guide */}
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed">
-                <div className="font-bold flex items-center gap-1 text-amber-400 mb-0.5">
-                  <ShieldCheck size={13} />
-                  <span>How to get your {apiKeyConnectorId.toUpperCase()} key:</span>
+              {/* Dynamic App-Specific Multi-Input Fields */}
+              {(apiKeyConnectorId === 'postgresql' || apiKeyConnectorId === 'mysql') ? (
+                <div className="flex flex-col gap-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-textMuted block mb-1">Host / Server</label>
+                      <input type="text" value={dbHost} onChange={(e) => setDbHost(e.target.value)} placeholder="localhost" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple" required />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-textMuted block mb-1">Port</label>
+                      <input type="text" value={dbPort} onChange={(e) => setDbPort(e.target.value)} placeholder={apiKeyConnectorId === 'mysql' ? '3306' : '5432'} className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple" required />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-textMuted block mb-1">Database Name</label>
+                      <input type="text" value={dbName} onChange={(e) => setDbName(e.target.value)} placeholder="production_db" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple" required />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-textMuted block mb-1">Username</label>
+                      <input type="text" value={dbUser} onChange={(e) => setDbUser(e.target.value)} placeholder={apiKeyConnectorId === 'mysql' ? 'root' : 'postgres'} className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Password</label>
+                    <input type="password" value={dbPass} onChange={(e) => setDbPass(e.target.value)} placeholder="••••••••••••" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple font-mono text-[11px]" required />
+                  </div>
                 </div>
-                <span>{APP_AUTH_SPECS[apiKeyConnectorId]?.help || 'Generate an API key or personal access token in your provider developer console.'}</span>
+              ) : apiKeyConnectorId === 'aws-s3' ? (
+                <div className="flex flex-col gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">AWS Access Key ID</label>
+                    <input type="text" value={awsAccessKeyId} onChange={(e) => setAwsAccessKeyId(e.target.value)} placeholder="AKIAXXXXXXEXAMPLE" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">AWS Secret Access Key</label>
+                    <input type="password" value={awsSecretKey} onChange={(e) => setAwsSecretKey(e.target.value)} placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-textMuted block mb-1">AWS Region</label>
+                      <input type="text" value={awsRegion} onChange={(e) => setAwsRegion(e.target.value)} placeholder="us-east-1" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white" required />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-textMuted block mb-1">S3 Bucket Name</label>
+                      <input type="text" value={awsBucket} onChange={(e) => setAwsBucket(e.target.value)} placeholder="my-app-bucket" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white" required />
+                    </div>
+                  </div>
+                </div>
+              ) : apiKeyConnectorId === 'twilio' ? (
+                <div className="flex flex-col gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Twilio Account SID (Starts with AC)</label>
+                    <input type="text" value={twilioSid} onChange={(e) => setTwilioSid(e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Twilio Auth Token</label>
+                    <input type="password" value={twilioToken} onChange={(e) => setTwilioToken(e.target.value)} placeholder="authtoken123456789" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                </div>
+              ) : apiKeyConnectorId === 'razorpay' ? (
+                <div className="flex flex-col gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Razorpay Key ID</label>
+                    <input type="text" value={razorpayKeyId} onChange={(e) => setRazorpayKeyId(e.target.value)} placeholder="rzp_test_xxxx or rzp_live_xxxx" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Razorpay Key Secret</label>
+                    <input type="password" value={razorpaySecret} onChange={(e) => setRazorpaySecret(e.target.value)} placeholder="secret123456789" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                </div>
+              ) : apiKeyConnectorId === 'shopify' ? (
+                <div className="flex flex-col gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Shopify Store Subdomain</label>
+                    <input type="text" value={shopifyDomain} onChange={(e) => setShopifyDomain(e.target.value)} placeholder="my-store.myshopify.com" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white" required />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-textMuted block mb-1">Admin API Access Token (shpat_...)</label>
+                    <input type="password" value={shopifyToken} onChange={(e) => setShopifyToken(e.target.value)} placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className="w-full px-3 py-1.5 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white font-mono text-[11px]" required />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">
+                    {APP_AUTH_SPECS[apiKeyConnectorId]?.label || 'API Key / Bearer Token / Connection URI'}
+                  </label>
+                  <input
+                    type="password"
+                    value={apiKeyValue}
+                    onChange={(e) => setApiKeyValue(e.target.value)}
+                    placeholder={APP_AUTH_SPECS[apiKeyConnectorId]?.placeholder || 'Enter secret key / token...'}
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple font-mono text-[11px]"
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Dynamic App Help Guide with Clickable Direct Link */}
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed flex flex-col gap-2">
+                <div>
+                  <div className="font-bold flex items-center gap-1 text-amber-400 mb-0.5">
+                    <ShieldCheck size={13} />
+                    <span>How to get your {apiKeyConnectorId.toUpperCase()} key:</span>
+                  </div>
+                  <span>{APP_AUTH_SPECS[apiKeyConnectorId]?.help || 'Generate an API key or personal access token in your provider developer console.'}</span>
+                </div>
+
+                {APP_AUTH_SPECS[apiKeyConnectorId]?.docUrl && (
+                  <a
+                    href={APP_AUTH_SPECS[apiKeyConnectorId].docUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 px-3 py-2 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <ExternalLink size={13} className="text-amber-400 group-hover:scale-110 transition-transform" />
+                      <span>🔗 Click here to generate {apiKeyConnectorId.toUpperCase()} API Key</span>
+                    </div>
+                    <ChevronRight size={14} className="text-amber-400" />
+                  </a>
+                )}
               </div>
 
               <button
@@ -953,6 +1134,32 @@ export default function ConnectorsPage() {
                 </div>
               )}
 
+              {['openai', 'anthropic', 'gemini', 'groq', 'elevenlabs', 'huggingface'].includes(activeTestConnector.id) && (
+                <div>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">AI Test Prompt Payload</label>
+                  <input
+                    type="text"
+                    value={aiTestPrompt}
+                    onChange={(e) => setAiTestPrompt(e.target.value)}
+                    placeholder="Explain AI automation in 1 sentence."
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
+                  />
+                </div>
+              )}
+
+              {['slack', 'telegram', 'discord', 'whatsapp'].includes(activeTestConnector.id) && (
+                <div>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">Test Notification Message</label>
+                  <input
+                    type="text"
+                    value={slackTestMessage}
+                    onChange={(e) => setSlackTestMessage(e.target.value)}
+                    placeholder="AutoFlow Connection Verified Live!"
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
+                  />
+                </div>
+              )}
+
               <div className="flex gap-2">
                 {activeTestConnector.id === 'gmail' && (
                   <button
@@ -977,22 +1184,47 @@ export default function ConnectorsPage() {
             </div>
 
             {testResult && (
-              <div className="p-4 rounded-xl bg-bgPrimary border border-borderColor font-mono text-xs">
-                <div className="flex items-center gap-2 mb-2">
-                  {testResult.status === 'success' ? (
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                  ) : (
-                    <AlertCircle size={16} className="text-red-400" />
-                  )}
-                  <span className={testResult.status === 'success' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
-                    {testResult.status === 'success' ? 'API TEST PASSED' : 'API TEST FAILED'}
+              <div className={`p-4 rounded-xl font-mono text-xs border ${
+                testResult.status === 'success'
+                  ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200'
+                  : 'bg-red-950/20 border-red-500/40 text-red-200'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {testResult.status === 'success' ? (
+                      <CheckCircle2 size={18} className="text-emerald-400" />
+                    ) : (
+                      <AlertCircle size={18} className="text-red-400" />
+                    )}
+                    <span className={testResult.status === 'success' ? 'text-emerald-400 font-bold text-sm' : 'text-red-400 font-bold text-sm'}>
+                      {testResult.status === 'success' ? 'LIVE API TEST PASSED' : 'API VERIFICATION FAILED'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 font-bold uppercase">
+                    {activeTestConnector.id.toUpperCase()}
                   </span>
                 </div>
-                <div className="text-white mb-2">{testResult.message || testResult.error}</div>
+
+                <div className="text-white text-xs mb-3 font-sans leading-relaxed font-semibold">
+                  {testResult.message || testResult.error}
+                </div>
+
+                {testResult.account && (
+                  <div className="mb-2 text-[11px] text-emerald-300/90 font-sans flex items-center gap-1.5 bg-emerald-500/10 p-2 rounded border border-emerald-500/20">
+                    <ShieldCheck size={13} className="text-emerald-400" />
+                    <span>Verified Provider Account: <strong>{testResult.account}</strong></span>
+                  </div>
+                )}
+
                 {testResult.output && (
-                  <pre className="p-2.5 bg-black/40 rounded border border-white/10 text-[11px] text-textMuted max-h-40 overflow-auto">
-                    {JSON.stringify(testResult.output, null, 2)}
-                  </pre>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-textMuted mb-1">
+                      Diagnostic Inspection Payload:
+                    </div>
+                    <pre className="p-3 bg-black/60 rounded-lg border border-white/10 text-[11px] text-emerald-300/90 max-h-48 overflow-auto leading-relaxed">
+                      {JSON.stringify(testResult.output, null, 2)}
+                    </pre>
+                  </div>
                 )}
               </div>
             )}
