@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { Heading, Text, Button, Badge } from '@/components/ui';
-import { Sliders, Lock, Copy, Check, ChevronDown, ShieldCheck, Play, Sparkles } from 'lucide-react';
+import { Sliders, Lock, Copy, Check, ChevronDown, ShieldCheck, Play, Sparkles, Loader2, CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Node } from 'reactflow';
 import { useUserRole } from '@/context/UserRoleContext';
 import { apiClient } from '@/lib/api-client';
@@ -294,6 +294,232 @@ export const CONNECTOR_MANIFESTS: Record<string, {
       },
     ],
   },
+  firebase: {
+    name: 'Firebase Firestore',
+    operations: [
+      {
+        id: 'store_doc',
+        label: 'Store Document in Firestore Collection',
+        type: 'action',
+        fields: [
+          { id: 'collection', label: 'Collection Name', type: 'input', placeholder: 'e.g. users, leads, orders' },
+          { id: 'documentId', label: 'Document ID (Optional)', type: 'input', placeholder: 'e.g. doc_123 or leave blank for auto-ID' },
+          { id: 'data', label: 'Document Payload (JSON)', type: 'textarea', placeholder: '{"name": "{{nodes.node_1.output.name}}", "email": "{{nodes.node_1.output.email}}"}' },
+        ],
+      },
+      {
+        id: 'get_doc',
+        label: 'Fetch Document by ID',
+        type: 'action',
+        fields: [
+          { id: 'collection', label: 'Collection Name', type: 'input', placeholder: 'e.g. users' },
+          { id: 'documentId', label: 'Document ID', type: 'input', placeholder: 'e.g. doc_123' },
+        ],
+      },
+    ],
+  },
+  mongodb: {
+    name: 'MongoDB Atlas',
+    operations: [
+      {
+        id: 'insert_doc',
+        label: 'Insert JSON Document into Collection',
+        type: 'action',
+        fields: [
+          { id: 'database', label: 'Database Name', type: 'input', placeholder: 'e.g. automation_platform' },
+          { id: 'collection', label: 'Collection Name', type: 'input', placeholder: 'e.g. leads_log' },
+          { id: 'document', label: 'Document Object Payload (JSON)', type: 'textarea', placeholder: '{"title": "{{nodes.node_1.output.title}}", "summary": "{{nodes.node_2.output.result}}"}' },
+        ],
+      },
+      {
+        id: 'query_docs',
+        label: 'Query Documents Filter',
+        type: 'action',
+        fields: [
+          { id: 'database', label: 'Database Name', type: 'input', placeholder: 'e.g. automation_platform' },
+          { id: 'collection', label: 'Collection Name', type: 'input', placeholder: 'e.g. leads_log' },
+          { id: 'filter', label: 'MongoDB Filter Query (JSON)', type: 'textarea', placeholder: '{"status": "active"}' },
+        ],
+      },
+    ],
+  },
+  postgresql: {
+    name: 'PostgreSQL Database',
+    operations: [
+      {
+        id: 'execute_query',
+        label: 'Execute SQL Command / Query',
+        type: 'action',
+        fields: [
+          { id: 'sql', label: 'PostgreSQL SQL Query', type: 'textarea', placeholder: 'INSERT INTO leads (name, email) VALUES (\'{{nodes.node_1.output.name}}\', \'{{nodes.node_1.output.email}}\');' },
+        ],
+      },
+    ],
+  },
+  mysql: {
+    name: 'MySQL Database',
+    operations: [
+      {
+        id: 'execute_query',
+        label: 'Execute MySQL Query',
+        type: 'action',
+        fields: [
+          { id: 'sql', label: 'MySQL SQL Statement', type: 'textarea', placeholder: 'SELECT * FROM users WHERE status = \'active\';' },
+        ],
+      },
+    ],
+  },
+  redis: {
+    name: 'Redis Cache & Store',
+    operations: [
+      {
+        id: 'set_key',
+        label: 'Set Key Value Pair',
+        type: 'action',
+        fields: [
+          { id: 'key', label: 'Redis Key', type: 'input', placeholder: 'e.g. cache:user_session' },
+          { id: 'value', label: 'Value Content', type: 'textarea', placeholder: 'e.g. {{nodes.node_1.output.result}}' },
+        ],
+      },
+    ],
+  },
+  supabase: {
+    name: 'Supabase Database',
+    operations: [
+      {
+        id: 'insert_row',
+        label: 'Insert Row into Supabase Table',
+        type: 'action',
+        fields: [
+          { id: 'tableName', label: 'Table Name', type: 'input', placeholder: 'e.g. profiles' },
+          { id: 'rowValues', label: 'Row Data (JSON)', type: 'textarea', placeholder: '{"full_name": "{{nodes.node_1.output.name}}"}' },
+        ],
+      },
+    ],
+  },
+  'aws-s3': {
+    name: 'AWS S3 Storage',
+    operations: [
+      {
+        id: 'upload_file',
+        label: 'Upload File to S3 Bucket',
+        type: 'action',
+        fields: [
+          { id: 'bucketName', label: 'Target Bucket Name', type: 'input', placeholder: 'e.g. my-app-backups' },
+          { id: 'fileName', label: 'S3 Key / File Path', type: 'input', placeholder: 'e.g. reports/summary.json' },
+          { id: 'content', label: 'File Payload Content', type: 'textarea', placeholder: 'e.g. {{nodes.node_ai.output.result}}' },
+        ],
+      },
+    ],
+  },
+  twilio: {
+    name: 'Twilio SMS',
+    operations: [
+      {
+        id: 'send_sms',
+        label: 'Send SMS Message Notification',
+        type: 'action',
+        fields: [
+          { id: 'to', label: 'Recipient Phone Number (+E.164)', type: 'input', placeholder: 'e.g. +1234567890' },
+          { id: 'body', label: 'SMS Body Text', type: 'textarea', placeholder: 'e.g. Alert: {{nodes.node_1.output.summary}}' },
+        ],
+      },
+    ],
+  },
+  razorpay: {
+    name: 'Razorpay Payments',
+    operations: [
+      {
+        id: 'create_order',
+        label: 'Create Payment Order',
+        type: 'action',
+        fields: [
+          { id: 'amount', label: 'Amount in Paise (e.g. 50000 = ₹500)', type: 'input', placeholder: '50000' },
+          { id: 'receipt', label: 'Receipt ID Reference', type: 'input', placeholder: 'receipt_order_101' },
+        ],
+      },
+    ],
+  },
+  shopify: {
+    name: 'Shopify Store',
+    operations: [
+      {
+        id: 'get_products',
+        label: 'Search Store Products & Inventory',
+        type: 'action',
+        fields: [
+          { id: 'query', label: 'Product Title Search Query', type: 'input', placeholder: 'e.g. T-Shirt' },
+        ],
+      },
+    ],
+  },
+  github: {
+    name: 'GitHub Repository',
+    operations: [
+      {
+        id: 'get_commits',
+        label: 'Fetch Commits & Pull Requests',
+        type: 'action',
+        fields: [
+          { id: 'repo', label: 'Repository Owner / Name', type: 'input', placeholder: 'e.g. octocat/Hello-World' },
+          { id: 'branch', label: 'Branch Name', type: 'input', placeholder: 'main' },
+        ],
+      },
+    ],
+  },
+  openai: {
+    name: 'OpenAI GPT-4o',
+    operations: [
+      {
+        id: 'chat_completion',
+        label: 'GPT-4o Text & Summary Generation',
+        type: 'action',
+        fields: [
+          { id: 'prompt', label: 'AI System Prompt / User Prompt', type: 'textarea', placeholder: 'e.g. Summarize the following data into 3 key takeaways:' },
+          { id: 'inputText', label: 'Input Context Text', type: 'input', placeholder: 'e.g. {{nodes.node_1.output.text}}' },
+        ],
+      },
+    ],
+  },
+  anthropic: {
+    name: 'Anthropic Claude 3.5',
+    operations: [
+      {
+        id: 'claude_generate',
+        label: 'Claude 3.5 Sonnet Analysis',
+        type: 'action',
+        fields: [
+          { id: 'prompt', label: 'Claude Prompt Instruction', type: 'textarea', placeholder: 'Analyze and summarize text:' },
+        ],
+      },
+    ],
+  },
+  gemini: {
+    name: 'Google Gemini 3.6',
+    operations: [
+      {
+        id: 'gemini_generate',
+        label: 'Gemini 3.6 Flash Generation',
+        type: 'action',
+        fields: [
+          { id: 'prompt', label: 'System Instruction / Prompt', type: 'textarea', placeholder: 'Generate summary digest:' },
+        ],
+      },
+    ],
+  },
+  groq: {
+    name: 'Groq Llama 3',
+    operations: [
+      {
+        id: 'groq_completion',
+        label: 'Ultra-Fast Llama 3 Inference',
+        type: 'action',
+        fields: [
+          { id: 'prompt', label: 'Prompt Payload', type: 'textarea', placeholder: 'Fast summary:' },
+        ],
+      },
+    ],
+  },
   'autoflow-schedule': {
     name: 'AutoFlow Schedule Trigger',
     operations: [
@@ -301,7 +527,20 @@ export const CONNECTOR_MANIFESTS: Record<string, {
         id: 'schedule_time',
         label: 'Time Interval (Daily/Weekly/Target Time)',
         type: 'trigger',
-        fields: [],
+        fields: [
+          {
+            id: 'frequency',
+            label: 'Trigger Schedule Frequency',
+            type: 'select',
+            options: [
+              { value: 'hourly', label: 'Every 1 Hour (60 mins)' },
+              { value: 'daily', label: 'Daily at Specified Time' },
+              { value: 'weekly', label: 'Weekly on Target Day' },
+              { value: 'interval', label: 'Custom Minutes Interval' },
+            ],
+            defaultValue: 'hourly',
+          },
+        ],
       },
       {
         id: 'inbound_webhook',
@@ -343,6 +582,31 @@ export function FieldMapper({
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<any>(null);
   const [isExecuting, setIsExecuting] = useState(false);
+
+  const [userConnections, setUserConnections] = useState<any[]>([]);
+  const [isCheckingConn, setIsCheckingConn] = useState(false);
+  const [inlineKey, setInlineKey] = useState('');
+  const [isConnectingInline, setIsConnectingInline] = useState(false);
+
+  const currentConnectorId = selectedNode?.data ? normalizeConnectorId(selectedNode.data.connectorId) : 'autoflow-schedule';
+
+  const fetchUserConnections = async () => {
+    try {
+      setIsCheckingConn(true);
+      const res = await apiClient.get('/v1/connectors/connections');
+      if (res.data?.data) {
+        setUserConnections(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching connections:', err);
+    } finally {
+      setIsCheckingConn(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserConnections();
+  }, [currentConnectorId]);
 
   // Schedule Trigger Modes & Fields
   const [scheduleMode, setScheduleMode] = useState<'hourly' | 'daily' | 'interval' | 'weekly' | 'date' | 'cron' | 'webhook'>('daily');
@@ -406,6 +670,38 @@ export function FieldMapper({
   const isScheduleNode = connectorId === 'autoflow-schedule';
   const manifest = CONNECTOR_MANIFESTS[connectorId] || CONNECTOR_MANIFESTS['autoflow-schedule'];
 
+  const handleConnectInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inlineKey.trim()) return;
+
+    setIsConnectingInline(true);
+    try {
+      await apiClient.post('/v1/connectors/connections/api-key', {
+        connectorId,
+        name: `${manifest.name} (Verified via Canvas)`,
+        apiKey: inlineKey.trim(),
+      });
+      toast.success(`${manifest.name} Account Verified & Connected!`, {
+        description: 'Credentials encrypted via AES-256 in MongoDB Atlas.',
+      });
+      if (onUpdateNodeData) {
+        onUpdateNodeData(selectedNode.id, { isConnected: true });
+      }
+      setInlineKey('');
+      await fetchUserConnections();
+    } catch (err: any) {
+      toast.error('Connection Verification Failed', {
+        description: err?.response?.data?.message || 'Invalid API key or credentials format.',
+      });
+    } finally {
+      setIsConnectingInline(false);
+    }
+  };
+
+  const isSystemNode = connectorId === 'autoflow-schedule' || connectorId === 'ai-agent' || connectorId === 'web-search' || connectorId === 'autoflow-condition' || connectorId === 'http-request';
+  const activeConnection = userConnections.find((c) => c.connectorId === connectorId || c.connectorId === (connectorId === 'gmail-read' ? 'gmail' : connectorId));
+  const isAccountConnected = isSystemNode || Boolean(activeConnection);
+
   const currentOperation =
     manifest.operations.find((op) => op.id === selectedOperationId) || manifest.operations[0];
 
@@ -438,6 +734,86 @@ export function FieldMapper({
       onUpdateNodeData(selectedNode.id, { config: updated });
     }
   };
+
+  const handleScheduleIntervalChange = (mins: string) => {
+    const updated = {
+      ...configValues,
+      intervalMinutes: mins,
+      frequency: 'interval',
+    };
+    setConfigValues(updated);
+
+    const labelText = `Schedule Trigger (Every ${mins} mins)`;
+    if (onUpdateNodeData) {
+      onUpdateNodeData(selectedNode.id, {
+        config: updated,
+        label: labelText,
+        name: labelText,
+      });
+    }
+    toast.success('Schedule Interval Updated', {
+      description: `Workflow configured to trigger automatically every ${mins} minutes.`,
+    });
+  };
+
+function getDynamicWizardTabs(manifest: any) {
+  if (manifest?.wizardMetadata) {
+    return [
+      { id: 'setup', label: manifest.wizardMetadata.step1.label, subtitle: manifest.wizardMetadata.step1.subtitle },
+      { id: 'configure', label: manifest.wizardMetadata.step2.label, subtitle: manifest.wizardMetadata.step2.subtitle },
+      { id: 'test', label: manifest.wizardMetadata.step3.label, subtitle: manifest.wizardMetadata.step3.subtitle },
+    ];
+  }
+
+  const category = (manifest?.category || '').toLowerCase();
+  const id = (manifest?.id || '').toLowerCase();
+
+  if (category.includes('ai') || ['openai', 'anthropic', 'gemini', 'groq', 'huggingface', 'elevenlabs', 'ai-agent'].includes(id)) {
+    return [
+      { id: 'setup', label: '1. API Key & Auth', subtitle: 'Credentials & Portal Link' },
+      { id: 'configure', label: '2. Model & Prompts', subtitle: 'Model & System Instruction' },
+      { id: 'test', label: '3. Live Prompt Ping', subtitle: 'Test Sample AI Output' },
+    ];
+  }
+
+  if (category.includes('database') || category.includes('storage') || ['mongodb', 'postgresql', 'mysql', 'redis', 'supabase', 'firebase', 'aws-s3', 'bigquery'].includes(id)) {
+    return [
+      { id: 'setup', label: '1. Connection Credentials', subtitle: 'Host, Port & Auth Keys' },
+      { id: 'configure', label: '2. Database & Schema', subtitle: 'Target DB, Table & Query' },
+      { id: 'test', label: '3. Ping & Query Test', subtitle: 'Live DB Driver Connectivity' },
+    ];
+  }
+
+  if (category.includes('messaging') || category.includes('communication') || ['slack', 'discord', 'telegram', 'whatsapp', 'twilio', 'zoom'].includes(id)) {
+    return [
+      { id: 'setup', label: '1. Bot & Webhook Auth', subtitle: 'Bot Token & Account SID' },
+      { id: 'configure', label: '2. Channel & Target', subtitle: 'Channel ID & Phone Number' },
+      { id: 'test', label: '3. Send Test Message', subtitle: 'Dispatch Sample Message' },
+    ];
+  }
+
+  if (category.includes('developer') || category.includes('crm') || ['github', 'gitlab', 'jira', 'linear', 'hubspot', 'salesforce', 'clickup', 'trello'].includes(id)) {
+    return [
+      { id: 'setup', label: '1. Token & Org Scope', subtitle: 'Personal Access Token' },
+      { id: 'configure', label: '2. Repo & Workspace', subtitle: 'Repository Name & Branch' },
+      { id: 'test', label: '3. Scope & API Test', subtitle: 'Fetch User Repositories' },
+    ];
+  }
+
+  if (category.includes('finance') || category.includes('commerce') || ['stripe', 'razorpay', 'shopify'].includes(id)) {
+    return [
+      { id: 'setup', label: '1. Secret Auth', subtitle: 'Secret Key & Store Domain' },
+      { id: 'configure', label: '2. Merchant Settings', subtitle: 'Currency & Event Webhook' },
+      { id: 'test', label: '3. Live Balance Ping', subtitle: 'Query Merchant Info' },
+    ];
+  }
+
+  return [
+    { id: 'setup', label: '1. App & Auth Setup', subtitle: 'Connect Account' },
+    { id: 'configure', label: '2. Operation Parameters', subtitle: 'Configure Parameters' },
+    { id: 'test', label: '3. Live Step Verification', subtitle: 'Test Node Execution' },
+  ];
+}
 
   const handleInsertVariable = (varStr: string) => {
     if (activeFieldId) {
@@ -525,23 +901,22 @@ export function FieldMapper({
         </Badge>
       </div>
 
-      {/* Zapier 3-Tab Navigation Bar */}
-      <div className="flex border-b border-borderColor bg-bgPrimary px-2 pt-2">
-        {[
-          { id: 'setup', label: '1. Setup' },
-          { id: 'configure', label: '2. Configure' },
-          { id: 'test', label: '3. Test' },
-        ].map((tab) => (
+      {/* Dynamic App-Aware 3-Step Wizard Navigation Bar */}
+      <div className="flex border-b border-borderColor bg-bgPrimary px-2 pt-2 gap-1">
+        {getDynamicWizardTabs(manifest).map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 py-2 text-xs font-semibold rounded-t-lg transition-all border-t-2 ${
+            className={`flex-1 py-2 px-1 text-center rounded-t-lg transition-all border-t-2 flex flex-col items-center justify-center ${
               activeTab === tab.id
                 ? 'bg-bgSecondary text-white border-accentPurple shadow-glow'
                 : 'text-textMuted hover:text-white border-transparent'
             }`}
           >
-            {tab.label}
+            <span className="text-xs font-bold truncate max-w-full">{tab.label}</span>
+            <span className="text-[9px] text-textMuted font-normal truncate max-w-full hidden sm:block">
+              {tab.subtitle}
+            </span>
           </button>
         ))}
       </div>
@@ -583,23 +958,66 @@ export function FieldMapper({
               </div>
             </div>
 
-            {/* Account Card Scoped Dynamically to Logged-in User */}
+            {/* Account Card Scoped Dynamically to Logged-in User & App Authentication */}
             <div>
-              <label className="text-xs text-textSecondary font-semibold mb-1.5 block">
-                Account Connection ({user.email})
+              <label className="text-xs text-textSecondary font-semibold mb-1.5 flex items-center justify-between">
+                <span>Account Authentication ({user.email})</span>
+                {isCheckingConn && <Loader2 size={12} className="animate-spin text-accentPurple" />}
               </label>
-              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-borderColor flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <Lock size={16} className="text-accentEmerald" />
-                  <div>
-                    <div className="text-xs font-semibold text-white">{user.name} ({user.email})</div>
-                    <div className="text-[10px] text-textMuted">OAuth2 (AES-256 Encrypted)</div>
+
+              {isAccountConnected ? (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 size={18} className="text-accentEmerald shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-white">
+                        {activeConnection?.name || `${manifest.name} Account`}
+                      </div>
+                      <div className="text-[10px] text-accentEmerald font-mono font-medium">
+                        CONNECTED 🟢 (AES-256 Encrypted in MongoDB)
+                      </div>
+                    </div>
                   </div>
+                  <Badge variant="active">Verified</Badge>
                 </div>
-                <Button variant="secondary" size="sm" className="text-[11px]">
-                  Connected
-                </Button>
-              </div>
+              ) : (
+                <form onSubmit={handleConnectInline} className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-2.5 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                      <AlertTriangle size={14} className="text-amber-400" />
+                      <span>Authentication Required: {manifest.name}</span>
+                    </div>
+                    <a href="/connectors" target="_blank" className="text-[10px] text-amber-400 hover:underline flex items-center gap-1">
+                      <span>Docs</span>
+                      <ExternalLink size={10} />
+                    </a>
+                  </div>
+
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                    Connect your {manifest.name} credentials to execute this step:
+                  </p>
+
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="password"
+                      value={inlineKey}
+                      onChange={(e) => setInlineKey(e.target.value)}
+                      placeholder={`Enter secret key, token, or connection URI for ${manifest.name}...`}
+                      style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+                      className="w-full px-3 py-2 bg-[#0f172a] border border-amber-500/40 rounded-lg text-xs text-white placeholder:text-slate-400 outline-none focus:border-amber-400 font-mono text-[11px]"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={isConnectingInline || !inlineKey.trim()}
+                      className="w-full py-2 bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+                    >
+                      {isConnectingInline ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
+                      <span>Verify &amp; Connect {manifest.name}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* Security Audit Badge */}
@@ -694,26 +1112,79 @@ export function FieldMapper({
                     </div>
                   </div>
                 )}
-
                 {scheduleMode === 'interval' && (
                   <div className="flex flex-col gap-3 p-3.5 bg-white/[0.02] rounded-xl border border-borderColor">
                     <div>
-                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">Execution Interval (Minutes)</label>
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">
+                        Preset Execution Interval
+                      </label>
                       <select
-                        value={configValues.intervalMinutes || '15'}
+                        value={['1', '2', '3', '5', '10', '15', '20', '30', '40', '45', '60'].includes(configValues.intervalMinutes || '2') ? (configValues.intervalMinutes || '2') : 'custom'}
                         onChange={(e) => {
-                          handleFieldChange('intervalMinutes', e.target.value);
-                          handleFieldChange('frequency', 'interval');
+                          const val = e.target.value;
+                          if (val !== 'custom') {
+                            handleScheduleIntervalChange(val);
+                          }
                         }}
-                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none"
+                        className="w-full bg-bgPrimary border border-borderColor rounded-lg px-3 py-2 text-xs text-white outline-none mb-2.5 font-medium"
                       >
+                        <option value="1">Every 1 Minute (Ultra Fast)</option>
+                        <option value="2">Every 2 Minutes (Real-Time Fast)</option>
+                        <option value="3">Every 3 Minutes</option>
                         <option value="5">Every 5 Minutes</option>
                         <option value="10">Every 10 Minutes</option>
                         <option value="15">Every 15 Minutes</option>
+                        <option value="20">Every 20 Minutes</option>
                         <option value="30">Every 30 Minutes</option>
+                        <option value="40">Every 40 Minutes</option>
                         <option value="45">Every 45 Minutes</option>
-                        <option value="60">Every 60 Minutes (1 hour)</option>
+                        <option value="60">Every 60 Minutes (1 Hour)</option>
+                        <option value="custom">⚙️ Custom Minutes (Enter Below)</option>
                       </select>
+
+                      <label className="text-[11px] text-textMuted font-semibold mb-1 block">
+                        Quick Minute Selection / Custom Entry:
+                      </label>
+                      <div className="flex flex-wrap gap-1.5 mb-2.5">
+                        {['1', '2', '5', '10', '15', '30', '40', '60'].map((mins) => (
+                          <button
+                            key={mins}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleScheduleIntervalChange(mins);
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border cursor-pointer ${
+                              (configValues.intervalMinutes || '2') === mins
+                                ? 'bg-accentPurple text-white border-accentPurple font-bold shadow-md ring-2 ring-purple-400/30'
+                                : 'bg-white/5 text-textMuted border-white/10 hover:text-white hover:bg-white/10 hover:border-white/30'
+                            }`}
+                          >
+                            {mins} Mins
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="1440"
+                          value={configValues.intervalMinutes || '2'}
+                          onChange={(e) => {
+                            handleScheduleIntervalChange(e.target.value);
+                          }}
+                          placeholder="e.g. 1, 2, 5, 10, 40, 90"
+                          style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+                          className="w-full bg-[#0f172a] border border-borderColor rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-accentPurple"
+                        />
+                        <span className="absolute right-3 top-2 text-[10px] text-textMuted font-mono pointer-events-none">
+                          mins
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-textMuted mt-1.5 leading-relaxed">
+                        Workflow will automatically trigger every <strong>{configValues.intervalMinutes || '2'} minutes</strong>.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -870,26 +1341,84 @@ export function FieldMapper({
           </>
         )}
 
-        {/* TAB 3: TEST (Step Execution & Response Viewer) */}
+        {/* TAB 3: TEST (Single App Step Execution & Live Response Viewer) */}
         {activeTab === 'test' && (
           <div className="flex flex-col gap-4">
-            <div className="text-xs text-textSecondary">
-              Run test execution for <strong className="text-white">{manifest.name} ({currentOperation?.label})</strong>.
+            <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-white">
+                <Play size={15} className="text-accentPurple animate-pulse" />
+                <span>Test Single App Step: {manifest.name}</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Test executing <strong>{currentOperation?.label}</strong> independently via the real {manifest.name} API driver.
+              </p>
             </div>
 
-            <Button onClick={handleRunTest} className="glow-button w-full text-xs py-2.5 flex items-center justify-center gap-2">
-              <Play size={14} />
-              <span>Test Step Execution</span>
-            </Button>
+            <button
+              onClick={handleRunTest}
+              disabled={isExecuting || !isAccountConnected}
+              className="glow-button w-full py-3 text-xs flex items-center justify-center gap-2 font-bold shadow-xl disabled:opacity-50"
+            >
+              {isExecuting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin text-white" />
+                  <span>Executing {manifest.name} Test Ping...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={15} />
+                  <span>⚡ Test {manifest.name} Step Only</span>
+                </>
+              )}
+            </button>
+
+            {!isAccountConnected && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-2">
+                <AlertTriangle size={15} className="shrink-0" />
+                <span>Authentication required in Step 1 before testing this app.</span>
+              </div>
+            )}
 
             {testResult && (
-              <div className="p-3 bg-bgPrimary border border-borderColor rounded-xl flex flex-col gap-2 font-mono text-[11px]">
-                <div className="flex justify-between items-center text-emerald-400 font-bold border-b border-borderColor/60 pb-1.5">
-                  <span>STATUS: 200 OK</span>
-                  <span className="text-[10px] text-textMuted">{testResult.timestamp.slice(11, 19)}</span>
+              <div
+                className={`p-4 rounded-xl flex flex-col gap-2.5 font-mono text-[11px] shadow-lg border ${
+                  testResult.status === 'success'
+                    ? 'bg-[#090d16] border-emerald-500/30'
+                    : 'bg-red-950/20 border-red-500/40'
+                }`}
+              >
+                <div
+                  className={`flex justify-between items-center font-bold border-b pb-2 ${
+                    testResult.status === 'success'
+                      ? 'text-emerald-400 border-emerald-500/20'
+                      : 'text-red-400 border-red-500/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    {testResult.status === 'success' ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        <span>STATUS: 200 OK — STEP VERIFIED</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle size={14} />
+                        <span>STATUS: {testResult.statusCode || 400} FAILED — EXECUTION ERROR</span>
+                      </>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-textMuted font-mono">
+                    {testResult.timestamp ? testResult.timestamp.slice(11, 19) : ''}
+                  </span>
                 </div>
-                <pre className="text-textSecondary overflow-x-auto p-1 text-[10px]">
-                  {JSON.stringify(testResult.outputData, null, 2)}
+                <pre className={`overflow-x-auto p-2 text-[10px] rounded-lg ${testResult.status === 'success' ? 'text-slate-200 bg-black/30' : 'text-red-200 bg-red-950/40'}`}>
+                  {JSON.stringify(
+                    testResult.status === 'success'
+                      ? testResult.outputData || { success: true, message: `${manifest.name} operation verified successfully!` }
+                      : { success: false, error: testResult.error || 'Step execution failed.', connectorId, operationId: selectedOperationId },
+                    null,
+                    2
+                  )}
                 </pre>
               </div>
             )}

@@ -75,9 +75,29 @@ export const CustomNode = memo(({ data, selected, id }: NodeProps) => {
 
       {/* Node Header Pill & Context Menu */}
       <div className="flex items-center justify-between mb-2 relative">
-        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-[11px] font-semibold text-textSecondary">
-          <Zap size={12} className={isTrigger ? 'text-accentEmerald' : isAINode ? 'text-accentPurple' : 'text-accentIndigo'} />
-          <span>{isTrigger ? 'Trigger' : isAINode ? 'AI Action' : 'Action'}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-[11px] font-semibold text-textSecondary">
+            <Zap size={12} className={isTrigger ? 'text-accentEmerald' : isAINode ? 'text-accentPurple' : 'text-accentIndigo'} />
+            <span>{isTrigger ? 'Trigger' : isAINode ? 'AI Action' : 'Action'}</span>
+          </div>
+
+          {/* Connection Status Badge directly on Canvas Node Card */}
+          {['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request'].includes(data.connectorId) ? (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>System</span>
+            </div>
+          ) : data.isConnected ? (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Connected 🟢</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-400 shadow-sm animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span>Connect ⚠️</span>
+            </div>
+          )}
         </div>
 
         {/* 3 Dots Menu Button Container with Click-Outside Ref */}

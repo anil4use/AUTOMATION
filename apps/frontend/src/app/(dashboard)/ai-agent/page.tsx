@@ -75,7 +75,8 @@ function InlineConnectCard({ connectorId, name, onSuccess }: InlineConnectCardPr
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder={`Enter secret key / token for ${connectorId.toUpperCase()}...`}
-          className="flex-1 px-3 py-1.5 bg-bgPrimary border border-amber-500/30 rounded-lg text-xs text-white outline-none focus:border-amber-400 font-mono text-[11px]"
+          style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+          className="flex-1 px-3 py-1.5 bg-[#0f172a] border border-amber-500/40 rounded-lg text-xs text-white placeholder:text-slate-400 outline-none focus:border-amber-400 font-mono text-[11px]"
           required
         />
         <button
@@ -219,67 +220,72 @@ export default function AIAgentPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto h-[calc(100vh-7rem)]">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Heading as="h1" className="flex items-center gap-2">
-              <Sparkles className="text-accentPurple" size={24} />
-              <span>AI Conversational Workflow Builder</span>
-            </Heading>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Gemini 2.0 / Groq LLM Copilot Active</span>
-            </span>
+    <div className="flex flex-col gap-5 max-w-6xl mx-auto h-[calc(100vh-6.5rem)]">
+      {/* Sleek Copilot Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/10 backdrop-blur-xl shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-glow">
+            <Sparkles size={20} />
           </div>
-          <Text variant="secondary" className="text-xs">
-            Persistent MongoDB Atlas Chat History &amp; Real-Time Execution Inspector for <strong className="text-white">{user.email}</strong>.
-          </Text>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Heading as="h1" className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-purple-300">
+                AI Conversational Copilot Studio
+              </Heading>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald flex items-center gap-1.5 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Gemini 3.6 Flash / Groq Active</span>
+              </span>
+            </div>
+            <Text variant="secondary" className="text-[11px]">
+              Persistent MongoDB Atlas Chat History &amp; Execution Inspector for <strong className="text-purple-300 font-semibold">{user.email}</strong>
+            </Text>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleSendMessageDirect('Check my execution error logs and diagnose recent workflow failures')}
-            className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 text-xs font-semibold"
+            className="px-3.5 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 transition-all flex items-center gap-2 text-xs font-semibold shadow-sm hover:scale-[1.02] active:scale-[0.98]"
             title="Inspect Runtime Execution Logs"
           >
-            <Workflow size={13} className="text-indigo-400" />
-            <span>Inspect Error Logs</span>
+            <Workflow size={14} className="text-indigo-400" />
+            <span>Inspect Logs</span>
           </button>
 
           <button
             onClick={handleClearHistory}
-            className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-red-400 transition-colors flex items-center gap-1 text-xs"
+            className="px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-textMuted hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-1.5 text-xs font-semibold"
             title="Clear Chat History from Database"
           >
             <Trash2 size={14} />
-            <span>Clear DB Chat</span>
+            <span>Clear DB</span>
           </button>
         </div>
       </div>
 
-      {/* Main Chat Stream Box */}
-      <SectionCard className="flex-1 flex flex-col p-0 overflow-hidden border-purple-500/30">
+      {/* Main Chat Stream Container Card */}
+      <div className="flex-1 flex flex-col rounded-2xl bg-gradient-to-b from-bgSecondary/90 via-bgSecondary/70 to-bgSecondary/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden">
         {/* Messages Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
           {isLoadingHistory ? (
-            <div className="flex items-center justify-center py-12 gap-2 text-textMuted text-xs">
-              <Loader2 size={18} className="animate-spin text-accentPurple" />
-              <span>Loading chat history from MongoDB Atlas...</span>
+            <div className="flex items-center justify-center py-16 gap-3 text-textMuted text-xs">
+              <Loader2 size={20} className="animate-spin text-accentPurple" />
+              <span>Syncing chat history from MongoDB Atlas...</span>
             </div>
           ) : (
             messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 max-w-3xl ${
+                className={`flex gap-3 max-w-3xl animate-fadeIn ${
                   msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start'
                 }`}
               >
                 {/* Avatar Icon */}
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
                     msg.role === 'user'
-                      ? 'bg-accentPurple text-white shadow-glow'
+                      ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-glow'
                       : 'bg-indigo-500/20 text-accentIndigo border border-indigo-500/30'
                   }`}
                 >
@@ -287,12 +293,12 @@ export default function AIAgentPage() {
                 </div>
 
                 {/* Message Content Bubble */}
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 max-w-2xl">
                   <div
-                    className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                    className={`p-4 rounded-2xl text-xs leading-relaxed shadow-sm ${
                       msg.role === 'user'
-                        ? 'bg-accentPurple text-white rounded-tr-none shadow-glow'
-                        : 'bg-white/[0.03] border border-borderColor text-white rounded-tl-none'
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-tr-none shadow-glow font-medium'
+                        : 'bg-white/[0.03] border border-white/10 text-slate-200 rounded-tl-none backdrop-blur-md'
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -300,37 +306,37 @@ export default function AIAgentPage() {
 
                   {/* Suggested Connectors & Account Connection Verification Badges */}
                   {msg.userConnectionsStatus && msg.userConnectionsStatus.length > 0 && (
-                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-borderColor flex flex-col gap-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-textMuted flex items-center gap-1.5">
-                        <LinkIcon size={12} className="text-accentIndigo" />
-                        <span>Required Connectors &amp; Authentication Status:</span>
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 backdrop-blur-md flex flex-col gap-3 shadow-md">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                        <LinkIcon size={13} className="text-accentIndigo" />
+                        <span>Required Connectors &amp; Account Status:</span>
                       </div>
 
                       <div className="flex flex-col gap-2">
                         {msg.userConnectionsStatus.map((conn) => (
                           <div key={conn.connectorId} className="flex flex-col gap-1">
                             <div
-                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                              className={`flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm ${
                                 conn.isConnected
                                   ? 'bg-emerald-500/10 border border-emerald-500/30 text-accentEmerald'
                                   : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
                               }`}
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 {conn.isConnected ? (
                                   <>
-                                    <CheckCircle2 size={13} />
+                                    <CheckCircle2 size={14} className="text-accentEmerald" />
                                     <span>{conn.name}</span>
                                   </>
                                 ) : (
                                   <>
-                                    <AlertTriangle size={13} />
+                                    <AlertTriangle size={14} className="text-amber-400" />
                                     <span>{conn.name}</span>
                                   </>
                                 )}
                               </div>
-                              <span className="text-[10px] font-mono uppercase">
-                                {conn.isConnected ? 'CONNECTED' : 'NOT CONNECTED'}
+                              <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-black/20">
+                                {conn.isConnected ? 'CONNECTED 🟢' : 'NOT CONNECTED ⚠️'}
                               </span>
                             </div>
 
@@ -364,24 +370,24 @@ export default function AIAgentPage() {
 
                   {/* Workflow Draft Card */}
                   {msg.workflowDraft && (
-                    <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col gap-3">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-purple-950/40 border border-purple-500/40 flex flex-col gap-3 shadow-xl backdrop-blur-md">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Workflow size={18} className="text-accentPurple" />
-                          <span className="font-semibold text-xs text-white">
+                          <Workflow size={18} className="text-accentPurple animate-pulse" />
+                          <span className="font-bold text-xs text-white">
                             {msg.workflowDraft.name}
                           </span>
                         </div>
                         <Badge variant="active">AUTO-MAPPED ({msg.workflowDraft.nodes?.length || 0} STEPS)</Badge>
                       </div>
 
-                      <p className="text-xs text-textSecondary">
+                      <p className="text-xs text-slate-300 leading-relaxed">
                         {msg.workflowDraft.description}
                       </p>
 
                       <button
                         onClick={() => handleOpenCanvasWithDraft(msg.workflowDraft)}
-                        className="glow-button py-2 text-xs flex items-center justify-center gap-1.5"
+                        className="glow-button py-2.5 text-xs flex items-center justify-center gap-2 font-semibold shadow-lg hover:scale-[1.01] transition-transform"
                       >
                         <span>Open Builder Canvas &amp; Activate All Steps</span>
                         <ArrowRight size={14} />
@@ -394,13 +400,13 @@ export default function AIAgentPage() {
           )}
 
           {isProcessing && (
-            <div className="flex items-center gap-3 self-start">
-              <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-accentIndigo flex items-center justify-center border border-indigo-500/30">
+            <div className="flex items-center gap-3 self-start animate-fadeIn">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-accentIndigo flex items-center justify-center border border-indigo-500/30">
                 <Bot size={16} />
               </div>
-              <div className="p-3 rounded-2xl bg-white/[0.03] border border-borderColor text-textMuted text-xs flex items-center gap-2">
-                <Loader2 size={14} className="animate-spin text-accentPurple" />
-                <span>AI Agent is mapping workflow &amp; saving to database...</span>
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 text-slate-300 text-xs flex items-center gap-2.5 shadow-md">
+                <Loader2 size={16} className="animate-spin text-accentPurple" />
+                <span>AI Copilot is processing request &amp; compiling DAG JSON...</span>
               </div>
             </div>
           )}
@@ -408,62 +414,66 @@ export default function AIAgentPage() {
           <div ref={chatEndRef} />
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="px-4 py-2 border-t border-borderColor/50 flex items-center gap-2 overflow-x-auto text-[11px]">
-          <span className="text-textMuted font-medium shrink-0 flex items-center gap-1">
-            <Sparkles size={11} className="text-accentPurple" />
-            <span>Try asking:</span>
+        {/* Category Prompt Chips */}
+        <div className="px-4 py-2 bg-black/20 border-t border-white/10 flex items-center gap-2 overflow-x-auto text-[11px] no-scrollbar">
+          <span className="text-textMuted font-bold shrink-0 flex items-center gap-1.5">
+            <Sparkles size={12} className="text-accentPurple" />
+            <span>Prompt Ideas:</span>
           </span>
           <button
             type="button"
             onClick={() => handleSendMessageDirect('Search for React developer jobs, analyze with AI, and log to Google Sheets')}
-            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:border-purple-500/60 text-slate-300 hover:text-white hover:bg-purple-500/10 transition-all shrink-0 font-medium"
           >
             🚀 React Jobs &rarr; Google Sheets
           </button>
           <button
             type="button"
             onClick={() => handleSendMessageDirect('When a new email arrives in Gmail, summarize with AI and send to Slack')}
-            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:border-purple-500/60 text-slate-300 hover:text-white hover:bg-purple-500/10 transition-all shrink-0 font-medium"
           >
             📩 Gmail &rarr; AI &rarr; Slack
           </button>
           <button
             type="button"
             onClick={() => handleSendMessageDirect('Schedule a daily WhatsApp message at 8pm')}
-            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:border-purple-500/60 text-slate-300 hover:text-white hover:bg-purple-500/10 transition-all shrink-0 font-medium"
           >
             💬 Daily WhatsApp Schedule
           </button>
           <button
             type="button"
             onClick={() => handleSendMessageDirect('What 55+ connectors do you support and how do I connect MongoDB Atlas?')}
-            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:border-purple-500/60 text-slate-300 hover:text-white hover:bg-purple-500/10 transition-all shrink-0 font-medium"
           >
             ❓ Supported Connectors &amp; Setup
           </button>
         </div>
 
-        {/* Input Bar */}
-        <form onSubmit={handleSendMessage} className="p-3 bg-bgSecondary border-t border-borderColor flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Type your requirement (e.g. 'Schedule daily 8pm message to girlfriend on WhatsApp')..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isProcessing}
-            className="flex-1 bg-bgPrimary border border-borderColor rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-accentPurple transition-colors disabled:opacity-50"
-          />
+        {/* Input Bar Form */}
+        <form onSubmit={handleSendMessage} className="p-4 bg-[#090d16] border-t border-white/10 flex items-center gap-3">
+          <div className="flex-1 relative flex items-center">
+            <input
+              type="text"
+              placeholder="Describe what you'd like to automate (e.g. 'Schedule daily WhatsApp message at 8pm')..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isProcessing}
+              style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+              className="w-full bg-[#0f172a] border border-purple-500/30 rounded-xl px-4 py-3.5 text-xs text-white placeholder:text-slate-400 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/40 transition-all disabled:opacity-50 font-medium shadow-inner caret-purple-400"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={isProcessing || !input.trim()}
-            className="glow-button px-4 py-2.5 text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50"
+            className="glow-button px-6 py-3.5 text-xs flex items-center gap-2 shadow-xl disabled:opacity-50 font-bold shrink-0 hover:scale-[1.02] active:scale-[0.98] transition-all bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl"
           >
-            <span>Send</span>
-            <Send size={14} />
+            <span>Send Prompt</span>
+            <Send size={15} />
           </button>
         </form>
-      </SectionCard>
+      </div>
     </div>
   );
 }

@@ -501,12 +501,18 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
    * Receives current canvas nodes + edges + user prompt and dynamically mutates canvas state
    */
   static async processCopilotChat(currentNodes: any[], currentEdges: any[], userPrompt: string, orgId: string, userId: string) {
-    logger.info(`[AIAgentService] Processing Co-Pilot request: "${userPrompt}" with ${currentNodes.length} nodes`);
+    logger.info(`[AIAgentService] Processing In-Canvas Co-Pilot request: "${userPrompt}" with ${currentNodes.length} nodes`);
 
     const lower = userPrompt.trim().toLowerCase();
 
-    // System prompt for Co-Pilot
-    const COPILOT_SYSTEM_PROMPT = `You are the In-Canvas AutoFlow AI Co-Pilot Assistant.
+    // Fetch Live Runtime Context (55+ SDK Manifests, Active Connected Accounts, Recent Execution Logs)
+    const baseDynamicContext = await AIAgentService.buildDynamicSystemPrompt(orgId);
+
+    // System prompt for In-Canvas Co-Pilot
+    const COPILOT_SYSTEM_PROMPT = `${baseDynamicContext}
+
+IN-CANVAS WORKFLOW MUTATOR ROLE:
+You are the In-Canvas AutoFlow AI Co-Pilot Assistant.
 Your job is to analyze the user's current workflow canvas nodes and edges, process their modification request, and return the UPDATED workflow canvas JSON.
 
 CURRENT CANVAS STATE:
@@ -515,8 +521,8 @@ Edges: ${JSON.stringify(currentEdges, null, 2)}
 
 USER REQUEST: "${userPrompt}"
 
-RULES:
-1. If user asks to ADD a step (e.g. Google Sheets, Slack, Web Search, AI Analyst): insert the node at the right position, connect edges sequentially.
+RULES FOR CANVAS MUTATION:
+1. If user asks to ADD a step (e.g. Google Sheets, Slack, Web Search, AI Analyst, WhatsApp, Postgres): select appropriate connector from the 55+ registry, insert the node at the right position, and connect edges sequentially.
 2. If user asks to DELETE a step (e.g. "delete step 3"): remove the node and re-wire edges between adjacent nodes.
 3. If user asks to UPDATE/CONFIGURE a step (e.g. "change sheet name to React_Jobs", "set maxResults to 20"): update that node's config and fieldMapping properties.
 4. Return ONLY a single raw valid JSON object (no markdown code fences):
@@ -533,12 +539,13 @@ RULES:
     if (env.geminiApiKey) {
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.geminiApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: COPILOT_SYSTEM_PROMPT }] }],
+              systemInstruction: { parts: [{ text: COPILOT_SYSTEM_PROMPT }] },
+              contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
               generationConfig: { responseMimeType: 'application/json' },
             }),
           }
@@ -561,9 +568,12 @@ RULES:
             Authorization: `Bearer ${env.groqApiKey}`,
           },
           body: JSON.stringify({
-            model: 'openai/gpt-oss-20b',
+            model: 'groq/compound',
             response_format: { type: 'json_object' },
-            messages: [{ role: 'system', content: COPILOT_SYSTEM_PROMPT }],
+            messages: [
+              { role: 'system', content: COPILOT_SYSTEM_PROMPT },
+              { role: 'user', content: userPrompt },
+            ],
           }),
         });
         const data = await response.json();

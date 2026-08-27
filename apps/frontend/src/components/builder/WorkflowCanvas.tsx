@@ -18,6 +18,8 @@ import { CustomEdge } from './CustomEdge';
 import { AppPickerModal, AppOption } from './AppPickerModal';
 import { toast } from 'sonner';
 
+import { apiClient } from '@/lib/api-client';
+
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
@@ -41,6 +43,40 @@ export function WorkflowCanvas({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [insertContext, setInsertContext] = useState<{ type: 'append' | 'insert'; sourceNodeId?: string; targetEdgeId?: string } | null>(null);
+
+  const [userConnections, setUserConnections] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadConnections() {
+      try {
+        const res = await apiClient.get('/v1/connectors/connections');
+        if (res.data?.data) {
+          setUserConnections(res.data.data);
+        }
+      } catch (e) {}
+    }
+    loadConnections();
+  }, []);
+
+  useEffect(() => {
+    const connectedCids = new Set(userConnections.map((c: any) => c.connectorId));
+    setNodes((prevNodes) =>
+      prevNodes.map((n) => {
+        const rawCid = n.data?.connectorId;
+        const cid = rawCid === 'gmail-read' ? 'gmail' : rawCid;
+        const isSystem = cid === 'autoflow-schedule' || cid === 'ai-agent' || cid === 'web-search' || cid === 'autoflow-condition' || cid === 'http-request';
+        const isConnected = isSystem || connectedCids.has(cid);
+        if (n.data?.isConnected === isConnected) return n;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            isConnected,
+          },
+        };
+      })
+    );
+  }, [userConnections, setNodes]);
 
   const onSelectNodeRef = useRef(onSelectNode);
   useEffect(() => {
@@ -174,7 +210,7 @@ export function WorkflowCanvas({
       const remaining = currentNodes.filter((n) => n.id !== nodeId);
       return remaining.map((n, idx) => ({
         ...n,
-        position: { x: 250, y: 80 + idx * VERTICAL_NODE_SPACING },
+        position: (n.position && typeof n.position.x === 'number') ? n.position : { x: 250, y: 80 + idx * VERTICAL_NODE_SPACING },
         data: {
           ...n.data,
           stepNumber: idx + 1,
@@ -206,7 +242,7 @@ export function WorkflowCanvas({
         return bindNodeCallbacks({
           id: n.id || `node_${idx + 1}`,
           type: 'custom',
-          position: { x: 250, y: 80 + idx * VERTICAL_NODE_SPACING },
+          position: (n.position && typeof n.position.x === 'number') ? n.position : { x: 250, y: 80 + idx * VERTICAL_NODE_SPACING },
           data: {
             stepNumber: idx + 1,
             label: n.name || n.label || `Step ${idx + 1}`,

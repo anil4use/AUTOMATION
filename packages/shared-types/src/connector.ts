@@ -19,6 +19,19 @@ export interface ConnectorOperation {
   outputs: ConnectorFieldSchema[];
 }
 
+export interface WizardStepMetadata {
+  id: 'setup' | 'configure' | 'test';
+  label: string;
+  subtitle?: string;
+  description?: string;
+}
+
+export interface ConnectorWizardMetadata {
+  step1: WizardStepMetadata;
+  step2: WizardStepMetadata;
+  step3: WizardStepMetadata;
+}
+
 export interface ConnectorManifest {
   id: string;
   name: string;
@@ -29,4 +42,5 @@ export interface ConnectorManifest {
   authConfig?: Record<string, any>;
   triggers: ConnectorOperation[];
   actions: ConnectorOperation[];
+  wizardMetadata?: ConnectorWizardMetadata;
 }
