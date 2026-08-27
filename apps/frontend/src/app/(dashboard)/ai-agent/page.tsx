@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { Heading, Text, SectionCard, Badge } from '@/components/ui';
-import { Sparkles, Send, Bot, User, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Workflow, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { Sparkles, Send, Bot, User, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Workflow, Link as LinkIcon, Trash2, Key, Lock, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -16,6 +16,79 @@ export interface ChatMessage {
   suggestedConnectors?: string[];
   userConnectionsStatus?: Array<{ connectorId: string; name: string; isConnected: boolean }>;
   workflowDraft?: any;
+}
+
+interface InlineConnectCardProps {
+  connectorId: string;
+  name: string;
+  onSuccess: (connectorId: string) => void;
+}
+
+function InlineConnectCard({ connectorId, name, onSuccess }: InlineConnectCardProps) {
+  const [key, setKey] = useState('');
+  const [connecting, setConnecting] = useState(false);
+
+  const handleConnect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!key.trim()) return;
+
+    setConnecting(true);
+    try {
+      await apiClient.post('/v1/connectors/connections/api-key', {
+        connectorId,
+        name: `${name} (Verified via AI Chat)`,
+        apiKey: key.trim(),
+      });
+      toast.success(`${name} Verified & Connected!`, {
+        description: 'Credentials encrypted via AES-256 in MongoDB Atlas.',
+      });
+      onSuccess(connectorId);
+    } catch (err: any) {
+      toast.error(`Verification Failed`, {
+        description: err?.response?.data?.message || 'Invalid credentials.',
+      });
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleConnect} className="mt-1 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-2 animate-fadeIn">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+          <Key size={13} className="text-amber-400" />
+          <span>Connect {name} inline:</span>
+        </div>
+        <Link
+          href="/connectors"
+          target="_blank"
+          className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
+        >
+          <span>Guide</span>
+          <ExternalLink size={10} />
+        </Link>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="password"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          placeholder={`Enter secret key / token for ${connectorId.toUpperCase()}...`}
+          className="flex-1 px-3 py-1.5 bg-bgPrimary border border-amber-500/30 rounded-lg text-xs text-white outline-none focus:border-amber-400 font-mono text-[11px]"
+          required
+        />
+        <button
+          type="submit"
+          disabled={connecting || !key.trim()}
+          className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 disabled:opacity-50"
+        >
+          {connecting ? <Loader2 size={12} className="animate-spin" /> : <Lock size={12} />}
+          <span>Verify &amp; Connect</span>
+        </button>
+      </div>
+    </form>
+  );
 }
 
 export default function AIAgentPage() {
@@ -149,22 +222,40 @@ export default function AIAgentPage() {
     <div className="flex flex-col gap-6 max-w-5xl mx-auto h-[calc(100vh-7rem)]">
       <div className="flex items-center justify-between">
         <div>
-          <Heading as="h1" className="flex items-center gap-2">
-            <Sparkles className="text-accentPurple" size={24} />
-            <span>AI Conversational Workflow Builder</span>
-          </Heading>
+          <div className="flex items-center gap-3 mb-1">
+            <Heading as="h1" className="flex items-center gap-2">
+              <Sparkles className="text-accentPurple" size={24} />
+              <span>AI Conversational Workflow Builder</span>
+            </Heading>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Gemini 2.0 / Groq LLM Copilot Active</span>
+            </span>
+          </div>
           <Text variant="secondary" className="text-xs">
-            Saved to MongoDB Atlas for <strong className="text-white">{user.email}</strong>. Powered by Groq / Gemini.
+            Persistent MongoDB Atlas Chat History &amp; Real-Time Execution Inspector for <strong className="text-white">{user.email}</strong>.
           </Text>
         </div>
-        <button
-          onClick={handleClearHistory}
-          className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-red-400 transition-colors flex items-center gap-1 text-xs"
-          title="Clear Chat History from Database"
-        >
-          <Trash2 size={14} />
-          <span>Clear DB Chat</span>
-        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleSendMessageDirect('Check my execution error logs and diagnose recent workflow failures')}
+            className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 text-xs font-semibold"
+            title="Inspect Runtime Execution Logs"
+          >
+            <Workflow size={13} className="text-indigo-400" />
+            <span>Inspect Error Logs</span>
+          </button>
+
+          <button
+            onClick={handleClearHistory}
+            className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-red-400 transition-colors flex items-center gap-1 text-xs"
+            title="Clear Chat History from Database"
+          >
+            <Trash2 size={14} />
+            <span>Clear DB Chat</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Chat Stream Box */}
@@ -209,46 +300,65 @@ export default function AIAgentPage() {
 
                   {/* Suggested Connectors & Account Connection Verification Badges */}
                   {msg.userConnectionsStatus && msg.userConnectionsStatus.length > 0 && (
-                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-borderColor flex flex-col gap-2">
+                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-borderColor flex flex-col gap-3">
                       <div className="text-[11px] font-semibold uppercase tracking-wider text-textMuted flex items-center gap-1.5">
                         <LinkIcon size={12} className="text-accentIndigo" />
-                        <span>Required Connectors Verification:</span>
+                        <span>Required Connectors &amp; Authentication Status:</span>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2">
                         {msg.userConnectionsStatus.map((conn) => (
-                          <div
-                            key={conn.connectorId}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                              conn.isConnected
-                                ? 'bg-emerald-500/10 border border-emerald-500/30 text-accentEmerald'
-                                : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
-                            }`}
-                          >
-                            {conn.isConnected ? (
-                              <>
-                                <CheckCircle2 size={13} />
-                                <span>{conn.name} (Connected)</span>
-                              </>
-                            ) : (
-                              <>
-                                <AlertTriangle size={13} />
-                                <span>{conn.name} (Not Connected)</span>
-                              </>
+                          <div key={conn.connectorId} className="flex flex-col gap-1">
+                            <div
+                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                                conn.isConnected
+                                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-accentEmerald'
+                                  : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                {conn.isConnected ? (
+                                  <>
+                                    <CheckCircle2 size={13} />
+                                    <span>{conn.name}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertTriangle size={13} />
+                                    <span>{conn.name}</span>
+                                  </>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-mono uppercase">
+                                {conn.isConnected ? 'CONNECTED' : 'NOT CONNECTED'}
+                              </span>
+                            </div>
+
+                            {/* Inline In-Chat Connection Card if Not Connected */}
+                            {!conn.isConnected && (
+                              <InlineConnectCard
+                                connectorId={conn.connectorId}
+                                name={conn.name}
+                                onSuccess={(connectedCid) => {
+                                  setMessages((prevMsgs) =>
+                                    prevMsgs.map((m) => {
+                                      if (m.id === msg.id && m.userConnectionsStatus) {
+                                        return {
+                                          ...m,
+                                          userConnectionsStatus: m.userConnectionsStatus.map((c) =>
+                                            c.connectorId === connectedCid ? { ...c, isConnected: true } : c
+                                          ),
+                                        };
+                                      }
+                                      return m;
+                                    })
+                                  );
+                                }}
+                              />
                             )}
                           </div>
                         ))}
                       </div>
-
-                      {/* Flag unauthenticated connectors */}
-                      {msg.userConnectionsStatus.some((c) => !c.isConnected) && (
-                        <div className="mt-1 pt-2 border-t border-borderColor/60 flex items-center justify-between text-xs text-amber-300">
-                          <span>Some required connectors need authentication.</span>
-                          <Link href="/connectors" className="text-accentPurple font-semibold hover:underline">
-                            Connect Accounts Now →
-                          </Link>
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -296,6 +406,42 @@ export default function AIAgentPage() {
           )}
 
           <div ref={chatEndRef} />
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="px-4 py-2 border-t border-borderColor/50 flex items-center gap-2 overflow-x-auto text-[11px]">
+          <span className="text-textMuted font-medium shrink-0 flex items-center gap-1">
+            <Sparkles size={11} className="text-accentPurple" />
+            <span>Try asking:</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => handleSendMessageDirect('Search for React developer jobs, analyze with AI, and log to Google Sheets')}
+            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+          >
+            🚀 React Jobs &rarr; Google Sheets
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendMessageDirect('When a new email arrives in Gmail, summarize with AI and send to Slack')}
+            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+          >
+            📩 Gmail &rarr; AI &rarr; Slack
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendMessageDirect('Schedule a daily WhatsApp message at 8pm')}
+            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+          >
+            💬 Daily WhatsApp Schedule
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendMessageDirect('What 55+ connectors do you support and how do I connect MongoDB Atlas?')}
+            className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-accentPurple/50 text-textMuted hover:text-white transition-all shrink-0"
+          >
+            ❓ Supported Connectors &amp; Setup
+          </button>
         </div>
 
         {/* Input Bar */}
