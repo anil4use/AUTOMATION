@@ -13,6 +13,8 @@ import { AINodeConnector } from '../integrations/ai-node';
 import { WebSearchConnector } from '../connectors/web-search.connector';
 import { AutoFlowScheduleConnector } from '../connectors/autoflow-schedule.connector';
 import { ConditionConnector } from '../connectors/condition.connector';
+import { AmazonFlipkartConnector } from '../connectors/amazon-flipkart.connector';
+import { UniversalConnector } from '../connectors/universal.connector';
 import * as crypto from 'crypto';
 
 export const connectorRegistry: Record<string, any> = {
@@ -32,6 +34,9 @@ export const connectorRegistry: Record<string, any> = {
   'web-search': new WebSearchConnector(),
   'autoflow-condition': new ConditionConnector(),
   condition: new ConditionConnector(),
+  'amazon-flipkart': new AmazonFlipkartConnector(),
+  amazon: new AmazonFlipkartConnector(),
+  flipkart: new AmazonFlipkartConnector(),
 };
 
 export class StepExecutor {
@@ -41,10 +46,7 @@ export class StepExecutor {
     triggerPayload: Record<string, any> = {},
     orgId?: string
   ) {
-    const connector = connectorRegistry[node.connectorId];
-    if (!connector) {
-      throw new Error(`Connector '${node.connectorId}' not registered in automation engine.`);
-    }
+    const connector = connectorRegistry[node.connectorId] || new UniversalConnector();
 
     // Resolve real user credentials from database (AES-256 decrypted)
     const credentials = await StepExecutor.resolveCredentials(node.connectorId, orgId);

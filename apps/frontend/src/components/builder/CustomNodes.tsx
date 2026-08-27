@@ -1,6 +1,6 @@
 import React, { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Mail, MessageSquare, Table, Sparkles, Zap, HardDrive, FileText, CreditCard, Send, Globe, Clock, Plus, MoreVertical, Edit2, Sliders, Copy, Trash2, Check, X, GitFork } from 'lucide-react';
+import { Mail, MessageSquare, Table, Sparkles, Zap, HardDrive, FileText, CreditCard, Send, Globe, Clock, Plus, MoreVertical, Edit2, Sliders, Copy, Trash2, Check, X, GitFork, ShoppingBag } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
   'autoflow-schedule': Clock,
@@ -15,6 +15,9 @@ const iconMap: Record<string, any> = {
   'ai-agent': Sparkles,
   'autoflow-condition': GitFork,
   condition: GitFork,
+  'amazon-flipkart': ShoppingBag,
+  amazon: ShoppingBag,
+  flipkart: ShoppingBag,
 };
 
 export const CustomNode = memo(({ data, selected, id }: NodeProps) => {

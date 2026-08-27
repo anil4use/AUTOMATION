@@ -1,6 +1,11 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cpu, Lock, Trash2, ShieldCheck, X, Loader2, RefreshCw, CheckCircle2, Mail, Key, ExternalLink, Send, Play, AlertCircle, FileText, Calendar, HardDrive, FileCode } from 'lucide-react';
+import {
+  Cpu, Lock, Trash2, ShieldCheck, X, Loader2, RefreshCw, CheckCircle2,
+  Mail, Key, ExternalLink, Send, Play, AlertCircle, FileText, Calendar,
+  HardDrive, FileCode, Sparkles, Search, Layers, Database, Code, CreditCard,
+  Building, Check, ChevronRight, Zap, Globe
+} from 'lucide-react';
 import { Button, Heading, Text, SectionCard, Badge } from '@/components/ui';
 import { useUserRole } from '@/context/UserRoleContext';
 import { apiClient } from '@/lib/api-client';
@@ -21,8 +26,56 @@ export interface AvailableConnector {
   id: string;
   name: string;
   description?: string;
+  category?: string;
   authType: 'oauth2' | 'api_key' | 'none';
 }
+
+interface AppAuthSpec {
+  label: string;
+  placeholder: string;
+  help: string;
+}
+
+const APP_AUTH_SPECS: Record<string, AppAuthSpec> = {
+  github: { label: 'GitHub Personal Access Token', placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate at GitHub -> Settings -> Developer Settings -> Personal Access Tokens (classic) with "repo" & "user" scopes.' },
+  gitlab: { label: 'GitLab Personal Access Token', placeholder: 'glpat-xxxxxxxxxxxxxxxxxxxx', help: 'Generate at GitLab -> Preferences -> Access Tokens.' },
+  slack: { label: 'Slack Bot User OAuth Token', placeholder: 'xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxx', help: 'Copy from Slack API Dashboard -> OAuth & Permissions -> Bot User OAuth Token.' },
+  discord: { label: 'Discord Bot Token', placeholder: 'MTAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy from Discord Developer Portal -> Bot -> Reset Token.' },
+  telegram: { label: 'Telegram Bot Token', placeholder: '123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ', help: 'Create a bot via @BotFather on Telegram to receive your HTTP API Token.' },
+  whatsapp: { label: 'WhatsApp Permanent System Token', placeholder: 'EAAGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate token at Facebook Developer Dashboard -> WhatsApp -> API Setup.' },
+  openai: { label: 'OpenAI Secret API Key', placeholder: 'sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at platform.openai.com -> API Keys.' },
+  anthropic: { label: 'Anthropic Claude API Key', placeholder: 'sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at console.anthropic.com -> API Keys.' },
+  gemini: { label: 'Google Gemini API Key', placeholder: 'AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at Google AI Studio (aistudio.google.com).' },
+  groq: { label: 'Groq Cloud Sub-Second API Key', placeholder: 'gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate key at console.groq.com -> API Keys.' },
+  elevenlabs: { label: 'ElevenLabs Voice API Key', placeholder: 'xi-api-key-xxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy key from ElevenLabs Profile Settings -> API Keys.' },
+  huggingface: { label: 'Hugging Face Access Token', placeholder: 'hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy token from huggingface.co/settings/tokens.' },
+  stripe: { label: 'Stripe Secret Key', placeholder: 'sk_test_51xxxxxxxxxxxxxxxx or sk_live_51xxxx', help: 'Copy key from dashboard.stripe.com -> Developers -> API Keys.' },
+  razorpay: { label: 'Razorpay Key ID & Key Secret', placeholder: 'rzp_test_xxxx:secret_xxxx', help: 'Generate keys at dashboard.razorpay.com -> Settings -> API Keys.' },
+  shopify: { label: 'Shopify Admin API Access Token', placeholder: 'shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create app at Shopify Admin -> Settings -> Apps & Admin API Integrations.' },
+  postgresql: { label: 'PostgreSQL Connection URI / JSON', placeholder: 'postgresql://username:password@localhost:5432/dbname', help: 'Format: postgresql://username:password@host:port/database_name.' },
+  mysql: { label: 'MySQL Connection URI / JSON', placeholder: 'mysql://username:password@localhost:3306/dbname', help: 'Format: mysql://username:password@host:port/database_name.' },
+  mongodb: { label: 'MongoDB Connection URI', placeholder: 'mongodb+srv://username:password@cluster.mongodb.net/dbname', help: 'Copy URI from MongoDB Atlas -> Database -> Connect.' },
+  redis: { label: 'Redis Connection URI', placeholder: 'redis://:password@localhost:6379', help: 'Format: redis://:password@host:port.' },
+  supabase: { label: 'Supabase Anon / Service Role Key', placeholder: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...', help: 'Copy key from Supabase Dashboard -> Project Settings -> API.' },
+  firebase: { label: 'Firebase Service Account / API Key', placeholder: '{"type": "service_account", "project_id": "..."}', help: 'Generate private key JSON from Firebase Console -> Service Accounts.' },
+  'aws-s3': { label: 'AWS S3 Credentials (AccessKey:SecretKey:Region:Bucket)', placeholder: 'AKIAXXXXXX:SecretKey123:us-east-1:my-bucket-name', help: 'IAM User credentials with s3:PutObject and s3:GetObject permissions.' },
+  hubspot: { label: 'HubSpot Private App Token', placeholder: 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', help: 'Create Private App at HubSpot -> Settings -> Integrations -> Private Apps.' },
+  salesforce: { label: 'Salesforce Security Token / Session ID', placeholder: '00Dxx0000000000!ARxxxxxxxxxxxxxxxx', help: 'Reset security token at Salesforce Settings -> My Personal Information.' },
+  notion: { label: 'Notion Internal Integration Secret', placeholder: 'secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create integration at notion.so/my-integrations.' },
+  airtable: { label: 'Airtable Personal Access Token', placeholder: 'patxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx', help: 'Create token at airtable.com/create/tokens.' },
+  jira: { label: 'Atlassian API Token', placeholder: 'ATATT3xFfGF0xxxxxxxxxxxxxxxx', help: 'Create token at id.atlassian.com/manage-profile/security/api-tokens.' },
+  linear: { label: 'Linear Personal Access Token', placeholder: 'lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create token at linear.app/settings/api.' },
+  clickup: { label: 'ClickUp Personal API Token', placeholder: 'pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Copy token from ClickUp Settings -> Apps -> API Token.' },
+  trello: { label: 'Trello API Key & Token', placeholder: 'key:token', help: 'Generate key & token at trello.com/app-key.' },
+  twilio: { label: 'Twilio Account SID & Auth Token', placeholder: 'ACxxxxxxxxxxxxxxxx:authtokenxxxx', help: 'Copy Account SID and Auth Token from Twilio Console.' },
+  sendgrid: { label: 'SendGrid API Key', placeholder: 'SG.xxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx', help: 'Create key at app.sendgrid.com -> Settings -> API Keys.' },
+  mailchimp: { label: 'Mailchimp API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', help: 'Create key at admin.mailchimp.com -> Account -> API Keys.' },
+  resend: { label: 'Resend API Key', placeholder: 're_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Create key at resend.com/api-keys.' },
+  'google-analytics': { label: 'GA4 Service Account JSON Key', placeholder: '{"type": "service_account", ...}', help: 'Generate key from Google Cloud Console with GA4 read permissions.' },
+  calendly: { label: 'Calendly Personal Access Token', placeholder: 'eyJhbGciOiJKV1QiLC...', help: 'Generate token at my.calendly.com/integrations/api_subscriptions.' },
+  typeform: { label: 'Typeform Personal Access Token', placeholder: 'tfp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', help: 'Generate token at admin.typeform.com/account.' },
+  zoom: { label: 'Zoom S2S OAuth Credentials (id:secret:account)', placeholder: 'client_id:client_secret:account_id', help: 'Create Server-to-Server OAuth App at marketplace.zoom.us.' },
+};
 
 export default function ConnectorsPage() {
   const { user } = useUserRole();
@@ -31,6 +84,11 @@ export default function ConnectorsPage() {
   const [loadingConnections, setLoadingConnections] = useState(true);
   const [connectingConnectorId, setConnectingConnectorId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Tab State: 'hub' (App Catalog) vs 'connections' (Active Accounts)
+  const [activeTab, setActiveTab] = useState<'hub' | 'connections'>('hub');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   // General API Key Modal
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -97,25 +155,61 @@ export default function ConnectorsPage() {
       const { url } = res.data.data;
 
       if (!url || url.includes('placeholder') || url.includes('YOUR_') || url.includes('undefined')) {
-        toast.error(`Real ${connector.name} OAuth Not Configured`, {
-          description: `To connect your real ${connector.name} account, add ${connector.id.toUpperCase()}_CLIENT_ID and ${connector.id.toUpperCase()}_CLIENT_SECRET in apps/backend/.env file.`,
-          duration: 6000,
+        toast.info(`OAuth Not Configured for ${connector.name}`, {
+          description: `Opening Personal Access Token / API Key modal for real ${connector.name} account authentication.`,
         });
-        setConnectingConnectorId(null);
+        handleOpenApiKeyModal(connector);
         return;
       }
 
       window.location.href = url;
     } catch (err: any) {
-      toast.error(`OAuth Redirect Failed`, {
-        description: err?.response?.data?.message || `Could not initiate OAuth for ${connector.name}. Check backend environment keys.`,
+      toast.error('OAuth Failed', {
+        description: err?.response?.data?.message || err?.message || 'Could not initiate OAuth authorization.',
       });
     } finally {
       setConnectingConnectorId(null);
     }
   };
 
-  const handleConnectGmailFirebase = async () => {
+  const handleOpenApiKeyModal = (connector: AvailableConnector) => {
+    setApiKeyConnectorId(connector.id);
+    setApiKeyName(`${connector.name} Account (${user.email})`);
+    setApiKeyValue('');
+    setIsApiKeyModalOpen(true);
+  };
+
+  const handleSaveApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!apiKeyValue.trim()) {
+      toast.error('API Key required', { description: 'Please enter a valid API key or secret token.' });
+      return;
+    }
+
+    setSavingKey(true);
+    try {
+      await apiClient.post('/v1/connectors/connections/api-key', {
+        connectorId: apiKeyConnectorId,
+        name: apiKeyName || `${apiKeyConnectorId.toUpperCase()} Key`,
+        apiKey: apiKeyValue.trim(),
+      });
+
+      toast.success('Connection Saved & Encrypted in MongoDB Atlas', {
+        description: `API Key encrypted via AES-256 for ${apiKeyConnectorId.toUpperCase()}.`,
+      });
+
+      setIsApiKeyModalOpen(false);
+      fetchConnections();
+    } catch (err: any) {
+      toast.error('Failed to save connection', {
+        description: err?.response?.data?.message || err?.message || 'Could not save credentials.',
+      });
+    } finally {
+      setSavingKey(false);
+    }
+  };
+
+  const handleConnectGoogleOAuth = async () => {
     setSavingGmail(true);
     try {
       const { user: fbUser, idToken, accessToken } = await signInWithGoogleFirebase();
@@ -169,82 +263,83 @@ export default function ConnectorsPage() {
       });
 
       setIsGmailModalOpen(false);
-      setGmailAppPassword('');
       fetchConnections();
     } catch (err: any) {
-      toast.error('Failed to Connect Gmail', {
-        description: err?.response?.data?.message || 'Could not save Gmail connection.',
+      toast.error('Gmail Setup Failed', {
+        description: err?.response?.data?.message || err?.message || 'Could not save Gmail connection.',
       });
     } finally {
       setSavingGmail(false);
     }
   };
 
-  const handleOpenApiKeyModal = (connector: AvailableConnector) => {
-    setApiKeyConnectorId(connector.id);
-    setApiKeyName(`${connector.name} Key`);
-    setApiKeyValue('');
-    setIsApiKeyModalOpen(true);
-  };
+  const handleRunLiveApiTest = async (sendTestEmail: boolean = false) => {
+    if (!activeTestConnector) return;
 
-  const handleAddApiKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apiKeyName || !apiKeyValue || !apiKeyConnectorId) return;
-    setSavingKey(true);
-    try {
-      await apiClient.post('/v1/connectors/connections/api-key', {
-        connectorId: apiKeyConnectorId,
-        name: apiKeyName.trim(),
-        apiKey: apiKeyValue.trim(),
-      });
-      toast.success('API Key Connection Encrypted & Saved', {
-        description: `Credentials encrypted with AES-256-CBC and stored in MongoDB.`,
-      });
-      setIsApiKeyModalOpen(false);
-      setApiKeyValue('');
-      fetchConnections();
-    } catch (err: any) {
-      toast.error('Failed to Save API Key', {
-        description: err?.response?.data?.message || 'Could not save API key.',
-      });
-    } finally {
-      setSavingKey(false);
-    }
-  };
-
-  const handleDelete = async (conn: ConnectionAccount) => {
-    try {
-      await apiClient.delete(`/v1/connectors/connections/${conn._id}`);
-      setConnections((prev) => prev.filter((c) => c._id !== conn._id));
-      toast.error('Connection Revoked', {
-        description: `"${conn.name}" removed and tokens deleted from database.`,
-      });
-    } catch (err: any) {
-      toast.error('Delete Failed', {
-        description: err?.response?.data?.message || 'Could not revoke connection.',
-      });
-    }
-  };
-
-  const handleTestConnection = async (connectorId: string, customParams?: any) => {
-    setTestingConnectorId(connectorId);
     setIsTestingAction(true);
+    setTestResult(null);
 
     try {
-      const res = await apiClient.post(`/v1/connectors/test/${connectorId}`, customParams || {});
+      const payload: any = {};
+      if (activeTestConnector.id === 'gmail' && sendTestEmail) {
+        payload.sendTestEmailTo = testRecipientEmail.trim() || user.email;
+      } else if (activeTestConnector.id === 'google-sheets' && testSpreadsheetId.trim()) {
+        payload.spreadsheetId = testSpreadsheetId.trim();
+        payload.worksheet = 'Sheet1';
+      } else if (activeTestConnector.id === 'google-drive' && testUploadFileName.trim()) {
+        payload.uploadFileName = testUploadFileName.trim();
+        payload.uploadContent = `AutoFlow Verification Test Document created on ${new Date().toLocaleString()}`;
+      } else if (activeTestConnector.id === 'google-calendar' && testEventTitle.trim()) {
+        payload.createTestEvent = true;
+        payload.eventTitle = testEventTitle.trim();
+      }
+
+      const res = await apiClient.post(`/v1/connectors/test/${activeTestConnector.id}`, payload);
       const data = res.data.data;
       setTestResult(data);
 
-      toast.success(`${connectorId.toUpperCase()} Connection Live & Verified!`, {
-        description: data.message || `Successfully tested ${connectorId} connection.`,
+      toast.success(`Live API Test Passed for ${activeTestConnector.name}`, {
+        description: data.message || `Decrypted AES-256 credentials & verified live API connection!`,
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || `Failed to verify ${connectorId} connection.`;
-      toast.error('Connection Test Failed', { description: msg });
-      setTestResult({ status: 'failed', error: msg });
+      const errorMsg = err?.response?.data?.message || err?.message || 'Live API test failed.';
+      setTestResult({ status: 'failed', error: errorMsg });
+      toast.error(`Live API Test Failed for ${activeTestConnector.name}`, {
+        description: errorMsg,
+      });
     } finally {
-      setTestingConnectorId(null);
       setIsTestingAction(false);
+    }
+  };
+
+  const handleDeleteConnection = async (id: string, name: string) => {
+    try {
+      await apiClient.delete(`/v1/connectors/connections/${id}`);
+      setConnections((prev) => prev.filter((c) => c._id !== id));
+      toast.error(`Connection Deleted`, {
+        description: `"${name}" removed from MongoDB Atlas encrypted database.`,
+      });
+    } catch (err: any) {
+      toast.error('Failed to delete connection', {
+        description: err?.response?.data?.message || 'Could not delete connection.',
+      });
+    }
+  };
+
+  const handleCleanMockConnections = async () => {
+    try {
+      setLoadingConnections(true);
+      const res = await apiClient.post('/v1/connectors/install-all', {});
+      toast.success('Mock Connections Cleaned!', {
+        description: res.data?.message || `Cleaned mock connection records. Displaying real connected accounts only.`,
+      });
+      fetchConnections();
+    } catch (err: any) {
+      toast.error('Cleanup failed', {
+        description: err?.response?.data?.message || err?.message || 'Could not clean connections.',
+      });
+    } finally {
+      setLoadingConnections(false);
     }
   };
 
@@ -257,555 +352,409 @@ export default function ConnectorsPage() {
   const catalogConnectors: AvailableConnector[] = availableConnectors.length > 0
     ? availableConnectors
     : [
-        { id: 'gmail', name: 'Gmail', authType: 'oauth2', description: 'Read emails, search, send notifications, reply & create drafts.' },
-        { id: 'google-sheets', name: 'Google Sheets', authType: 'oauth2', description: 'Append rows, create spreadsheets & read cell ranges.' },
-        { id: 'google-drive', name: 'Google Drive', authType: 'oauth2', description: 'Upload files, create folders & search Drive storage.' },
-        { id: 'google-calendar', name: 'Google Calendar', authType: 'oauth2', description: 'Schedule meetings, create events & list schedules.' },
-        { id: 'google-docs', name: 'Google Docs', authType: 'oauth2', description: 'Create documents, read content & append paragraphs.' },
-        { id: 'slack', name: 'Slack', authType: 'oauth2', description: 'Post messages & listen for events.' },
-        { id: 'stripe', name: 'Stripe', authType: 'oauth2', description: 'Payment events & subscriptions.' },
-        { id: 'notion', name: 'Notion DB', authType: 'oauth2', description: 'Create pages & query workspace.' },
-        { id: 'whatsapp', name: 'WhatsApp Business', authType: 'oauth2', description: 'Send & receive messages.' },
-        { id: 'web-search', name: 'Web Search', authType: 'api_key', description: 'Live web search & scraper.' },
-        { id: 'ai-node', name: 'AI Processor Node', authType: 'none', description: 'LLM summarization & extraction.' },
+        { id: 'gmail', name: 'Gmail', category: 'Google Suite', authType: 'oauth2', description: 'Read emails, search, send notifications, reply & create drafts.' },
+        { id: 'google-sheets', name: 'Google Sheets', category: 'Google Suite', authType: 'oauth2', description: 'Append rows, create spreadsheets & read cell ranges.' },
+        { id: 'google-drive', name: 'Google Drive', category: 'Google Suite', authType: 'oauth2', description: 'Upload files, create folders & search Drive storage.' },
+        { id: 'google-calendar', name: 'Google Calendar', category: 'Google Suite', authType: 'oauth2', description: 'Schedule meetings, create events & list schedules.' },
+        { id: 'google-docs', name: 'Google Docs', category: 'Google Suite', authType: 'oauth2', description: 'Create documents, read content & append paragraphs.' },
+        { id: 'outlook', name: 'Microsoft Outlook', category: 'Communication', authType: 'oauth2', description: 'Read Outlook emails, send email messages & manage folders.' },
+        { id: 'ms-teams', name: 'Microsoft Teams', category: 'Communication', authType: 'oauth2', description: 'Post channel announcements, send adaptive cards & chat messages.' },
+        { id: 'slack', name: 'Slack Workspace', category: 'Communication', authType: 'oauth2', description: 'Post messages, upload snippets & listen for events.' },
+        { id: 'discord', name: 'Discord Bot', category: 'Communication', authType: 'api_key', description: 'Send channel embeds, dispatch webhooks & bot notifications.' },
+        { id: 'telegram', name: 'Telegram Bot', category: 'Communication', authType: 'api_key', description: 'Send bot messages, broadcast channel alerts & handle commands.' },
+        { id: 'whatsapp', name: 'WhatsApp Business', category: 'Communication', authType: 'api_key', description: 'Send template messages, receive replies & dispatch alerts.' },
+        { id: 'notion', name: 'Notion DB', category: 'Productivity', authType: 'oauth2', description: 'Create pages, query workspace databases & update blocks.' },
+        { id: 'airtable', name: 'Airtable Base', category: 'Productivity', authType: 'api_key', description: 'Add records to Airtable bases, update grid cells & search rows.' },
+        { id: 'hubspot', name: 'HubSpot CRM', category: 'CRM & Sales', authType: 'oauth2', description: 'Create contacts, update deal pipeline stages & list companies.' },
+        { id: 'salesforce', name: 'Salesforce CRM', category: 'CRM & Sales', authType: 'oauth2', description: 'Manage leads, opportunities, accounts & SOQL queries.' },
+        { id: 'shopify', name: 'Shopify Store', category: 'E-Commerce', authType: 'oauth2', description: 'Fulfill customer orders, sync product inventory & paid checkouts.' },
+        { id: 'stripe', name: 'Stripe Payments', category: 'Finance', authType: 'api_key', description: 'Payment events, create checkout links & subscriptions.' },
+        { id: 'razorpay', name: 'Razorpay (India)', category: 'Finance', authType: 'api_key', description: 'Create UPI & card payment links, handle payment captures.' },
+        { id: 'github', name: 'GitHub Repositories', category: 'Developer Tools', authType: 'oauth2', description: 'Create issues, post pull request comments & trigger workflows.' },
+        { id: 'gitlab', name: 'GitLab CI/CD', category: 'Developer Tools', authType: 'oauth2', description: 'Trigger CI/CD pipelines, manage repository issues & MRs.' },
+        { id: 'postgresql', name: 'PostgreSQL Database', category: 'Databases', authType: 'api_key', description: 'Execute SQL queries, insert rows & stream database triggers.' },
+        { id: 'mysql', name: 'MySQL Database', category: 'Databases', authType: 'api_key', description: 'Run MySQL queries, query tables & insert structured records.' },
+        { id: 'mongodb', name: 'MongoDB Atlas', category: 'Databases', authType: 'api_key', description: 'Insert JSON documents, query collections & aggregations.' },
+        { id: 'redis', name: 'Redis Cache & Store', category: 'Databases', authType: 'api_key', description: 'Get/Set key-value pairs, handle pub/sub channels & rate limits.' },
+        { id: 'supabase', name: 'Supabase Database', category: 'Databases', authType: 'api_key', description: 'Query Postgres tables, handle Supabase Auth & storage events.' },
+        { id: 'firebase', name: 'Firebase Firestore', category: 'Databases', authType: 'api_key', description: 'Read & write Firestore documents, handle Auth triggers.' },
+        { id: 'aws-s3', name: 'AWS S3 Storage', category: 'Databases', authType: 'api_key', description: 'Upload S3 file objects, generate presigned URLs & manage buckets.' },
+        { id: 'bigquery', name: 'Google BigQuery', category: 'Databases', authType: 'oauth2', description: 'Run SQL analytics queries, append rows & export reports.' },
+        { id: 'http-request', name: 'HTTP Request Call', category: 'Developer Tools', authType: 'none', description: 'Send custom REST API GET, POST, PUT, or DELETE requests.' },
+        { id: 'webhooks', name: 'Inbound Webhooks', category: 'Developer Tools', authType: 'none', description: 'Catch real-time HTTP POST webhooks from external apps.' },
+        { id: 'rest-api', name: 'REST API Connector', category: 'Developer Tools', authType: 'api_key', description: 'Execute structured REST API calls with OAuth 2.0 or API Keys.' },
+        { id: 'graphql', name: 'GraphQL Query Client', category: 'Developer Tools', authType: 'api_key', description: 'Execute custom GraphQL query and mutation requests.' },
+        { id: 'openai', name: 'OpenAI GPT-4o', category: 'AI Native', authType: 'api_key', description: 'ChatGPT, GPT-4o vision, custom system prompts & JSON tools.' },
+        { id: 'anthropic', name: 'Anthropic Claude 3.5', category: 'AI Native', authType: 'api_key', description: 'Claude 3.5 Sonnet, long context analysis & code reasoning.' },
+        { id: 'gemini', name: 'Google Gemini 2.0', category: 'AI Native', authType: 'api_key', description: 'Gemini 2.0 Flash, multimodal processing & fast reasoning.' },
+        { id: 'groq', name: 'Groq Llama 3', category: 'AI Native', authType: 'api_key', description: 'Sub-second ultrafast Llama 3 70B inference engine.' },
+        { id: 'elevenlabs', name: 'ElevenLabs Voice AI', category: 'AI Native', authType: 'api_key', description: 'AI Text-to-Speech audio synthesis & voice cloning.' },
+        { id: 'huggingface', name: 'Hugging Face ML', category: 'AI Native', authType: 'api_key', description: 'Run open-source Machine Learning models & image generation.' },
+        { id: 'twilio', name: 'Twilio SMS', category: 'Communication', authType: 'api_key', description: 'Send SMS text messages, dispatch WhatsApp templates & calls.' },
+        { id: 'sendgrid', name: 'SendGrid Email API', category: 'Marketing', authType: 'api_key', description: 'Send transactional emails & manage contact suppression lists.' },
+        { id: 'mailchimp', name: 'Mailchimp Marketing', category: 'Marketing', authType: 'api_key', description: 'Add campaign subscribers & trigger email automation sequences.' },
+        { id: 'resend', name: 'Resend Email API', category: 'Marketing', authType: 'api_key', description: 'Send modern developer-friendly transactional emails.' },
+        { id: 'jira', name: 'Jira Software', category: 'Productivity', authType: 'oauth2', description: 'Create Jira issue tickets, update sprint boards & statuses.' },
+        { id: 'linear', name: 'Linear App', category: 'Productivity', authType: 'api_key', description: 'Create Linear issue tickets, set priorities & assign cycles.' },
+        { id: 'clickup', name: 'ClickUp Tasks', category: 'Productivity', authType: 'oauth2', description: 'Create ClickUp tasks, set assignees & update custom fields.' },
+        { id: 'trello', name: 'Trello Boards', category: 'Productivity', authType: 'oauth2', description: 'Create Trello cards, move cards across board columns.' },
+        { id: 'google-analytics', name: 'Google Analytics 4', category: 'Analytics', authType: 'oauth2', description: 'Query GA4 metrics, track conversions & active sessions.' },
+        { id: 'calendly', name: 'Calendly Bookings', category: 'Productivity', authType: 'oauth2', description: 'Trigger on new booking invitees & cancel events.' },
+        { id: 'typeform', name: 'Typeform Forms', category: 'Productivity', authType: 'oauth2', description: 'Trigger on new form submission responses & answers.' },
+        { id: 'zoom', name: 'Zoom Meetings', category: 'Communication', authType: 'oauth2', description: 'Schedule video meetings, webinars & registrants.' },
+        { id: 'amazon-flipkart', name: 'Amazon & Flipkart', category: 'E-Commerce', authType: 'none', description: 'Track price drops, compare product deals & monitor stock.' },
+        { id: 'autoflow-condition', name: 'If / Else Condition', category: 'Logic & Control Flow', authType: 'none', description: 'Split workflow execution paths into TRUE and FALSE branches.' },
       ];
+
+  const categoriesList = ['All', 'Google Suite', 'Communication', 'AI Native', 'Developer Tools', 'Databases', 'Finance', 'CRM & Sales', 'Productivity'];
+
+  const filteredCatalog = catalogConnectors.filter((c) => {
+    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (selectedCategory === 'All') return matchesSearch;
+    return matchesSearch && c.category === selectedCategory;
+  });
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Heading as="h1">Connector SDK &amp; Connections</Heading>
+          <Heading as="h1">Integrations &amp; Connections SDK</Heading>
           <Text variant="secondary">
-            Authenticated accounts for <strong className="text-white">{user.email}</strong>. Credentials encrypted via AES-256.
+            Manage authenticated accounts for <strong className="text-white">{user.email}</strong>. Encrypted via AES-256-CBC.
           </Text>
         </div>
-        <button
-          onClick={fetchConnections}
-          className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-white transition-colors flex items-center gap-1.5 text-xs"
-          title="Refresh connections"
-        >
-          <RefreshCw size={14} className={loadingConnections ? 'animate-spin' : ''} />
-          <span>Refresh Connections</span>
-        </button>
-      </div>
-
-      {/* Connectors Catalog */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {catalogConnectors.map((c) => {
-          const isConnecting = connectingConnectorId === c.id;
-          const activeConn = connections.find((conn) => conn.connectorId === c.id);
-          const isAlreadyConnected = Boolean(activeConn);
-
-          return (
-            <SectionCard
-              key={c.id}
-              className={`flex flex-col justify-between transition-all relative ${
-                isAlreadyConnected
-                  ? 'border-emerald-500/40 bg-emerald-950/10 shadow-lg shadow-emerald-950/20'
-                  : 'hover:border-accentPurple'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Cpu size={22} className={isAlreadyConnected ? 'text-accentEmerald' : 'text-accentIndigo'} />
-                    <Heading as="h3" className="text-sm font-bold">{c.name}</Heading>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    {isAlreadyConnected ? (
-                      <span className="flex items-center gap-1 text-[10px] text-accentEmerald font-semibold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        <CheckCircle2 size={11} />
-                        CONNECTED
-                      </span>
-                    ) : (
-                      <Badge variant={c.authType === 'oauth2' ? 'active' : c.authType === 'none' ? 'info' : 'draft'}>
-                        {c.authType.toUpperCase()}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <Text variant="secondary" className="text-xs mb-3">{c.description}</Text>
-
-                {/* Account Details Box when Connected */}
-                {isAlreadyConnected && activeConn && (
-                  <div className="mb-4 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 flex flex-col gap-1">
-                    <div className="flex items-center justify-between font-semibold text-emerald-300">
-                      <span className="truncate max-w-[180px]" title={activeConn.name}>
-                        {activeConn.name || user.email}
-                      </span>
-                      <span className="text-[10px] font-mono uppercase bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300">
-                        {activeConn.authType}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-mono">
-                      <Lock size={10} />
-                      <span>AES-256 Encrypted · Live API Verified</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {c.authType === 'none' ? (
-                <Button variant="secondary" size="sm" disabled className="w-full">
-                  Native Node Active
-                </Button>
-              ) : isAlreadyConnected ? (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleOpenTestModal(c)}
-                      className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5"
-                    >
-                      <Play size={13} />
-                      <span>Test {c.name} API</span>
-                    </Button>
-                    <button
-                      onClick={() => activeConn && handleDelete(activeConn)}
-                      className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
-                      title="Revoke Connection"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleConnectOAuth(c)}
-                    className="text-[11px] text-textMuted hover:text-white text-center underline"
-                  >
-                    Re-authenticate {c.name}
-                  </button>
-                </div>
-              ) : c.authType === 'oauth2' ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={isConnecting}
-                  onClick={() => handleConnectOAuth(c)}
-                  className="w-full"
-                >
-                  {isConnecting ? (
-                    <span className="flex items-center gap-1.5">
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Authenticating...</span>
-                    </span>
-                  ) : (
-                    `Connect ${c.name}`
-                  )}
-                </Button>
-              ) : (
-                <Button variant="primary" size="sm" onClick={() => handleOpenApiKeyModal(c)} className="w-full">
-                  Add API Key
-                </Button>
-              )}
-            </SectionCard>
-          );
-        })}
-      </div>
-
-      {/* Active Connections List */}
-      <SectionCard>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={20} className="text-accentEmerald" />
-            <Heading as="h3">
-              Active Encrypted Connections ({connections.length})
-            </Heading>
-          </div>
-          <Badge variant="active">LIVE · AES-256 · MONGODB</Badge>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCleanMockConnections}
+            disabled={loadingConnections}
+            className="px-3.5 py-2 text-xs flex items-center gap-1.5 font-semibold rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all"
+            title="Clean mock connection records in database"
+          >
+            <Trash2 size={14} className="text-red-400" />
+            <span>Clean Mock Data</span>
+          </button>
+          <button
+            onClick={fetchConnections}
+            className="p-2 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            title="Refresh connections"
+          >
+            <RefreshCw size={14} className={loadingConnections ? 'animate-spin text-accentPurple' : ''} />
+            <span>Refresh</span>
+          </button>
         </div>
+      </div>
 
-        {loadingConnections ? (
-          <div className="flex items-center justify-center py-10 gap-2 text-textMuted text-xs">
-            <Loader2 size={16} className="animate-spin text-accentPurple" />
-            <span>Loading connections from database...</span>
+      {/* Hero Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-purple-900/20 to-bgSecondary border-purple-500/30">
+          <div className="p-3 rounded-xl bg-purple-500/20 text-accentPurple border border-purple-500/30">
+            <Cpu size={20} />
           </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-400 text-xs">
-            {error}
-            <br />
-            <button onClick={fetchConnections} className="mt-2 text-accentPurple hover:underline">Retry</button>
+          <div>
+            <div className="text-2xl font-extrabold text-white font-mono">{catalogConnectors.length}</div>
+            <div className="text-[11px] text-textMuted font-medium">Enterprise Apps Available</div>
           </div>
-        ) : connections.length === 0 ? (
-          <div className="text-center py-10 text-textMuted text-xs bg-white/[0.01] rounded-xl border border-dashed border-borderColor">
-            No active connections for <strong className="text-white">{user.email}</strong>.<br />
-            Click &quot;Connect&quot; on any connector above to authenticate.
+        </SectionCard>
+
+        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-emerald-900/20 to-bgSecondary border-emerald-500/30">
+          <div className="p-3 rounded-xl bg-emerald-500/20 text-accentEmerald border border-emerald-500/30">
+            <CheckCircle2 size={20} />
           </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {connections.map((conn) => {
-              const matchedCatalog = catalogConnectors.find((c) => c.id === conn.connectorId) || {
-                id: conn.connectorId,
-                name: conn.name,
-                authType: conn.authType as any,
-              };
+          <div>
+            <div className="text-2xl font-extrabold text-white font-mono">{connections.length}</div>
+            <div className="text-[11px] text-textMuted font-medium">Connected Accounts Active</div>
+          </div>
+        </SectionCard>
+
+        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-indigo-900/20 to-bgSecondary border-indigo-500/30">
+          <div className="p-3 rounded-xl bg-indigo-500/20 text-accentIndigo border border-indigo-500/30">
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white">AES-256-CBC</div>
+            <div className="text-[11px] text-textMuted font-medium">Encrypted Storage Layer</div>
+          </div>
+        </SectionCard>
+
+        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-sky-900/20 to-bgSecondary border-sky-500/30">
+          <div className="p-3 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <Globe size={20} />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white">OAuth2 &amp; API Key</div>
+            <div className="text-[11px] text-textMuted font-medium">Live Authorization Protocols</div>
+          </div>
+        </SectionCard>
+      </div>
+
+      {/* Main Content Tabs Switcher */}
+      <div className="flex items-center justify-between border-b border-borderColor pb-1">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('hub')}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${
+              activeTab === 'hub'
+                ? 'bg-accentPurple text-white shadow-glow'
+                : 'text-textMuted hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Layers size={14} />
+            <span>App Integration Hub ({filteredCatalog.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('connections')}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${
+              activeTab === 'connections'
+                ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-glow'
+                : 'text-textMuted hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <CheckCircle2 size={14} className="text-emerald-400" />
+            <span>Active Connected Accounts ({connections.length})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TAB 1: App Integration Hub */}
+      {activeTab === 'hub' && (
+        <div className="flex flex-col gap-5">
+          {/* Search & Category Filter Bar */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-bgSecondary p-4 rounded-xl border border-borderColor">
+            <div className="relative w-full md:w-96">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-textMuted" />
+              <input
+                type="text"
+                placeholder="Search 55+ connectors (e.g. Gmail, OpenAI, Postgres, Stripe)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-bgPrimary border border-borderColor rounded-xl text-xs text-white outline-none focus:border-accentPurple"
+              />
+            </div>
+
+            {/* Category Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {categoriesList.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                    selectedCategory === cat
+                      ? 'bg-white/15 border border-white/30 text-white shadow-sm'
+                      : 'bg-white/5 border border-transparent text-textMuted hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCatalog.map((c) => {
+              const activeConn = connections.find((conn) => conn.connectorId === c.id);
+              const isAlreadyConnected = Boolean(activeConn);
+              const isConnecting = connectingConnectorId === c.id;
 
               return (
-                <div
-                  key={conn._id}
-                  className="flex items-center justify-between p-3.5 px-4 rounded-md bg-white/[0.02] border border-borderColor hover:border-accentPurple transition-all"
+                <SectionCard
+                  key={c.id}
+                  className={`flex flex-col justify-between transition-all relative ${
+                    isAlreadyConnected
+                      ? 'border-emerald-500/40 bg-emerald-950/10 shadow-lg shadow-emerald-950/20'
+                      : 'hover:border-accentPurple/50'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Lock size={18} className="text-accentEmerald" />
-                    <div>
-                      <div className="font-semibold text-sm text-white">{conn.name}</div>
-                      <div className="text-xs text-textSecondary font-mono">
-                        {conn.connectorId} · {conn.authType} · Added {new Date(conn.createdAt).toLocaleDateString()}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`p-2 rounded-xl border ${
+                          isAlreadyConnected
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-accentEmerald'
+                            : 'bg-white/5 border-borderColor text-accentPurple'
+                        }`}>
+                          <Cpu size={20} />
+                        </div>
+                        <div>
+                          <Heading as="h3" className="text-sm font-bold">{c.name}</Heading>
+                          <span className="text-[10px] text-textMuted font-mono">{c.category || 'General'}</span>
+                        </div>
                       </div>
+
+                      {/* Connection Status Badge */}
+                      {isAlreadyConnected ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
+                          <CheckCircle2 size={11} />
+                          <span>CONNECTED</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-textMuted">
+                          <span>NOT CONNECTED</span>
+                        </span>
+                      )}
                     </div>
+
+                    <Text variant="secondary" className="text-xs mb-4 min-h-[36px] line-clamp-2">
+                      {c.description || 'Connect to trigger automation workflows and sync data payloads.'}
+                    </Text>
+
+                    {/* Connected Account Detail Pill if Connected */}
+                    {isAlreadyConnected && (
+                      <div className="p-2 rounded-lg bg-emerald-900/20 border border-emerald-500/30 mb-4 flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5 text-emerald-300 font-medium truncate">
+                          <ShieldCheck size={12} className="text-emerald-400" />
+                          <span className="truncate">{activeConn?.name || 'Verified Connection'}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-emerald-400/80 uppercase">{activeConn?.authType}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenTestModal(matchedCatalog)}
-                      className="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold flex items-center gap-1"
-                    >
-                      <Play size={11} />
-                      <span>Test {conn.connectorId}</span>
-                    </button>
-                    <Badge variant={conn.status === 'connected' ? 'active' : 'failed'}>
-                      {conn.status.toUpperCase()}
-                    </Badge>
-                    <button
-                      onClick={() => handleDelete(conn)}
-                      className="text-textMuted hover:text-accentRose transition-colors p-1"
-                      title="Revoke Connection"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+
+                  {/* Card Footer Actions */}
+                  <div className="pt-3 border-t border-borderColor/60 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono text-textMuted uppercase tracking-wider">
+                      AUTH: {c.authType.toUpperCase()}
+                    </span>
+
+                    {isAlreadyConnected ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenTestModal(c)}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-all flex items-center gap-1"
+                          title="Run Live API Test"
+                        >
+                          <Play size={11} />
+                          <span>Test API</span>
+                        </button>
+                        <button
+                          onClick={() => c.authType === 'oauth2' ? handleConnectOAuth(c) : handleOpenApiKeyModal(c)}
+                          className="p-1.5 rounded-lg bg-white/5 border border-borderColor text-textMuted hover:text-white hover:bg-white/10 transition-colors"
+                          title="Re-authenticate Account"
+                        >
+                          <RefreshCw size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => c.authType === 'oauth2' ? handleConnectOAuth(c) : handleOpenApiKeyModal(c)}
+                        disabled={isConnecting}
+                        className="px-3 py-1.5 rounded-lg bg-accentPurple/20 border border-accentPurple/40 text-accentPurple text-xs font-semibold hover:bg-accentPurple/30 transition-all flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {isConnecting ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                        <span>+ Connect Account</span>
+                      </button>
+                    )}
                   </div>
-                </div>
+                </SectionCard>
               );
             })}
           </div>
-        )}
-      </SectionCard>
 
-      {/* Dynamic Connection Verification Modal */}
-      {isTestModalOpen && activeTestConnector && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <SectionCard className="w-full max-w-lg border-emerald-500/40 relative bg-bgSecondary">
-            <button
-              onClick={() => setIsTestModalOpen(false)}
-              className="absolute right-4 top-4 text-textMuted hover:text-white"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                <ShieldCheck className="text-emerald-400" size={22} />
-              </div>
-              <div>
-                <Heading as="h3">Test {activeTestConnector.name} API Connection</Heading>
-                <Text variant="secondary" className="text-xs">
-                  Verify live API access and permissions for <strong>{user.email}</strong>.
-                </Text>
-              </div>
+          {filteredCatalog.length === 0 && (
+            <div className="py-16 text-center text-textMuted text-xs bg-white/[0.01] rounded-xl border border-borderColor">
+              No connectors found matching "{searchQuery}".<br />
+              Use <strong className="text-accentPurple">HTTP Request Call</strong> to connect any external REST API!
             </div>
-
-            {/* DYNAMIC TEST ACTIONS BASED ON CONNECTOR ID */}
-            {activeTestConnector.id === 'gmail' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Mail size={14} className="text-accentIndigo" />
-                        <span>1. Check Inbox Access (Read API)</span>
-                      </div>
-                      <div className="text-[11px] text-textMuted mt-0.5">Queries your Gmail inbox using real Google REST API.</div>
-                    </div>
-                    <Button
-                      size="sm"
-                      disabled={testingConnectorId === 'gmail'}
-                      onClick={() => handleTestConnection('gmail')}
-                      className="shrink-0 text-xs"
-                    >
-                      {testingConnectorId === 'gmail' && !isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'Verify Inbox'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl mb-2">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Send size={14} className="text-accentEmerald" />
-                    <span>2. Send Real Test Email</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <input
-                      type="email"
-                      placeholder="recipient@example.com"
-                      value={testRecipientEmail}
-                      onChange={(e) => setTestRecipientEmail(e.target.value)}
-                      className="flex-1 bg-bgPrimary border border-borderColor rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accentEmerald"
-                    />
-                    <Button
-                      size="sm"
-                      disabled={isTestingAction || !testRecipientEmail}
-                      onClick={() => handleTestConnection('gmail', { sendTestEmailTo: testRecipientEmail })}
-                      className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                    >
-                      {isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'Send Email'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTestConnector.id === 'google-drive' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <HardDrive size={14} className="text-accentIndigo" />
-                        <span>1. Search &amp; List Drive Storage</span>
-                      </div>
-                      <div className="text-[11px] text-textMuted mt-0.5">Queries Google Drive REST API to list your files.</div>
-                    </div>
-                    <Button
-                      size="sm"
-                      disabled={testingConnectorId === 'google-drive'}
-                      onClick={() => handleTestConnection('google-drive')}
-                      className="shrink-0 text-xs"
-                    >
-                      {testingConnectorId === 'google-drive' && !isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'List Files'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl mb-2">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Send size={14} className="text-accentEmerald" />
-                    <span>2. Upload Sample Test File</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <input
-                      type="text"
-                      placeholder="File Name (e.g. TestDoc.txt)"
-                      value={testUploadFileName}
-                      onChange={(e) => setTestUploadFileName(e.target.value)}
-                      className="flex-1 bg-bgPrimary border border-borderColor rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accentEmerald"
-                    />
-                    <Button
-                      size="sm"
-                      disabled={isTestingAction || !testUploadFileName}
-                      onClick={() => handleTestConnection('google-drive', { uploadFileName: testUploadFileName })}
-                      className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                    >
-                      {isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'Upload File'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTestConnector.id === 'google-sheets' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <FileText size={14} className="text-accentIndigo" />
-                        <span>1. Create New Test Spreadsheet</span>
-                      </div>
-                      <div className="text-[11px] text-textMuted mt-0.5">Creates a real Google Sheet in your account.</div>
-                    </div>
-                    <Button
-                      size="sm"
-                      disabled={testingConnectorId === 'google-sheets'}
-                      onClick={() => handleTestConnection('google-sheets')}
-                      className="shrink-0 text-xs"
-                    >
-                      {testingConnectorId === 'google-sheets' && !isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'Create Sheet'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl mb-2">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Send size={14} className="text-accentEmerald" />
-                    <span>2. Append Test Row to Existing Sheet</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <input
-                      type="text"
-                      placeholder="Spreadsheet ID or Google Sheet Link"
-                      value={testSpreadsheetId}
-                      onChange={(e) => setTestSpreadsheetId(e.target.value)}
-                      className="flex-1 bg-bgPrimary border border-borderColor rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accentEmerald"
-                    />
-                    <Button
-                      size="sm"
-                      disabled={isTestingAction || !testSpreadsheetId}
-                      onClick={() => handleTestConnection('google-sheets', { spreadsheetId: testSpreadsheetId })}
-                      className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                    >
-                      {isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'Append Row'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTestConnector.id === 'google-calendar' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Calendar size={14} className="text-accentIndigo" />
-                        <span>1. List Upcoming Calendar Meetings</span>
-                      </div>
-                      <div className="text-[11px] text-textMuted mt-0.5">Queries Google Calendar API for upcoming events.</div>
-                    </div>
-                    <Button
-                      size="sm"
-                      disabled={testingConnectorId === 'google-calendar'}
-                      onClick={() => handleTestConnection('google-calendar')}
-                      className="shrink-0 text-xs"
-                    >
-                      {testingConnectorId === 'google-calendar' && !isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'List Meetings'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl mb-2">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Send size={14} className="text-accentEmerald" />
-                    <span>2. Create Test Event</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <input
-                      type="text"
-                      placeholder="Event Title"
-                      value={testEventTitle}
-                      onChange={(e) => setTestEventTitle(e.target.value)}
-                      className="flex-1 bg-bgPrimary border border-borderColor rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accentEmerald"
-                    />
-                    <Button
-                      size="sm"
-                      disabled={isTestingAction || !testEventTitle}
-                      onClick={() => handleTestConnection('google-calendar', { createTestEvent: true, eventTitle: testEventTitle })}
-                      className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                    >
-                      {isTestingAction ? <Loader2 size={12} className="animate-spin" /> : 'Create Event'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTestConnector.id === 'google-docs' && (
-              <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <FileCode size={14} className="text-accentIndigo" />
-                      <span>Create Test Google Document</span>
-                    </div>
-                    <div className="text-[11px] text-textMuted mt-0.5">Creates a brand new Google Document via Google Docs REST API.</div>
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={testingConnectorId === 'google-docs'}
-                    onClick={() => handleTestConnection('google-docs')}
-                    className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                  >
-                    {testingConnectorId === 'google-docs' ? <Loader2 size={12} className="animate-spin" /> : 'Create Document'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {!activeTestConnector.id.startsWith('google') && activeTestConnector.id !== 'gmail' && (
-              <div className="flex flex-col gap-3 p-3.5 bg-white/5 border border-borderColor rounded-xl mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <ShieldCheck size={14} className="text-accentEmerald" />
-                      <span>Verify {activeTestConnector.name} Connection</span>
-                    </div>
-                    <div className="text-[11px] text-textMuted mt-0.5">Verifies encrypted credentials in MongoDB for {user.email}.</div>
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={testingConnectorId === activeTestConnector.id}
-                    onClick={() => handleTestConnection(activeTestConnector.id)}
-                    className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                  >
-                    {testingConnectorId === activeTestConnector.id ? <Loader2 size={12} className="animate-spin" /> : 'Verify API Token'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Live Verification Output Box */}
-            {testResult && (
-              <div
-                className={`p-3.5 rounded-xl border text-xs flex flex-col gap-1.5 font-mono animate-fadeIn ${
-                  testResult.status === 'failed'
-                    ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                }`}
-              >
-                <div className="font-bold flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    {testResult.status === 'failed' ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
-                    {testResult.status === 'failed' ? 'TEST FAILED' : 'LIVE API VERIFIED SUCCESS'}
-                  </span>
-                  <span className="text-[10px] text-gray-400">{new Date().toLocaleTimeString()}</span>
-                </div>
-                <div>{testResult.message || testResult.error}</div>
-                {(testResult.error?.includes('console.developers.google.com') || testResult.message?.includes('console.developers.google.com') || testResult.error?.includes('has not been used in project')) && (
-                  <div className="mt-2 p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs font-sans">
-                    <div className="font-bold flex items-center gap-1.5 mb-1 text-amber-300">
-                      <ExternalLink size={14} className="text-amber-400 shrink-0" />
-                      <span>One-Time Action Required: Enable Google API</span>
-                    </div>
-                    <p className="text-[11px] text-amber-100/90 mb-2.5">
-                      Your Google authentication is valid! Google Cloud requires turning ON the API for project <strong>728116182533</strong>. Click the button below, press <strong>&quot;ENABLE&quot;</strong>, then re-test.
-                    </p>
-                    <a
-                      href={
-                        testResult.error?.includes('sheets') || testResult.message?.includes('sheets')
-                          ? "https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=728116182533"
-                          : testResult.error?.includes('drive') || testResult.message?.includes('drive')
-                          ? "https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=728116182533"
-                          : testResult.error?.includes('calendar') || testResult.message?.includes('calendar')
-                          ? "https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=728116182533"
-                          : testResult.error?.includes('docs') || testResult.message?.includes('docs')
-                          ? "https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=728116182533"
-                          : "https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=728116182533"
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3.5 py-2 rounded-lg transition-all shadow-md"
-                    >
-                      <span>
-                        Enable {activeTestConnector?.name} API on Google Cloud
-                      </span>
-                      <ExternalLink size={13} />
-                    </a>
-                  </div>
-                )}
-                {testResult.output && (
-                  <pre className="mt-1 p-2 bg-black/40 rounded text-[10px] text-gray-300 overflow-x-auto max-h-32">
-                    {JSON.stringify(testResult.output, null, 2)}
-                  </pre>
-                )}
-              </div>
-            )}
-          </SectionCard>
+          )}
         </div>
       )}
 
-      {/* Real Gmail Setup Modal */}
+      {/* TAB 2: Active Connected Accounts */}
+      {activeTab === 'connections' && (
+        <SectionCard className="p-0 overflow-hidden">
+          <div className="p-4 border-b border-borderColor bg-bgSecondary flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-accentEmerald" />
+              <Heading as="h3" className="text-sm">
+                Active Authenticated Accounts ({connections.length})
+              </Heading>
+            </div>
+            <Badge variant="active">AES-256 ENCRYPTED · MONGO ATLAS</Badge>
+          </div>
+
+          {loadingConnections ? (
+            <div className="flex items-center justify-center py-16 gap-2 text-textMuted text-xs">
+              <Loader2 size={18} className="animate-spin text-accentPurple" />
+              <span>Loading authenticated connections from MongoDB Atlas...</span>
+            </div>
+          ) : connections.length === 0 ? (
+            <div className="py-16 text-center text-textMuted text-xs">
+              No active connected accounts found for <strong className="text-white">{user.email}</strong>.<br />
+              Switch to <strong className="text-accentPurple">App Integration Hub</strong> to connect your first app!
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-borderColor text-textMuted text-xs uppercase tracking-wider bg-white/[0.01]">
+                    <th className="p-3.5 pl-4">Account Name</th>
+                    <th className="p-3.5">Connector ID</th>
+                    <th className="p-3.5">Auth Strategy</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5">Connected At</th>
+                    <th className="p-3.5 text-right pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-borderColor">
+                  {connections.map((conn) => {
+                    const catalogItem = catalogConnectors.find((c) => c.id === conn.connectorId);
+                    return (
+                      <tr key={conn._id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="p-3.5 pl-4 font-semibold text-white text-xs">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck size={14} className="text-accentEmerald" />
+                            <span>{conn.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-3.5 font-mono text-xs text-accentPurple">{conn.connectorId}</td>
+                        <td className="p-3.5 text-xs text-textMuted font-mono uppercase">{conn.authType}</td>
+                        <td className="p-3.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
+                            <CheckCircle2 size={11} />
+                            <span>CONNECTED</span>
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-xs text-textMuted">
+                          {new Date(conn.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="p-3.5 text-right pr-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {catalogItem && (
+                              <button
+                                onClick={() => handleOpenTestModal(catalogItem)}
+                                className="px-2.5 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-all flex items-center gap-1"
+                              >
+                                <Play size={11} />
+                                <span>Test API</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteConnection(conn._id, conn.name)}
+                              className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                              title="Delete Connection"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
+      )}
+
+      {/* GMAIL / GOOGLE OAUTH MODAL */}
       {isGmailModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <SectionCard className="w-full max-w-lg border-purple-500/40 relative bg-bgSecondary">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="w-full max-w-md bg-bgSecondary border border-borderColor rounded-xl shadow-2xl p-6 relative">
             <button
               onClick={() => setIsGmailModalOpen(false)}
               className="absolute right-4 top-4 text-textMuted hover:text-white"
@@ -813,177 +762,241 @@ export default function ConnectorsPage() {
               <X size={18} />
             </button>
 
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-                <Mail className="text-red-400" size={20} />
-              </div>
-              <div>
-                <Heading as="h3">Connect Real Google Account</Heading>
-                <Text variant="secondary" className="text-xs">
-                  Connect your real Gmail, Google Sheets, Google Drive, Calendar &amp; Docs accounts instantly.
-                </Text>
-              </div>
+            <div className="flex items-center gap-2 mb-2">
+              <Mail size={20} className="text-red-400" />
+              <Heading as="h3" className="text-base">Google Workspace Integration</Heading>
             </div>
+            <Text variant="secondary" className="text-xs mb-4">
+              Connect your real Google Account ({user.email}). Credentials encrypted via AES-256.
+            </Text>
 
-            {/* Mode Switcher Tabs */}
-            <div className="flex rounded-xl bg-white/5 p-1 mb-5 border border-borderColor">
+            <div className="flex gap-2 mb-4 border-b border-borderColor pb-2">
               <button
-                type="button"
                 onClick={() => setGmailTab('oauth')}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  gmailTab === 'oauth'
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-textMuted hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  gmailTab === 'oauth' ? 'bg-accentPurple text-white' : 'text-textMuted hover:text-white'
                 }`}
               >
-                1. Logged-in Google Account (1-Click)
+                1-Click Google OAuth
               </button>
               <button
-                type="button"
                 onClick={() => setGmailTab('app_password')}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  gmailTab === 'app_password'
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-textMuted hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  gmailTab === 'app_password' ? 'bg-accentPurple text-white' : 'text-textMuted hover:text-white'
                 }`}
               >
-                2. Google App Password (SMTP)
+                Google App Password
               </button>
             </div>
 
             {gmailTab === 'oauth' ? (
-              <div className="flex flex-col gap-4 py-2">
-                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-xs text-purple-200">
-                  <div className="font-semibold mb-1 flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className="text-purple-400" />
-                    Connect Logged-in Account: <strong>{user.email}</strong>
-                  </div>
-                  <p className="text-[11px] text-gray-300">
-                    Authenticates directly via Google OAuth Popup to grant real Gmail, Google Sheets, Google Drive, Calendar, and Docs access tokens across all your workspace apps.
-                  </p>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button type="button" variant="secondary" onClick={() => setIsGmailModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={savingGmail}
-                    onClick={handleConnectGmailFirebase}
-                    className="flex items-center gap-2"
-                  >
-                    {savingGmail ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        <span>Connecting to Google...</span>
-                      </>
-                    ) : (
-                      <span>Authorize Logged-in Account ({user.email})</span>
-                    )}
-                  </Button>
-                </div>
+              <div className="flex flex-col gap-3">
+                <Text variant="secondary" className="text-xs">
+                  Click below to authorize via Google OAuth. Authenticates Gmail, Sheets, Drive, Calendar &amp; Docs!
+                </Text>
+                <button
+                  onClick={handleConnectGoogleOAuth}
+                  disabled={savingGmail}
+                  className="glow-button w-full py-2.5 text-xs flex items-center justify-center gap-2"
+                >
+                  {savingGmail ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                  <span>Sign in &amp; Connect via Google OAuth</span>
+                </button>
               </div>
             ) : (
-              <form onSubmit={handleSaveGmailAppPassword} className="flex flex-col gap-4">
-                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-xs text-purple-200">
-                  <div className="font-semibold mb-1 flex items-center gap-1.5">
-                    <Key size={14} className="text-purple-400" />
-                    How to get a 16-character Google App Password:
-                  </div>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-gray-300">
-                    <li>Go to your Google Account: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline inline-flex items-center gap-0.5">myaccount.google.com/apppasswords <ExternalLink size={10} /></a></li>
-                    <li>Make sure 2-Step Verification is turned ON in Google Security.</li>
-                    <li>Type App name &quot;AutoFlow Platform&quot; and click <strong>Create</strong>.</li>
-                    <li>Copy the 16-character password below.</li>
-                  </ol>
-                </div>
-
+              <form onSubmit={handleSaveGmailAppPassword} className="flex flex-col gap-3">
                 <div>
-                  <label className="text-xs text-textSecondary font-medium mb-1 block">Your Gmail Address</label>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">Google Email</label>
                   <input
                     type="email"
-                    placeholder="user@gmail.com"
                     value={gmailEmail}
                     onChange={(e) => setGmailEmail(e.target.value)}
-                    className="w-full bg-bgPrimary border border-borderColor rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-accentPurple"
+                    placeholder="anil4code@gmail.com"
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
                     required
                   />
                 </div>
-
                 <div>
-                  <label className="text-xs text-textSecondary font-medium mb-1 block">16-Digit Google App Password</label>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">Google 16-Char App Password</label>
                   <input
                     type="password"
-                    placeholder="abcd efgh ijkl mnop"
                     value={gmailAppPassword}
                     onChange={(e) => setGmailAppPassword(e.target.value)}
-                    className="w-full bg-bgPrimary border border-borderColor rounded-xl px-3.5 py-2.5 text-sm font-mono text-white outline-none focus:border-accentPurple"
+                    placeholder="xxxx xxxx xxxx xxxx"
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
                     required
                   />
                 </div>
-
-                <div className="flex justify-end gap-2 mt-2">
-                  <Button type="button" variant="secondary" onClick={() => setIsGmailModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={savingGmail}>
-                    {savingGmail ? 'Encrypting & Saving...' : 'Connect Gmail Account'}
-                  </Button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={savingGmail}
+                  className="glow-button w-full py-2.5 text-xs flex items-center justify-center gap-2 mt-2"
+                >
+                  {savingGmail ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
+                  <span>Save Encrypted Gmail Credentials</span>
+                </button>
               </form>
             )}
-          </SectionCard>
+          </div>
         </div>
       )}
 
-      {/* API Key Modal */}
+      {/* GENERAL API KEY MODAL */}
       {isApiKeyModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <SectionCard className="w-full max-w-md border-purple-500/40 relative">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="w-full max-w-md bg-bgSecondary border border-borderColor rounded-xl shadow-2xl p-6 relative">
             <button
               onClick={() => setIsApiKeyModalOpen(false)}
               className="absolute right-4 top-4 text-textMuted hover:text-white"
             >
               <X size={18} />
             </button>
-            <Heading as="h3" className="mb-2">Add Encrypted API Key Connection</Heading>
-            <Text variant="secondary" className="mb-4 text-xs">
-              Credentials encrypted with AES-256-CBC and stored in MongoDB for {user.email}.
+
+            <div className="flex items-center gap-2 mb-2">
+              <Key size={20} className="text-amber-400" />
+              <Heading as="h3" className="text-base">Connect {apiKeyConnectorId.toUpperCase()}</Heading>
+            </div>
+            <Text variant="secondary" className="text-xs mb-4">
+              Enter your real credentials for <strong className="text-white">{apiKeyConnectorId.toUpperCase()}</strong>. Encrypted via AES-256-CBC in MongoDB Atlas.
             </Text>
-            <form onSubmit={handleAddApiKey} className="flex flex-col gap-4">
+
+            <form onSubmit={handleSaveApiKey} className="flex flex-col gap-3">
               <div>
-                <label className="text-xs text-textSecondary font-medium mb-1 block">Connection Name</label>
+                <label className="text-[11px] font-semibold text-textMuted block mb-1">Account / Label</label>
                 <input
                   type="text"
-                  placeholder="e.g. Production Key"
                   value={apiKeyName}
                   onChange={(e) => setApiKeyName(e.target.value)}
-                  className="w-full bg-bgSecondary border border-borderColor rounded px-3 py-2 text-sm text-white outline-none focus:border-accentPurple"
+                  className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
                   required
                 />
               </div>
               <div>
-                <label className="text-xs text-textSecondary font-medium mb-1 block">Secret API Key</label>
+                <label className="text-[11px] font-semibold text-textMuted block mb-1">
+                  {APP_AUTH_SPECS[apiKeyConnectorId]?.label || 'API Key / Bearer Token'}
+                </label>
                 <input
                   type="password"
-                  placeholder="tvly-... / sk-..."
                   value={apiKeyValue}
                   onChange={(e) => setApiKeyValue(e.target.value)}
-                  className="w-full bg-bgSecondary border border-borderColor rounded px-3 py-2 text-sm text-white outline-none focus:border-accentPurple"
+                  placeholder={APP_AUTH_SPECS[apiKeyConnectorId]?.placeholder || 'Enter secret key / token...'}
+                  className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple font-mono text-[11px]"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <Button type="button" variant="secondary" onClick={() => setIsApiKeyModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={savingKey}>
-                  {savingKey ? 'Encrypting...' : 'Encrypt & Save to MongoDB'}
-                </Button>
+
+              {/* Dynamic App Help Guide */}
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed">
+                <div className="font-bold flex items-center gap-1 text-amber-400 mb-0.5">
+                  <ShieldCheck size={13} />
+                  <span>How to get your {apiKeyConnectorId.toUpperCase()} key:</span>
+                </div>
+                <span>{APP_AUTH_SPECS[apiKeyConnectorId]?.help || 'Generate an API key or personal access token in your provider developer console.'}</span>
               </div>
+
+              <button
+                type="submit"
+                disabled={savingKey}
+                className="glow-button w-full py-2.5 text-xs flex items-center justify-center gap-2 mt-2 font-semibold"
+              >
+                {savingKey ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                <span>Encrypt &amp; Connect {apiKeyConnectorId.toUpperCase()} Account</span>
+              </button>
             </form>
-          </SectionCard>
+          </div>
+        </div>
+      )}
+
+      {/* DYNAMIC LIVE API TEST MODAL */}
+      {isTestModalOpen && activeTestConnector && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="w-full max-w-lg bg-bgSecondary border border-borderColor rounded-xl shadow-2xl p-6 relative">
+            <button
+              onClick={() => setIsTestModalOpen(false)}
+              className="absolute right-4 top-4 text-textMuted hover:text-white"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-2 mb-2">
+              <Play size={20} className="text-accentEmerald" />
+              <Heading as="h3" className="text-base">Test Live API — {activeTestConnector.name}</Heading>
+            </div>
+            <Text variant="secondary" className="text-xs mb-4">
+              Executes a live ping test against the actual API service using your AES-256 decrypted credentials.
+            </Text>
+
+            <div className="flex flex-col gap-3 mb-4">
+              {activeTestConnector.id === 'gmail' && (
+                <div>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">Optional: Recipient Email to Send Test Email</label>
+                  <input
+                    type="email"
+                    value={testRecipientEmail}
+                    onChange={(e) => setTestRecipientEmail(e.target.value)}
+                    placeholder="anil4code@gmail.com"
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
+                  />
+                </div>
+              )}
+
+              {activeTestConnector.id === 'google-sheets' && (
+                <div>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">Optional: Google Spreadsheet ID</label>
+                  <input
+                    type="text"
+                    value={testSpreadsheetId}
+                    onChange={(e) => setTestSpreadsheetId(e.target.value)}
+                    placeholder="1BxiMVs0XRA5nFMdKbBUI6y1xDbvKB0x..."
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                {activeTestConnector.id === 'gmail' && (
+                  <button
+                    onClick={() => handleRunLiveApiTest(true)}
+                    disabled={isTestingAction}
+                    className="flex-1 py-2 text-xs bg-red-500/20 border border-red-500/40 text-red-300 rounded-lg hover:bg-red-500/30 transition-all flex items-center justify-center gap-1.5 font-semibold"
+                  >
+                    {isTestingAction ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                    <span>Send Real Test Email</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleRunLiveApiTest(false)}
+                  disabled={isTestingAction}
+                  className="flex-1 py-2 text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-lg hover:bg-emerald-500/30 transition-all flex items-center justify-center gap-1.5 font-semibold"
+                >
+                  {isTestingAction ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+                  <span>Run API Ping Test</span>
+                </button>
+              </div>
+            </div>
+
+            {testResult && (
+              <div className="p-4 rounded-xl bg-bgPrimary border border-borderColor font-mono text-xs">
+                <div className="flex items-center gap-2 mb-2">
+                  {testResult.status === 'success' ? (
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                  ) : (
+                    <AlertCircle size={16} className="text-red-400" />
+                  )}
+                  <span className={testResult.status === 'success' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                    {testResult.status === 'success' ? 'API TEST PASSED' : 'API TEST FAILED'}
+                  </span>
+                </div>
+                <div className="text-white mb-2">{testResult.message || testResult.error}</div>
+                {testResult.output && (
+                  <pre className="p-2.5 bg-black/40 rounded border border-white/10 text-[11px] text-textMuted max-h-40 overflow-auto">
+                    {JSON.stringify(testResult.output, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

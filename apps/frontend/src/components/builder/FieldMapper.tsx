@@ -262,6 +262,38 @@ export const CONNECTOR_MANIFESTS: Record<string, {
       },
     ],
   },
+  'amazon-flipkart': {
+    name: 'Amazon & Flipkart E-Commerce',
+    operations: [
+      {
+        id: 'search_products',
+        label: 'Search Product Deals & Prices',
+        type: 'action',
+        fields: [
+          { id: 'keyword', label: 'Product Name / Keyword Search', type: 'input', placeholder: 'e.g. Wireless Headphones or MacBooks' },
+          {
+            id: 'platform',
+            label: 'Target E-Commerce Store',
+            type: 'select',
+            options: [
+              { value: 'Both', label: 'Amazon & Flipkart Both' },
+              { value: 'Amazon', label: 'Amazon Store Only' },
+              { value: 'Flipkart', label: 'Flipkart Store Only' },
+            ],
+            defaultValue: 'Both',
+          },
+        ],
+      },
+      {
+        id: 'track_product_price',
+        label: 'Track Product Price & Discounts',
+        type: 'action',
+        fields: [
+          { id: 'productUrl', label: 'Amazon or Flipkart Product URL', type: 'input', placeholder: 'https://www.amazon.in/dp/... or https://www.flipkart.com/...' },
+        ],
+      },
+    ],
+  },
   'autoflow-schedule': {
     name: 'AutoFlow Schedule Trigger',
     operations: [
@@ -284,6 +316,7 @@ export const CONNECTOR_MANIFESTS: Record<string, {
 function normalizeConnectorId(rawId?: string): string {
   if (!rawId) return 'autoflow-schedule';
   const lower = rawId.toLowerCase();
+  if (lower.includes('amazon') || lower.includes('flipkart') || lower.includes('shopping')) return 'amazon-flipkart';
   if (lower.includes('condition') || lower.includes('if_else') || lower.includes('logic')) return 'autoflow-condition';
   if (lower.includes('sheet')) return 'google-sheets';
   if (lower.includes('search') || lower.includes('web')) return 'web-search';

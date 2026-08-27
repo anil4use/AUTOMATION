@@ -82,4 +82,15 @@ export class ConnectorController {
       next(err);
     }
   }
+
+  static async installAll(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await ConnectorService.cleanAutoSeededConnections(
+        req.user?.organizationId || 'org_demo_123'
+      );
+      return sendResponse(res, 200, true, data, 'Cleaned up mock connections in database');
+    } catch (err) {
+      next(err);
+    }
+  }
 }

@@ -4,9 +4,10 @@
 **Architecture**: Monorepo (Turborepo + NPM Workspaces)  
 **Primary Stack**: Next.js 14 App Router, Node.js / Express (TypeScript), BullMQ / Redis, MongoDB Atlas (Mongoose), Groq / Gemini LLM.  
 **Master Build Plan**: [Automation_Platform_Master_Build_Plan.docx](file:///d:/CODE/AUTOMATIONS/docs/Automation_Platform_Master_Build_Plan.docx)  
+**Master Integration Roadmap**: [MASTER_INTEGRATION_ROADMAP.md](file:///d:/CODE/AUTOMATIONS/docs/MASTER_INTEGRATION_ROADMAP.md)  
 **System Diagnostics & Roadmap**: [SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md](file:///d:/CODE/AUTOMATIONS/docs/SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md)  
 **Master Task Status File**: [TASK_STATUS.md](file:///d:/CODE/AUTOMATIONS/docs/TASK_STATUS.md)  
-**Last Updated**: 2026-08-26  
+**Last Updated**: 2026-08-27  
 
 ---
 
