@@ -4,8 +4,9 @@
 **Architecture**: Monorepo (Turborepo + NPM Workspaces)  
 **Primary Stack**: Next.js 14 App Router, Node.js / Express (TypeScript), BullMQ / Redis, MongoDB Atlas (Mongoose), Groq / Gemini LLM.  
 **Master Build Plan**: [Automation_Platform_Master_Build_Plan.docx](file:///d:/CODE/AUTOMATIONS/docs/Automation_Platform_Master_Build_Plan.docx)  
+**System Diagnostics & Roadmap**: [SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md](file:///d:/CODE/AUTOMATIONS/docs/SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md)  
 **Master Task Status File**: [TASK_STATUS.md](file:///d:/CODE/AUTOMATIONS/docs/TASK_STATUS.md)  
-**Last Updated**: 2026-08-19  
+**Last Updated**: 2026-08-26  
 
 ---
 
@@ -14,8 +15,8 @@
 ```
 AUTOMATIONS/
 ├── apps/
-│   ├── frontend/            # Next.js 14 App Router UI (Workflows, Canvas Builder, Executions, Connectors, AI Agent Chat)
-│   ├── backend/             # Modular Express REST API (7-Layer Architecture + Stripe Billing + Log API + MongoDB Atlas)
+│   ├── frontend/            # Next.js 14 App Router UI (Workflows, Canvas Builder, Co-Pilot, Executions, Connectors, AI Agent Chat)
+│   ├── backend/             # Modular Express REST API (7-Layer Architecture + AI Co-Pilot API + MongoDB Atlas)
 │   └── worker/              # BullMQ Background Worker Process (DAG Engine + Auto-Credential Resolver + Redis Rate Limiter)
 ├── packages/
 │   ├── connector-sdk/       # 11 Native Multi-App Plugins (Schedule, Web Search, Gmail, Slack, Sheets, Drive, Notion, Stripe, WhatsApp, Webhooks, AI Node)
@@ -26,6 +27,7 @@ AUTOMATIONS/
 │   └── test-runner.ts       # End-to-End Automated Integration Test Suite (17/17 PASSED)
 └── docs/                    # Central Documentation Hub
     ├── Automation_Platform_Master_Build_Plan.docx  # Original Master Spec
+    ├── SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md       # Diagnostic Health & Roadmap
     ├── PROJECT_MASTER_DOCUMENTATION.md              # (This File - Source of Truth)
     ├── TASK_STATUS.md                               # Comprehensive Task Status Tracker
     └── features/                                    # Detailed Feature Documentation
@@ -33,25 +35,29 @@ AUTOMATIONS/
 
 ---
 
-## ⚙️ Core Platform Systems & Parity
+## ⚙️ Core Platform Systems & Advanced Features
 
-### 1. Real MongoDB Atlas REST API & Auth Parity
-- **Authentication**: `POST /api/v1/auth/login` and `POST /api/v1/auth/register` persist real user records in MongoDB Atlas (`users` collection).
-- **Session Persistence**: JWT tokens and session metadata are stored in **both HTTP Cookies (`document.cookie`) and LocalStorage**.
-- **Route Guard**: Dashboard layout (`layout.tsx`) checks `isLoadingSession` to ensure sessions persist across page refreshes without auto-logout.
-- **API Interceptor**: `apiClient` (`api-client.ts`) handles JWT header injection and 401 response auto-cleanup.
+### 1. In-Canvas AI Co-Pilot Assistant (`/workflows/[id]`)
+- **Live Canvas State Mutation**: Interactive AI assistant sidebar allowing real-time prompt-driven step additions, step deletions, parameter updates (schedules, sheet names, search queries), and edge re-wiring directly on the visual ReactFlow canvas.
+- **Dynamic AI Suggestions**: Generates context-aware suggestion chips based on the live workflow state (`📊 Change Sheet to "Anil_dev"`, `⏱️ Change Schedule to Hourly`).
+- **Co-Pilot REST Endpoint**: `POST /v1/ai-agent/copilot` processes canvas nodes/edges with Gemini 2.0 Flash / Groq LLMs and returns updated canvas JSON + mutation summary badges.
 
-### 2. Multi-App Connector SDK & Auto-Configuration (11 Native Plugins)
-- **Native Plugins**: `autoflow-schedule`, `web-search`, `gmail`, `slack`, `google-sheets`, `google-drive`, `notion`, `stripe`, `whatsapp`, `http-request`, `ai-agent`.
-- **AES-256-CBC Encryption**: `ConnectionModel` stores OAuth and API key credentials encrypted with AES-256-CBC in MongoDB Atlas.
-- **Worker Auto-Configuration**: `StepExecutor` automatically fetches and decrypts user credentials from MongoDB by `organizationId`, injects system AI keys for AI steps, and auto-provisions fallbacks so workflow steps execute seamlessly.
+### 2. Fully Dynamic LLM Workflow Compiler
+- **100% Dynamic Prompt Pipeline**: Replaced static regex rules with LLM JSON compilation (`DYNAMIC_WORKFLOW_SYSTEM_PROMPT`). Compiles custom search queries, spreadsheet names, AI prompts, and variable interpolation templates for any user workflow request.
 
-### 3. AI Conversational Prompt-to-Workflow Agent (`/ai-agent`)
-- **Gemini & Groq LLM Chat**: Powered by `gemini-2.0-flash` and Groq `openai/gpt-oss-20b`. Answers user queries in rich text without outputting raw Python code.
-- **Native Connector Awareness**: Recommends platform connectors and verifies active user connections in MongoDB Atlas (✅ `Connected` vs ⚠️ `Not Connected`).
-- **Vertical DAG Generation**: Generates structured 1-way DAG drafts with pre-configured step operations and variable mappings (`{{nodes.node_2.output.result}}`).
-- **Canvas Hydration**: Clicking **"Open Builder Canvas & Activate All Steps"** auto-loads all generated DAG steps vertically onto the visual builder canvas (`/workflows/new`).
-- **MongoDB Atlas Chat History**: `AIChatModel` persists user messages, AI responses, and drafts in MongoDB Atlas (`GET/POST/DELETE /api/v1/ai-agent/chat-history`).
+### 3. Debounced Auto-Save Draft Engine
+- **Zero-Data-Loss Architecture**: Automatically syncs canvas modifications to MongoDB Atlas (`PUT /v1/workflows/:id`) and `localStorage` after a 1.5-second debounce timeout.
+- **Header Status Badge**: Live visual indicator in the builder header (`🟡 Saving Draft...` $\rightarrow$ `🟢 Draft Auto-Saved (07:11 PM)`).
+
+### 4. Live 1-Second Countdown Ticker (`Workflows Page`)
+- **`LiveNextExecutionCountdown`**: Real-time ticking 1-second countdown badge (`⏱️ 38m : 57s`) for hourly, interval, and daily target schedules.
+- **Status Aware**: Displays `⚡ Triggering now...` when countdown reaches zero, and `⏸️ Paused` for inactive workflows.
+
+### 5. Native Web Search & Scraper SDK (`WebSearchConnector`)
+- **Native Platform Connector**: Integrates live Tavily API searching (`search_web`), DuckDuckGo web scraping fallback, and live URL text extraction (`scrape_url`) with zero user API key setup required (`authType: 'none'`).
+
+### 6. Google Sheets 400 Range Repair & Tab Auto-Creation
+- **Automatic Worksheet Creation**: Catches `400 Bad Request: Unable to parse range` errors (e.g. missing `JobListings` tab), issues a `batchUpdate` `addSheet` request to create the worksheet tab dynamically, and retries append operations cleanly.
 
 ---
 
@@ -59,11 +65,12 @@ AUTOMATIONS/
 
 | Feature Area | Document File | Description |
 | :--- | :--- | :--- |
+| **System Diagnostics & Roadmap** | [SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md](file:///d:/CODE/AUTOMATIONS/docs/SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md) | Architectural audit, scalability diagnosis, and feature roadmap |
 | **Monorepo & Tooling** | [01_monorepo_and_tooling.md](file:///d:/CODE/AUTOMATIONS/docs/features/01_monorepo_and_tooling.md) | Workspace packages, Turborepo pipeline, tsconfig, Docker setup |
 | **Backend Modular System** | [02_backend_modular_architecture.md](file:///d:/CODE/AUTOMATIONS/docs/features/02_backend_modular_architecture.md) | 7-layer architecture, Express routes, controllers, services, repositories |
 | **Connector SDK & Security** | [03_connector_sdk.md](file:///d:/CODE/AUTOMATIONS/docs/features/03_connector_sdk.md) | AES-256 encryption, 11 native connector plugins, worker auto-configuration |
 | **BullMQ Worker Engine** | [04_bullmq_worker_engine.md](file:///d:/CODE/AUTOMATIONS/docs/features/04_bullmq_worker_engine.md) | DAG topological runner, step execution, retries, rate limiter |
 | **Zapier Next.js UI & Builder** | [05_frontend_nextjs_ui.md](file:///d:/CODE/AUTOMATIONS/docs/features/05_frontend_nextjs_ui.md) | Next.js 14 App Router, visual DAG builder, canvas draft loader, executions inspector |
-| **AI Agent Service** | [06_ai_agent_service.md](file:///d:/CODE/AUTOMATIONS/docs/features/06_ai_agent_service.md) | Gemini/Groq LLM chat, connector checks, vertical DAG generation, MongoDB chat history |
+| **AI Agent & Co-Pilot** | [06_ai_agent_service.md](file:///d:/CODE/AUTOMATIONS/docs/features/06_ai_agent_service.md) | Gemini/Groq LLM chat, in-canvas AI Co-Pilot assistant, vertical DAG compiler |
 | **Database & Shared Types** | [07_database_and_shared_types.md](file:///d:/CODE/AUTOMATIONS/docs/features/07_database_and_shared_types.md) | Mongoose ODM schemas (`AIChatModel`) & TypeScript contracts |
 | **Design Tokens & Tailwind** | [08_frontend_design_system_and_tokens.md](file:///d:/CODE/AUTOMATIONS/docs/features/08_frontend_design_system_and_tokens.md) | Central design tokens (`tokens.ts`) & Tailwind CSS styling |
