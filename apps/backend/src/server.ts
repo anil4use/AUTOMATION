@@ -4,6 +4,7 @@ import { env } from './config/env';
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 import { WorkflowSchedulerService } from './services/workflow-scheduler.service';
+import { startMemoryExtractionWorker } from './jobs/memory-extraction.job';
 
 async function bootstrap(retries = 3) {
   try {
@@ -20,6 +21,13 @@ async function bootstrap(retries = 3) {
 
       // 4. Start Background Workflow Cron Scheduler Engine (polls active workflows every 10s)
       WorkflowSchedulerService.start(10000);
+
+      // 5. Start Memory Extraction Worker (processes async memory extraction after conversations)
+      try {
+        startMemoryExtractionWorker();
+      } catch (workerErr: any) {
+        logger.warn(`[Server] Memory extraction worker setup deferred: ${workerErr?.message || workerErr}`);
+      }
     });
   } catch (error) {
     logger.error('Failed to start modular backend server:', error);

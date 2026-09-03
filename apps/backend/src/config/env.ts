@@ -49,4 +49,7 @@ export const env = {
   // Stripe
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+
+  // WhatsApp Agent (optional — only needed if using WA Agent Automation)
+  whatsappApiVersion: process.env.WHATSAPP_API_VERSION || 'v19.0',
 };

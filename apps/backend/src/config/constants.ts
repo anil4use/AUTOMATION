@@ -9,5 +9,6 @@ export const APP_CONSTANTS = {
   },
   QUEUE_NAMES: {
     WORKFLOW_EXECUTION: 'workflow-execution-queue',
+    MEMORY_EXTRACTION: 'memory-extraction-queue',
   },
 };

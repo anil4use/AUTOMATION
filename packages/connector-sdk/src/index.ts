@@ -1,4 +1,9 @@
 export * from './core/types';
+
+// Provider-agnostic messaging layer
+export * from './messaging/normalized-message';
+export * from './messaging/base-adapter';
+export * from './messaging/whatsapp-adapter';
 export * from './core/base-connector';
 export * from './core/manifest-registry';
 export * from './integrations/gmail';
