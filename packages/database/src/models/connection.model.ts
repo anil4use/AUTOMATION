@@ -8,6 +8,7 @@ export interface IConnection extends Document {
   authType: 'oauth2' | 'api_key' | 'webhook' | 'basic';
   encryptedCredentials: string; // AES-256 encrypted JSON string
   expiresAt?: Date;
+  pollingCursor?: Record<string, any>;
   status: 'connected' | 'expired' | 'error';
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +23,7 @@ const ConnectionSchema = new Schema<IConnection>(
     authType: { type: String, enum: ['oauth2', 'api_key', 'webhook', 'basic'], required: true },
     encryptedCredentials: { type: String, required: true },
     expiresAt: { type: Date },
+    pollingCursor: { type: Schema.Types.Mixed, default: {} },
     status: { type: String, enum: ['connected', 'expired', 'error'], default: 'connected' },
   },
   { timestamps: true }

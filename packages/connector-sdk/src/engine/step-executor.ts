@@ -74,6 +74,10 @@ export class StepExecutor {
       }
     }
 
+    // Generate idempotency key for safe action retries (Zapier.md Topic 37)
+    const idempotencyKey = `idemp_${node.id}_${crypto.createHash('md5').update(JSON.stringify(resolvedInputs)).digest('hex').substring(0, 12)}`;
+    resolvedInputs._idempotencyKey = idempotencyKey;
+
     // Execute REAL connector action (NO mock/sandbox fallbacks!)
     const actionId = node.operationId || (node as any).actionId || 'execute';
     const result = await connector.executeAction(actionId, {

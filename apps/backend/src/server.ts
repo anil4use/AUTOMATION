@@ -5,6 +5,8 @@ import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 import { WorkflowSchedulerService } from './services/workflow-scheduler.service';
 import { startMemoryExtractionWorker } from './jobs/memory-extraction.job';
+import { OAuthRefreshDaemon } from './jobs/oauth-refresh.job';
+import { PollingSchedulerJob } from './jobs/polling-scheduler.job';
 
 async function bootstrap(retries = 3) {
   try {
@@ -22,7 +24,13 @@ async function bootstrap(retries = 3) {
       // 4. Start Background Workflow Cron Scheduler Engine (polls active workflows every 10s)
       WorkflowSchedulerService.start(10000);
 
-      // 5. Start Memory Extraction Worker (processes async memory extraction after conversations)
+      // 5. Start OAuth2 Token Refresh Daemon (checks expiring tokens every 10 mins)
+      OAuthRefreshDaemon.start(600000);
+
+      // 6. Start Polling Trigger Worker (polls non-webhook triggers every 5 mins)
+      PollingSchedulerJob.start(300000);
+
+      // 7. Start Memory Extraction Worker (processes async memory extraction after conversations)
       try {
         startMemoryExtractionWorker();
       } catch (workerErr: any) {

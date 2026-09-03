@@ -12,6 +12,7 @@ import billingRoutes from './modules/billing/billing.routes';
 import logsRoutes from './modules/logs/logs.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import whatsappAgentRoutes from './modules/whatsapp-agent/whatsapp-agent.routes';
+import webhookGatewayRoutes from './modules/webhooks/webhook-gateway.routes';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
@@ -34,6 +35,9 @@ export function createApp() {
   app.use('/api/v1/billing', billingRoutes);
   app.use('/api/v1/logs', logsRoutes);
   app.use('/api/v1/dashboard', dashboardRoutes);
+
+  // Universal Webhook Catch Gateway
+  app.use('/api/v1/webhooks', webhookGatewayRoutes);
 
   // WhatsApp Agent Automation
   app.use('/api/v1/wa', whatsappAgentRoutes);

@@ -12,3 +12,4 @@ export * from './models/whatsapp-automation.model';
 export * from './models/wa-conversation.model';
 export * from './models/wa-message.model';
 export * from './models/user-memory.model';
+export * from './models/workflow-version.model';

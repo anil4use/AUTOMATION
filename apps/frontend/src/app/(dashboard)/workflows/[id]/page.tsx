@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkflowCanvas } from '@/components/builder/WorkflowCanvas';
 import { FieldMapper } from '@/components/builder/FieldMapper';
 import { AICopilotDrawer } from '@/components/builder/AICopilotDrawer';
+import { StepSetupDrawer } from '@/components/workflow/StepSetupDrawer';
 import { useUserRole } from '@/context/UserRoleContext';
 import { Play, Save, ArrowLeft, RefreshCw, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -379,11 +380,43 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
           onCanvasChange={handleCanvasChange}
           updatedNodeData={updatedNodeData}
         />
-        <FieldMapper
-          selectedNode={selectedNode}
-          onChangeApp={() => setSelectedNode(null)}
-          onUpdateNodeData={handleUpdateNodeData}
-        />
+        {selectedNode && (
+          <StepSetupDrawer
+            key={selectedNode.id}
+            node={{
+              id: selectedNode.id,
+              name: selectedNode.data?.name || selectedNode.data?.label || selectedNode.id,
+              connectorId: selectedNode.data?.connectorId || 'gmail',
+              operationId: selectedNode.data?.operationId || 'execute',
+              type: selectedNode.data?.type || 'action',
+              config: selectedNode.data?.config || {},
+              fieldMapping: selectedNode.data?.fieldMapping || {},
+              connectionId: selectedNode.data?.connectionId || '',
+            }}
+            allNodes={canvasNodes.map((n) => ({
+              id: n.id,
+              name: n.data?.name || n.data?.label || n.id,
+              connectorId: n.data?.connectorId || 'gmail',
+            }))}
+            edges={canvasEdges}
+            connections={[]}
+            onSaveNode={(updated) => {
+              handleUpdateNodeData(updated.id, {
+                name: updated.name,
+                connectorId: updated.connectorId,
+                operationId: updated.operationId,
+                config: updated.config,
+                fieldMapping: updated.fieldMapping,
+                connectionId: updated.connectionId,
+                isConnected: Boolean(updated.connectionId),
+              });
+            }}
+            onClose={() => setSelectedNode(null)}
+            onAddNewAccount={() => {
+              router.push('/connectors');
+            }}
+          />
+        )}
 
         <AICopilotDrawer
           isOpen={isCopilotOpen}

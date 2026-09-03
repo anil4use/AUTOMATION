@@ -87,8 +87,8 @@ export const CustomNode = memo(({ data, selected, id }: NodeProps) => {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>System</span>
             </div>
-          ) : data.isConnected ? (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald shadow-sm">
+          ) : (data.isConnected || Boolean(data.connectionId)) ? (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Connected 🟢</span>
             </div>
