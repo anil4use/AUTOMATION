@@ -12,6 +12,8 @@ export interface IWorkflow extends Document {
   };
   isAiGenerated: boolean;
   aiPrompt?: string;
+  lastExecutedAt?: Date;
+  executionCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,8 @@ const WorkflowSchema = new Schema<IWorkflow>(
     },
     isAiGenerated: { type: Boolean, default: false },
     aiPrompt: { type: String },
+    lastExecutedAt: { type: Date },
+    executionCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

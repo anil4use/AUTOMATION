@@ -104,24 +104,39 @@ export class WorkflowController {
         throw new AppError('Workflow has no steps/nodes configured', 400);
       }
 
-      // Execute live DAG engine and log step execution outputs to MongoDB
-      const nodeResults = await DAGRunner.run(nodes, edges, triggerPayload, undefined, {}, orgId);
+      let nodeResults: Record<string, any> = {};
+      let status: 'completed' | 'failed' = 'completed';
+      let errorMessage: string | undefined = undefined;
+
+      try {
+        nodeResults = await DAGRunner.run(nodes, edges, triggerPayload, undefined, {}, orgId);
+        const failedStep = Object.values(nodeResults).find((res: any) => res && res.success === false);
+        if (failedStep) {
+          status = 'failed';
+          errorMessage = failedStep.error || 'Step execution failed';
+        }
+      } catch (err: any) {
+        status = 'failed';
+        errorMessage = err?.message || 'Workflow execution error';
+      }
 
       const log = await ExecutionLogModel.create({
         workflowId: workflowId === 'new' ? undefined : workflowId,
         organizationId: orgId,
-        status: 'completed',
+        status,
         triggerPayload,
         nodeResults,
+        error: errorMessage,
         startedAt: new Date(),
         completedAt: new Date(),
       });
 
       return sendResponse(res, 200, true, {
         executionId: log._id,
-        status: 'completed',
+        status,
         nodeResults,
-      }, 'Workflow executed live successfully');
+        error: errorMessage,
+      }, status === 'completed' ? 'Workflow executed live successfully' : `Workflow execution logged: ${errorMessage}`);
     } catch (err: any) {
       next(err);
     }

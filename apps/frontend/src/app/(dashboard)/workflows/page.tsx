@@ -22,6 +22,8 @@ export interface WorkflowItem {
   updatedAt: string;
   runsCount?: number;
   lastRunAt?: string;
+  lastExecutedAt?: string;
+  executionCount?: number;
 }
 
 function LiveNextExecutionCountdown({ wf }: { wf: WorkflowItem }) {
@@ -49,13 +51,17 @@ function LiveNextExecutionCountdown({ wf }: { wf: WorkflowItem }) {
       }
 
       if (freq === 'interval') {
-        const intervalMins = parseInt(config.intervalMinutes) || 15;
-        const currentMins = now.getMinutes();
-        const currentSecs = now.getSeconds();
-        const nextIntervalMin = Math.ceil((currentMins + 1) / intervalMins) * intervalMins;
-        const remSecs = (nextIntervalMin - currentMins - 1) * 60 + (60 - currentSecs);
-        const minsLeft = Math.floor(remSecs / 60);
-        const secsLeft = remSecs % 60;
+        const intervalMins = parseInt(config.intervalMinutes) || 2;
+        const intervalMs = intervalMins * 60 * 1000;
+        const lastRun = wf.lastExecutedAt ? new Date(wf.lastExecutedAt).getTime() : (now.getTime() - intervalMs + 60000);
+        const nextRunTime = lastRun + intervalMs;
+        const remMs = Math.max(0, nextRunTime - now.getTime());
+
+        if (remMs <= 0) return '⚡ Running now...';
+
+        const totalSecs = Math.floor(remMs / 1000);
+        const minsLeft = Math.floor(totalSecs / 60);
+        const secsLeft = totalSecs % 60;
         return `${minsLeft.toString().padStart(2, '0')}m : ${secsLeft.toString().padStart(2, '0')}s`;
       }
 
