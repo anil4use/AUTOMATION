@@ -140,6 +140,50 @@ const slackManifest: ConnectorManifest = {
         { key: 'statusEmoji', label: 'Status Emoji', type: 'string', required: true },
       ],
     },
+    {
+      id: 'new_mention',
+      name: 'New App Mention',
+      description: 'Triggers when the bot or app is mentioned in a channel message.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [
+        { key: 'channel', label: 'Channel', type: 'string', required: false, dynamicChoice: { endpoint: 'channel' } },
+      ],
+      outputs: [
+        { key: 'user', label: 'Mentioning User ID', type: 'string', required: true },
+        { key: 'text', label: 'Message Text', type: 'string', required: true },
+        { key: 'ts', label: 'Timestamp', type: 'string', required: true },
+        { key: 'channel', label: 'Channel ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'app_home_opened',
+      name: 'App Home Opened',
+      description: 'Triggers when a user opens the app home tab in Slack.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'user', label: 'User ID', type: 'string', required: true },
+        { key: 'tab', label: 'Opened Tab', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'slash_command',
+      name: 'Slash Command Invoked',
+      description: 'Triggers when a custom slash command is run in Slack.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [
+        { key: 'command', label: 'Command Name (e.g. /autoflow)', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'command', label: 'Command', type: 'string', required: true },
+        { key: 'text', label: 'Command Parameters Text', type: 'string', required: true },
+        { key: 'user_id', label: 'Invoking User ID', type: 'string', required: true },
+        { key: 'channel_id', label: 'Channel ID', type: 'string', required: true },
+      ],
+    },
   ],
   actions: [
     {

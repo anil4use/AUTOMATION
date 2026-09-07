@@ -11,9 +11,12 @@ const router = Router();
 router.use(authMiddleware as any);
 
 // Registry endpoints (Phase 2)
+router.get('/registry/search', ConnectorRegistryController.searchConnectors as any);
 router.get('/registry/manifests', ConnectorRegistryController.getAllManifests as any);
 router.get('/registry/manifests/:appId', ConnectorRegistryController.getManifestById as any);
 router.get('/registry/export-ai', ConnectorRegistryController.exportForAI as any);
+router.get('/registry/:connectorId/triggers/:triggerId', ConnectorRegistryController.getTriggerById as any);
+router.get('/registry/:connectorId/actions/:actionId', ConnectorRegistryController.getActionById as any);
 
 router.get('/available', ConnectorController.listAvailable as any);
 router.get('/connections', ConnectorController.listUserConnections as any);

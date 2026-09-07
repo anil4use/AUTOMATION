@@ -45,6 +45,57 @@ const jiraManifest: ConnectorManifest = {
         { key: 'updatedBy', label: 'Updated By', type: 'string', required: true },
       ],
     },
+    {
+      id: 'issue_deleted',
+      name: 'Issue Deleted',
+      description: 'Triggers when a Jira issue is deleted.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [
+        { key: 'projectKey', label: 'Project', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'comment_added',
+      name: 'Comment Added',
+      description: 'Triggers when a comment is posted on an issue.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'commentId', label: 'Comment ID', type: 'string', required: true },
+        { key: 'body', label: 'Comment Body', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'project_created',
+      name: 'Project Created',
+      description: 'Triggers when a new project is created in Jira.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
+        { key: 'projectName', label: 'Project Name', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'issue_assigned',
+      name: 'Issue Assigned',
+      description: 'Triggers when an issue is assigned to a user.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+        { key: 'assigneeAccountId', label: 'Assignee Account ID', type: 'string', required: true },
+      ],
+    },
   ],
   actions: [
     {
@@ -117,6 +168,157 @@ const jiraManifest: ConnectorManifest = {
       ],
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'delete_issue',
+      name: 'Delete Issue',
+      description: 'Deletes a Jira issue.',
+      type: 'action',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'assign_issue',
+      name: 'Assign Issue',
+      description: 'Assigns an issue to a specific user account.',
+      type: 'action',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+        { key: 'accountId', label: 'User Account ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'update_issue',
+      name: 'Update Issue Summary',
+      description: 'Updates summary or description of an issue.',
+      type: 'action',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+        { key: 'summary', label: 'New Summary', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'link_issues',
+      name: 'Link Issues',
+      description: 'Creates a link between two Jira issues.',
+      type: 'action',
+      inputs: [
+        { key: 'inwardIssueKey', label: 'Inward Issue Key', type: 'string', required: true },
+        { key: 'outwardIssueKey', label: 'Outward Issue Key', type: 'string', required: true },
+        { key: 'linkType', label: 'Link Type (e.g. Relates)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'get_project',
+      name: 'Get Project Details',
+      description: 'Fetches metadata of a Jira project.',
+      type: 'action',
+      inputs: [
+        { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'id', label: 'Project ID', type: 'string', required: true },
+        { key: 'name', label: 'Project Name', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'list_projects',
+      name: 'List Projects',
+      description: 'Lists all accessible projects in Jira.',
+      type: 'action',
+      inputs: [],
+      outputs: [
+        { key: 'projects', label: 'Projects Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'create_component',
+      name: 'Create Component',
+      description: 'Creates a component in a project.',
+      type: 'action',
+      inputs: [
+        { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
+        { key: 'name', label: 'Component Name', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'id', label: 'Component ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_version',
+      name: 'Create Version',
+      description: 'Creates a version release in a project.',
+      type: 'action',
+      inputs: [
+        { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
+        { key: 'name', label: 'Version Name', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'id', label: 'Version ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'add_attachment',
+      name: 'Add Attachment',
+      description: 'Attaches text or file content to an issue.',
+      type: 'action',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+        { key: 'filename', label: 'File Name', type: 'string', required: true },
+        { key: 'content', label: 'File Content', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'attachmentId', label: 'Attachment ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'get_issue_comments',
+      name: 'Get Issue Comments',
+      description: 'Gets all comments on an issue.',
+      type: 'action',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'comments', label: 'Comments Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'worklog_add',
+      name: 'Log Work Time',
+      description: 'Logs time spent working on an issue.',
+      type: 'action',
+      inputs: [
+        { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
+        { key: 'timeSpent', label: 'Time Spent (e.g. 2h 30m)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'worklogId', label: 'Worklog ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'get_user_myself',
+      name: 'Get Current User Profile',
+      description: 'Gets profile of authenticated Jira user.',
+      type: 'action',
+      inputs: [],
+      outputs: [
+        { key: 'accountId', label: 'Account ID', type: 'string', required: true },
+        { key: 'displayName', label: 'Display Name', type: 'string', required: true },
       ],
     },
   ],
@@ -219,6 +421,74 @@ export class JiraConnector extends BaseConnector {
             transition: { id: inputs.transitionId },
           });
           return { success: true, data: { success: true } };
+        }
+
+        case 'delete_issue': {
+          await api.delete(`/issue/${inputs.issueKey}`);
+          return { success: true, data: { success: true } };
+        }
+
+        case 'assign_issue': {
+          await api.put(`/issue/${inputs.issueKey}/assignee`, { accountId: inputs.accountId });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'update_issue': {
+          await api.put(`/issue/${inputs.issueKey}`, { fields: { summary: inputs.summary } });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'link_issues': {
+          await api.post('/issueLink', {
+            type: { name: inputs.linkType },
+            inwardIssue: { key: inputs.inwardIssueKey },
+            outwardIssue: { key: inputs.outwardIssueKey },
+          });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'get_project': {
+          const { data } = await api.get(`/project/${inputs.projectKey}`);
+          return { success: true, data: { id: data.id, name: data.name } };
+        }
+
+        case 'list_projects': {
+          const { data } = await api.get('/project');
+          return { success: true, data: { projects: data || [] } };
+        }
+
+        case 'create_component': {
+          const { data } = await api.post('/component', { project: inputs.projectKey, name: inputs.name });
+          return { success: true, data: { id: data.id } };
+        }
+
+        case 'create_version': {
+          const { data } = await api.post('/version', { project: inputs.projectKey, name: inputs.name });
+          return { success: true, data: { id: data.id } };
+        }
+
+        case 'add_attachment': {
+          const formData = new (require('form-data'))();
+          formData.append('file', Buffer.from(inputs.content), inputs.filename);
+          const { data } = await api.post(`/issue/${inputs.issueKey}/attachments`, formData, {
+            headers: { ...formData.getHeaders(), 'X-Atlassian-Token': 'no-check' },
+          });
+          return { success: true, data: { attachmentId: data[0]?.id } };
+        }
+
+        case 'get_issue_comments': {
+          const { data } = await api.get(`/issue/${inputs.issueKey}/comment`);
+          return { success: true, data: { comments: data.comments || [] } };
+        }
+
+        case 'worklog_add': {
+          const { data } = await api.post(`/issue/${inputs.issueKey}/worklog`, { timeSpent: inputs.timeSpent });
+          return { success: true, data: { worklogId: data.id } };
+        }
+
+        case 'get_user_myself': {
+          const { data } = await api.get('/myself');
+          return { success: true, data: { accountId: data.accountId, displayName: data.displayName } };
         }
 
         default:

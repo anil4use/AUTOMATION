@@ -873,7 +873,12 @@ RULES FOR CANVAS MUTATION:
     const nodes: WorkflowNode[] = draft.nodes || [];
     const edges: WorkflowEdge[] = draft.edges || [];
 
-    const validation = validateWorkflow(nodes, edges, connectedAppIds);
+    const userConnectionScopeInfo = userConnections.map((c) => ({
+      connectorId: c.connectorId,
+      scopes: c.grantedScopes || c.scopes || [],
+    }));
+
+    const validation = validateWorkflow(nodes, edges, userConnectionScopeInfo);
 
     for (let i = 1; i < nodes.length; i++) {
       const currentNode = nodes[i];

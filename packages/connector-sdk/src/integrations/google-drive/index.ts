@@ -62,6 +62,45 @@ const googleDriveManifest: ConnectorManifest = {
         { key: 'name', label: 'Folder Name', type: 'string', required: true },
       ],
     },
+    {
+      id: 'file_deleted',
+      name: 'File Deleted',
+      description: 'Triggers when a file is moved to trash or deleted from Drive.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'file_shared_with_me',
+      name: 'File Shared With Me',
+      description: 'Triggers when another user shares a file with the authenticated user.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'name', label: 'File Name', type: 'string', required: true },
+        { key: 'sharedBy', label: 'Shared By Email', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'new_comment_added',
+      name: 'New Comment Added',
+      description: 'Triggers when a comment is posted on a Drive file.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'commentId', label: 'Comment ID', type: 'string', required: true },
+        { key: 'content', label: 'Comment Text', type: 'string', required: true },
+        { key: 'author', label: 'Author Name', type: 'string', required: true },
+      ],
+    },
   ],
   actions: [
     {
@@ -190,6 +229,145 @@ const googleDriveManifest: ConnectorManifest = {
       ],
       outputs: [
         { key: 'permissionId', label: 'Permission ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_google_doc',
+      name: 'Create Google Doc',
+      description: 'Creates a new empty Google Doc document in Drive.',
+      type: 'action',
+      inputs: [
+        { key: 'title', label: 'Document Title', type: 'string', required: true },
+        { key: 'folderId', label: 'Parent Folder ID', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_google_sheet',
+      name: 'Create Google Sheet',
+      description: 'Creates a new Google Spreadsheet in Drive.',
+      type: 'action',
+      inputs: [
+        { key: 'title', label: 'Spreadsheet Title', type: 'string', required: true },
+        { key: 'folderId', label: 'Parent Folder ID', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_google_slides',
+      name: 'Create Google Slides',
+      description: 'Creates a new Google Slides presentation in Drive.',
+      type: 'action',
+      inputs: [
+        { key: 'title', label: 'Presentation Title', type: 'string', required: true },
+        { key: 'folderId', label: 'Parent Folder ID', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'add_file_comment',
+      name: 'Add Comment to File',
+      description: 'Posts a comment thread on a Drive file.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'content', label: 'Comment Text', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'commentId', label: 'Comment ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'list_file_comments',
+      name: 'List Comments on File',
+      description: 'Lists all comments posted on a Drive file.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'comments', label: 'Comments Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'remove_file_permission',
+      name: 'Remove Sharing Permission',
+      description: 'Revokes a specific permission from a file.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'permissionId', label: 'Permission ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'list_file_permissions',
+      name: 'List File Permissions',
+      description: 'Lists all users/groups with permission to access a file.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'permissions', label: 'Permissions Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'star_file',
+      name: 'Star File',
+      description: 'Stars a file in Google Drive.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'unstar_file',
+      name: 'Unstar File',
+      description: 'Removes star from a file in Google Drive.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'empty_trash',
+      name: 'Empty Trash',
+      description: 'Permanently deletes all files in user trash.',
+      type: 'action',
+      inputs: [],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'update_file_content',
+      name: 'Update File Content',
+      description: 'Overwrites existing file content in Google Drive.',
+      type: 'action',
+      inputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
+        { key: 'content', label: 'New File Content', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
     },
   ],
@@ -376,6 +554,67 @@ export class GoogleDriveConnector extends BaseConnector {
             emailAddress: inputs.emailAddress || undefined,
           });
           return { success: true, data: { permissionId: data.id } };
+        }
+
+        case 'create_google_doc': {
+          const metadata: any = { name: inputs.title, mimeType: 'application/vnd.google-apps.document' };
+          if (inputs.folderId) metadata.parents = [inputs.folderId];
+          const { data } = await api.post('/files', metadata);
+          return { success: true, data: { fileId: data.id, webViewLink: `https://docs.google.com/document/d/${data.id}/edit` } };
+        }
+
+        case 'create_google_sheet': {
+          const metadata: any = { name: inputs.title, mimeType: 'application/vnd.google-apps.spreadsheet' };
+          if (inputs.folderId) metadata.parents = [inputs.folderId];
+          const { data } = await api.post('/files', metadata);
+          return { success: true, data: { fileId: data.id, webViewLink: `https://docs.google.com/spreadsheets/d/${data.id}/edit` } };
+        }
+
+        case 'create_google_slides': {
+          const metadata: any = { name: inputs.title, mimeType: 'application/vnd.google-apps.presentation' };
+          if (inputs.folderId) metadata.parents = [inputs.folderId];
+          const { data } = await api.post('/files', metadata);
+          return { success: true, data: { fileId: data.id, webViewLink: `https://docs.google.com/presentation/d/${data.id}/edit` } };
+        }
+
+        case 'add_file_comment': {
+          const { data } = await api.post(`/files/${inputs.fileId}/comments`, { content: inputs.content }, { params: { fields: 'id' } });
+          return { success: true, data: { commentId: data.id } };
+        }
+
+        case 'list_file_comments': {
+          const { data } = await api.get(`/files/${inputs.fileId}/comments`, { params: { fields: 'comments(id, content, author)' } });
+          return { success: true, data: { comments: data.comments || [] } };
+        }
+
+        case 'remove_file_permission': {
+          await api.delete(`/files/${inputs.fileId}/permissions/${inputs.permissionId}`);
+          return { success: true, data: { success: true } };
+        }
+
+        case 'list_file_permissions': {
+          const { data } = await api.get(`/files/${inputs.fileId}/permissions`, { params: { fields: 'permissions(id, role, type, emailAddress)' } });
+          return { success: true, data: { permissions: data.permissions || [] } };
+        }
+
+        case 'star_file': {
+          await api.patch(`/files/${inputs.fileId}`, { starred: true });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'unstar_file': {
+          await api.patch(`/files/${inputs.fileId}`, { starred: false });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'empty_trash': {
+          await api.delete('/files/trash');
+          return { success: true, data: { success: true } };
+        }
+
+        case 'update_file_content': {
+          const { data } = await api.patch(`/files/${inputs.fileId}`, inputs.content, { headers: { 'Content-Type': 'text/plain' } });
+          return { success: true, data: { fileId: data.id || inputs.fileId } };
         }
 
         default:

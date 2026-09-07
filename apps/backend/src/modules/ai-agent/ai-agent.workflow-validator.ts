@@ -67,17 +67,33 @@ export function detectCycles(nodes: WorkflowNode[], edges: WorkflowEdge[]): bool
   return visited !== nodes.length; // true if cycle detected
 }
 
+export interface UserConnectionScopeInfo {
+  connectorId: string;
+  scopes?: string[];
+}
+
 /**
  * Validates generated workflow DAG against the ManifestRegistry
  */
 export function validateWorkflow(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
-  userConnectedAppIds: string[] = []
+  userConnectedAppIds: string[] | UserConnectionScopeInfo[] = []
 ): WorkflowValidationResult {
   const errors: string[] = [];
   const missingConnectionsSet = new Set<string>();
   const missingScopes: Record<string, string[]> = {};
+
+  const connectedAppIds: string[] = userConnectedAppIds.map((c) =>
+    typeof c === 'string' ? c : c.connectorId
+  );
+
+  const scopeMap = new Map<string, Set<string>>();
+  for (const item of userConnectedAppIds) {
+    if (typeof item !== 'string' && item.scopes) {
+      scopeMap.set(item.connectorId, new Set(item.scopes));
+    }
+  }
 
   // 1. Cycle Detection
   if (detectCycles(nodes, edges)) {
@@ -99,11 +115,11 @@ export function validateWorkflow(
     }
 
     // Connection Check
-    if (!userConnectedAppIds.includes(node.connectorId) && node.connectorId !== 'autoflow-schedule') {
+    if (!connectedAppIds.includes(node.connectorId) && node.connectorId !== 'autoflow-schedule') {
       missingConnectionsSet.add(node.connectorId);
     }
 
-    const opId = node.actionId || node.triggerId;
+    const opId = node.actionId || node.triggerId || (node as any).operationId;
     if (!opId) {
       errors.push(`Node '${node.id}' missing actionId or triggerId.`);
       continue;
@@ -127,10 +143,19 @@ export function validateWorkflow(
         errors.push(`Node '${node.id}' missing required input field '${input.key}' for operation '${opId}'.`);
       }
       if (input.requiredScopes && input.requiredScopes.length > 0) {
-        missingScopes[node.connectorId] = [
-          ...(missingScopes[node.connectorId] || []),
-          ...input.requiredScopes,
-        ];
+        const grantedScopes = scopeMap.get(node.connectorId) || new Set();
+        const ungranted = input.requiredScopes.filter((s) => !grantedScopes.has(s));
+        if (ungranted.length > 0) {
+          missingScopes[node.connectorId] = Array.from(
+            new Set([...(missingScopes[node.connectorId] || []), ...ungranted])
+          );
+        }
+      }
+
+      // Mark dynamic choice fields for Step 7
+      if (input.hasDynamicChoices || input.dynamicChoice) {
+        if (!node.config) node.config = {};
+        node.config[`_needsChoicesFetch_${input.key}`] = true;
       }
     }
   }

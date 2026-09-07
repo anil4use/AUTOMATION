@@ -1,21 +1,44 @@
 import { manifestRegistry } from '@automation/connector-sdk';
 
 /**
- * 4-Tier IO Field Matcher for AI Engine (Decision 5)
+ * 4-Tier IO Field Matcher for AI Engine (Spec Compliant)
  *
- * Tier 1 (1.0): Exact key name match (e.g. 'subject' → 'subject')
- * Tier 2 (0.9): Exact semantic alias match via CONNECTOR_PROMPT_ALIASES
- * Tier 3 (0.7): Substring / fuzzy match (e.g. 'text' → 'messageText', 'body' → 'content')
- * Tier 4 (0.5): Data type match fallback (string → string)
+ * Tier 1 (1.0): Exact key name + same type match
+ * Tier 2 (0.8): Same type + Levenshtein distance <= 3
+ * Tier 3 (0.65): Same type + shared root 4+ chars / semantic alias match
+ * Tier 4 (0.0): No match (score 0.0, no mapping)
  */
 
 export const FIELD_ALIASES: Record<string, string[]> = {
-  text: ['body', 'content', 'message', 'description', 'snippet', 'userMessage'],
-  subject: ['title', 'summary', 'header', 'topic', 'name'],
-  to: ['recipient', 'email', 'user', 'channel'],
-  from: ['sender', 'author', 'creator'],
-  id: ['messageId', 'threadId', 'fileId', 'draftId', 'channelId'],
+  email: ['emailAddress', 'mail', 'to', 'from', 'sender', 'recipient'],
+  message: ['text', 'body', 'content', 'description', 'messageText', 'userMessage', 'snippet'],
+  id: ['messageId', 'fileId', 'userId', 'itemId', 'recordId', 'threadId', 'draftId', 'channelId', 'pageId'],
+  name: ['title', 'subject', 'label', 'displayName', 'summary', 'header', 'topic'],
 };
+
+export function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  const lenA = a.length;
+  const lenB = b.length;
+
+  for (let i = 0; i <= lenB; i++) matrix[i] = [i];
+  for (let j = 0; j <= lenA; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= lenB; i++) {
+    for (let j = 1; j <= lenA; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[lenB][lenA];
+}
 
 export interface MatchedField {
   sourceNodeId: string;
@@ -33,34 +56,43 @@ export function findBestFieldMatch(
   let bestMatch: MatchedField | null = null;
   let maxScore = 0;
 
+  const tKeyLower = targetFieldKey.toLowerCase();
+
   for (const upstream of upstreamOutputs) {
     for (const field of upstream.fields) {
+      const fKeyLower = field.key.toLowerCase();
+      const sameType = field.type === targetFieldType || field.type === 'string' || targetFieldType === 'string';
       let score = 0;
 
-      // Tier 1: Exact Key Match
-      if (field.key.toLowerCase() === targetFieldKey.toLowerCase()) {
+      // Tier 1: Exact Key + Same Type (1.0)
+      if (fKeyLower === tKeyLower && sameType) {
         score = 1.0;
       }
-      // Tier 2: Semantic Alias Match
-      else if (
-        FIELD_ALIASES[targetFieldKey.toLowerCase()]?.includes(field.key.toLowerCase()) ||
-        FIELD_ALIASES[field.key.toLowerCase()]?.includes(targetFieldKey.toLowerCase())
-      ) {
-        score = 0.9;
+      // Tier 2: Same Type + Levenshtein distance <= 3 (0.8)
+      else if (sameType && levenshteinDistance(fKeyLower, tKeyLower) <= 3) {
+        score = 0.8;
       }
-      // Tier 3: Substring / Fuzzy Match
-      else if (
-        field.key.toLowerCase().includes(targetFieldKey.toLowerCase()) ||
-        targetFieldKey.toLowerCase().includes(field.key.toLowerCase())
-      ) {
-        score = 0.7;
-      }
-      // Tier 4: Type Match
-      else if (field.type === targetFieldType) {
-        score = 0.5;
+      // Tier 3: Same Type + Shared Root (4+ chars) or Semantic Alias (0.65)
+      else if (sameType) {
+        const isAliasMatch = Object.entries(FIELD_ALIASES).some(([groupKey, aliases]) => {
+          const inGroup = [groupKey, ...aliases].map((s) => s.toLowerCase());
+          return inGroup.includes(fKeyLower) && inGroup.includes(tKeyLower);
+        });
+
+        const sharedRootLength = (a: string, b: string) => {
+          let i = 0;
+          while (i < a.length && i < b.length && a[i] === b[i]) i++;
+          return i;
+        };
+
+        if (isAliasMatch || sharedRootLength(fKeyLower, tKeyLower) >= 4) {
+          score = 0.65;
+        }
       }
 
-      if (score > maxScore) {
+      // Tier 4: No Match (0.0) -> score remains 0
+
+      if (score > maxScore && score > 0) {
         maxScore = score;
         bestMatch = {
           sourceNodeId: upstream.nodeId,
@@ -89,7 +121,6 @@ export function autoMapNodeInputs(
   const targetOp = operations.find((o) => o.id === operationId);
   if (!targetOp) return {};
 
-  // Build upstream outputs schema
   const upstreamOutputs = upstreamNodes.map((u) => {
     const manifest = manifestRegistry.getManifest(u.connectorId);
     const ops = [...(manifest?.triggers || []), ...(manifest?.actions || [])];
@@ -104,7 +135,7 @@ export function autoMapNodeInputs(
 
   for (const input of targetOp.inputs || []) {
     const match = findBestFieldMatch(input.key, input.type, upstreamOutputs);
-    if (match && match.confidence >= 0.7) {
+    if (match && match.confidence >= 0.65) {
       fieldMapping[input.key] = match.mappingExpression;
     }
   }

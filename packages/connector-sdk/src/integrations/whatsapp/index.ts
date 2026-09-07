@@ -40,6 +40,32 @@ const whatsappManifest: ConnectorManifest = {
         { key: 'recipientId', label: 'Recipient Phone', type: 'string', required: true },
       ],
     },
+    {
+      id: 'media_message_received',
+      name: 'Media Message Received',
+      description: 'Triggers when an incoming image, video, or doc is received.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'from', label: 'Sender Phone', type: 'string', required: true },
+        { key: 'mediaId', label: 'Media ID', type: 'string', required: true },
+        { key: 'mimeType', label: 'MIME Type', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'button_click_received',
+      name: 'Button Click Received',
+      description: 'Triggers when a user taps an interactive quick-reply button.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'from', label: 'Sender Phone', type: 'string', required: true },
+        { key: 'buttonId', label: 'Button ID', type: 'string', required: true },
+        { key: 'buttonTitle', label: 'Button Title', type: 'string', required: true },
+      ],
+    },
   ],
   actions: [
     {
@@ -99,6 +125,51 @@ const whatsappManifest: ConnectorManifest = {
       ],
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'send_interactive_buttons',
+      name: 'Send Interactive Quick Reply Buttons',
+      description: 'Sends up to 3 quick-reply interactive buttons.',
+      type: 'action',
+      inputs: [
+        { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
+        { key: 'to', label: 'Recipient Phone', type: 'string', required: true },
+        { key: 'bodyText', label: 'Body Text', type: 'string', required: true },
+        { key: 'buttonTitlesJson', label: 'Button Titles Array (JSON string)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'send_contact_card',
+      name: 'Send Contact Card',
+      description: 'Sends a contact vCard message.',
+      type: 'action',
+      inputs: [
+        { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
+        { key: 'to', label: 'Recipient Phone', type: 'string', required: true },
+        { key: 'name', label: 'Contact Name', type: 'string', required: true },
+        { key: 'phone', label: 'Contact Phone', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'send_location_message',
+      name: 'Send Location Pin',
+      description: 'Sends location pin with coordinates.',
+      type: 'action',
+      inputs: [
+        { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
+        { key: 'to', label: 'Recipient Phone', type: 'string', required: true },
+        { key: 'latitude', label: 'Latitude', type: 'number', required: true },
+        { key: 'longitude', label: 'Longitude', type: 'number', required: true },
+      ],
+      outputs: [
+        { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],
     },
   ],
@@ -186,6 +257,44 @@ export class WhatsAppConnector extends BaseConnector {
             message_id: inputs.messageId,
           });
           return { success: true, data: { success: data.success || true } };
+        }
+
+        case 'send_interactive_buttons': {
+          const titles = typeof inputs.buttonTitlesJson === 'string' ? JSON.parse(inputs.buttonTitlesJson) : inputs.buttonTitlesJson;
+          const buttons = titles.slice(0, 3).map((t: string, i: number) => ({
+            type: 'reply',
+            reply: { id: `btn_${i + 1}`, title: t },
+          }));
+          const { data } = await client.post('/messages', {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: inputs.to,
+            type: 'interactive',
+            interactive: { type: 'button', body: { text: inputs.bodyText }, action: { buttons } },
+          });
+          return { success: true, data: { messageId: data.messages?.[0]?.id } };
+        }
+
+        case 'send_contact_card': {
+          const { data } = await client.post('/messages', {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: inputs.to,
+            type: 'contacts',
+            contacts: [{ name: { formatted_name: inputs.name, first_name: inputs.name }, phones: [{ phone: inputs.phone }] }],
+          });
+          return { success: true, data: { messageId: data.messages?.[0]?.id } };
+        }
+
+        case 'send_location_message': {
+          const { data } = await client.post('/messages', {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: inputs.to,
+            type: 'location',
+            location: { latitude: inputs.latitude, longitude: inputs.longitude },
+          });
+          return { success: true, data: { messageId: data.messages?.[0]?.id } };
         }
 
         default:

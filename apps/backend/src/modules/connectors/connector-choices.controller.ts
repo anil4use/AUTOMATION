@@ -107,10 +107,7 @@ export class ConnectorChoicesController {
           choices = await getAnthropicChoices(fieldId, credentials as any);
           break;
         default:
-          choices = [
-            { label: 'Option 1 (Default)', value: 'opt_1' },
-            { label: 'Option 2 (Secondary)', value: 'opt_2' },
-          ];
+          throw new AppError(`No dynamic choices handler implemented for connector '${appId}'`, 404);
       }
 
       // Store in Redis (TTL 300s = 5 min)

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useUserRole } from '@/context/UserRoleContext';
+import { getSocketClient } from '@/lib/socket-client';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,6 +16,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace('/login');
     }
   }, [user.isAuthenticated, isLoadingSession, router]);
+
+  // Global Socket.IO listener for connection auth expiration warnings
+  useEffect(() => {
+    if (user.isAuthenticated) {
+      const socket = getSocketClient();
+      socket.emit('join_org', user.organizationId || 'unknown');
+
+      const handleAuthExpired = (data: { connectionId: string; connectorId: string; name?: string }) => {
+        console.warn(`[Socket.IO] OAuth token expired for connection ${data.connectionId} (${data.connectorId})`);
+        alert(`⚠️ Action Required: Authentication for ${data.name || data.connectorId} has expired. Please re-authenticate on the Connections page.`);
+      };
+
+      socket.on('connection:auth_expired', handleAuthExpired);
+
+      return () => {
+        socket.off('connection:auth_expired', handleAuthExpired);
+      };
+    }
+  }, [user.isAuthenticated, user.organizationId]);
 
   // Show loading spinner while reading session cookies/storage
   if (isLoadingSession || !user.isAuthenticated) {

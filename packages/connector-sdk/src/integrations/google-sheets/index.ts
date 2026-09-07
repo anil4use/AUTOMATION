@@ -236,6 +236,102 @@ const googleSheetsManifest: ConnectorManifest = {
         { key: 'title', label: 'Sheet Title', type: 'string', required: true },
       ],
     },
+    {
+      id: 'find_row_by_value',
+      name: 'Find Row by Value',
+      description: 'Finds a row by matching a column value.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Name', type: 'string', required: true },
+        { key: 'searchValue', label: 'Search Value', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'rowIndex', label: 'Row Index', type: 'number', required: true },
+        { key: 'rowValues', label: 'Row Values', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'update_worksheet_title',
+      name: 'Rename Worksheet',
+      description: 'Renames an existing worksheet tab.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
+        { key: 'newTitle', label: 'New Title', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'delete_worksheet',
+      name: 'Delete Worksheet Tab',
+      description: 'Deletes a worksheet tab from a spreadsheet.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'batch_update_values',
+      name: 'Batch Update Values',
+      description: 'Updates multiple cell ranges in one request.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'valueData', label: 'Values JSON Array', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'updatedCells', label: 'Total Updated Cells', type: 'number', required: true },
+      ],
+    },
+    {
+      id: 'clear_cell_range',
+      name: 'Clear Range',
+      description: 'Clears cell contents in a range (e.g. A1:C10).',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'range', label: 'Cell Range', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'clearedRange', label: 'Cleared Range', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'add_conditional_formatting',
+      name: 'Add Conditional Formatting',
+      description: 'Adds a conditional formatting rule to range.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'range', label: 'Range (e.g. A1:B10)', type: 'string', required: true },
+        { key: 'ruleType', label: 'Rule Type (e.g. CELL_NOT_EMPTY)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'sort_range',
+      name: 'Sort Range',
+      description: 'Sorts data in a specific range by column.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'range', label: 'Range to Sort', type: 'string', required: true },
+        { key: 'sortOrder', label: 'Order (ASCENDING/DESCENDING)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
   ],
 };
 
@@ -383,6 +479,56 @@ export class GoogleSheetsConnector extends BaseConnector {
           });
           const reply = data.replies[0]?.addSheet?.properties;
           return { success: true, data: { sheetId: reply?.sheetId, title: reply?.title } };
+        }
+
+        case 'find_row_by_value': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const { data } = await api.get(`/${inputs.spreadsheetId}/values/${encodeURIComponent(sheetName)}`);
+          const rows = data.values || [];
+          const matchedIdx = rows.findIndex((r: any[]) => r.some((cell: any) => String(cell).toLowerCase().includes(String(inputs.searchValue).toLowerCase())));
+          return { success: true, data: { rowIndex: matchedIdx >= 0 ? matchedIdx + 1 : -1, rowValues: matchedIdx >= 0 ? rows[matchedIdx] : [] } };
+        }
+
+        case 'update_worksheet_title': {
+          await api.post(`/${inputs.spreadsheetId}:batchUpdate`, {
+            requests: [{ updateSheetProperties: { properties: { sheetId: inputs.sheetId, title: inputs.newTitle }, fields: 'title' } }],
+          });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'delete_worksheet': {
+          await api.post(`/${inputs.spreadsheetId}:batchUpdate`, {
+            requests: [{ deleteSheet: { sheetId: inputs.sheetId } }],
+          });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'batch_update_values': {
+          const dataPayload = typeof inputs.valueData === 'string' ? JSON.parse(inputs.valueData) : inputs.valueData;
+          const { data } = await api.post(`/${inputs.spreadsheetId}/values:batchUpdate`, {
+            valueInputOption: 'USER_ENTERED',
+            data: dataPayload,
+          });
+          return { success: true, data: { updatedCells: data.totalUpdatedCells || 0 } };
+        }
+
+        case 'clear_cell_range': {
+          const { data } = await api.post(`/${inputs.spreadsheetId}/values/${encodeURIComponent(inputs.range)}:clear`);
+          return { success: true, data: { clearedRange: data.clearedRange } };
+        }
+
+        case 'add_conditional_formatting': {
+          await api.post(`/${inputs.spreadsheetId}:batchUpdate`, {
+            requests: [{ addConditionalFormatRule: { rule: { ranges: [{ sheetId: 0 }], booleanRule: { condition: { type: inputs.ruleType } } }, index: 0 } }],
+          });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'sort_range': {
+          await api.post(`/${inputs.spreadsheetId}:batchUpdate`, {
+            requests: [{ sortRange: { range: { sheetId: 0 }, sortSpecs: [{ dimensionIndex: 0, sortOrder: inputs.sortOrder || 'ASCENDING' }] } }],
+          });
+          return { success: true, data: { success: true } };
         }
 
         default:

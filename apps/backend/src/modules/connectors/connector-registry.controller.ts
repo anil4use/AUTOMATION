@@ -28,11 +28,40 @@ export class ConnectorRegistryController {
   }
 
   /**
-   * GET /api/v1/connectors/registry/manifests/:appId
+   * GET /api/v1/connectors/registry/search?q=:query
+   */
+  static async searchConnectors(req: Request, res: Response) {
+    try {
+      const q = (req.query.q as string || '').toLowerCase().trim();
+      const manifests = manifestRegistry.getAllManifests();
+
+      if (!q) {
+        return res.status(200).json({ success: true, count: manifests.length, data: manifests });
+      }
+
+      const filtered = manifests.filter((m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.id.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q) ||
+        m.category.toLowerCase().includes(q)
+      );
+
+      return res.status(200).json({
+        success: true,
+        count: filtered.length,
+        data: filtered,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/connectors/registry/manifests/:appId or /registry/:connectorId
    */
   static async getManifestById(req: Request, res: Response) {
     try {
-      const { appId } = req.params;
+      const appId = req.params.appId || req.params.connectorId;
       const manifest = manifestRegistry.getManifest(appId);
 
       if (!manifest) {
@@ -52,8 +81,53 @@ export class ConnectorRegistryController {
   }
 
   /**
-   * GET /api/v1/connectors/registry/export-ai
-   * Query params: appIds (comma-separated), prompt
+   * GET /api/v1/connectors/registry/:connectorId/triggers/:triggerId
+   */
+  static async getTriggerById(req: Request, res: Response) {
+    try {
+      const { connectorId, triggerId } = req.params;
+      const manifest = manifestRegistry.getManifest(connectorId);
+
+      if (!manifest) {
+        return res.status(404).json({ success: false, error: `Connector '${connectorId}' not found.` });
+      }
+
+      const trigger = (manifest.triggers || []).find((t) => t.id === triggerId);
+      if (!trigger) {
+        return res.status(404).json({ success: false, error: `Trigger '${triggerId}' not found for connector '${connectorId}'.` });
+      }
+
+      return res.status(200).json({ success: true, data: trigger });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/connectors/registry/:connectorId/actions/:actionId
+   */
+  static async getActionById(req: Request, res: Response) {
+    try {
+      const { connectorId, actionId } = req.params;
+      const manifest = manifestRegistry.getManifest(connectorId);
+
+      if (!manifest) {
+        return res.status(404).json({ success: false, error: `Connector '${connectorId}' not found.` });
+      }
+
+      const action = (manifest.actions || []).find((a) => a.id === actionId);
+      if (!action) {
+        return res.status(404).json({ success: false, error: `Action '${actionId}' not found for connector '${connectorId}'.` });
+      }
+
+      return res.status(200).json({ success: true, data: action });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/connectors/registry/export-ai (or /registry/ai-index)
    */
   static async exportForAI(req: Request, res: Response) {
     try {

@@ -78,6 +78,50 @@ const stripeManifest: ConnectorManifest = {
         { key: 'status', label: 'Status', type: 'string', required: true },
       ],
     },
+    {
+      id: 'customer_updated',
+      name: 'Customer Updated',
+      description: 'Triggers when customer details are updated in Stripe.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'subscription_updated',
+      name: 'Subscription Updated',
+      description: 'Triggers when a subscription plan or state changes.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'subscription_deleted',
+      name: 'Subscription Canceled',
+      description: 'Triggers when a subscription is canceled.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'invoice_payment_failed',
+      name: 'Invoice Payment Failed',
+      description: 'Triggers when an invoice payment fails.',
+      type: 'trigger',
+      deliveryMethod: 'webhook',
+      inputs: [],
+      outputs: [
+        { key: 'invoiceId', label: 'Invoice ID', type: 'string', required: true },
+      ],
+    },
   ],
   actions: [
     {
@@ -179,6 +223,132 @@ const stripeManifest: ConnectorManifest = {
         { key: 'invoices', label: 'Invoices Array', type: 'array', required: true },
       ],
     },
+    {
+      id: 'update_customer',
+      name: 'Update Customer',
+      description: 'Updates email or description of a customer.',
+      type: 'action',
+      inputs: [
+        { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
+        { key: 'email', label: 'New Email', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'delete_customer',
+      name: 'Delete Customer',
+      description: 'Deletes a customer record from Stripe.',
+      type: 'action',
+      inputs: [
+        { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'capture_payment_intent',
+      name: 'Capture Payment Intent',
+      description: 'Captures an authorized PaymentIntent.',
+      type: 'action',
+      inputs: [
+        { key: 'paymentIntentId', label: 'Payment Intent ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'status', label: 'Status', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'cancel_payment_intent',
+      name: 'Cancel Payment Intent',
+      description: 'Cancels an uncaptured PaymentIntent.',
+      type: 'action',
+      inputs: [
+        { key: 'paymentIntentId', label: 'Payment Intent ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'status', label: 'Status', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_subscription',
+      name: 'Create Subscription',
+      description: 'Subscribes a customer to a price plan.',
+      type: 'action',
+      inputs: [
+        { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
+        { key: 'priceId', label: 'Price ID (e.g. price_xxx)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'get_subscription',
+      name: 'Get Subscription Details',
+      description: 'Gets subscription details by ID.',
+      type: 'action',
+      inputs: [
+        { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
+        { key: 'status', label: 'Status', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'cancel_subscription',
+      name: 'Cancel Subscription',
+      description: 'Cancels an active subscription.',
+      type: 'action',
+      inputs: [
+        { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'create_product',
+      name: 'Create Product',
+      description: 'Creates a product in Stripe product catalog.',
+      type: 'action',
+      inputs: [
+        { key: 'name', label: 'Product Name', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'productId', label: 'Product ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_price',
+      name: 'Create Price',
+      description: 'Creates a price point for a product.',
+      type: 'action',
+      inputs: [
+        { key: 'productId', label: 'Product ID', type: 'string', required: true },
+        { key: 'unitAmount', label: 'Unit Amount in Cents', type: 'number', required: true },
+        { key: 'currency', label: 'Currency Code', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'priceId', label: 'Price ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'refund_charge',
+      name: 'Refund Charge',
+      description: 'Issues a full or partial refund.',
+      type: 'action',
+      inputs: [
+        { key: 'chargeId', label: 'Charge or Payment Intent ID', type: 'string', required: true },
+        { key: 'amount', label: 'Amount in Cents (Optional)', type: 'number', required: false },
+      ],
+      outputs: [
+        { key: 'refundId', label: 'Refund ID', type: 'string', required: true },
+      ],
+    },
   ],
 };
 
@@ -271,6 +441,70 @@ export class StripeConnector extends BaseConnector {
           if (inputs.customerId) params.customer = inputs.customerId;
           const { data } = await client.get('/invoices', { params });
           return { success: true, data: { count: data.data?.length || 0, invoices: data.data || [] } };
+        }
+
+        case 'update_customer': {
+          const params = new URLSearchParams();
+          if (inputs.email) params.append('email', inputs.email);
+          await client.post(`/customers/${inputs.customerId}`, params);
+          return { success: true, data: { success: true } };
+        }
+
+        case 'delete_customer': {
+          await client.delete(`/customers/${inputs.customerId}`);
+          return { success: true, data: { success: true } };
+        }
+
+        case 'capture_payment_intent': {
+          const { data } = await client.post(`/payment_intents/${inputs.paymentIntentId}/capture`);
+          return { success: true, data: { status: data.status } };
+        }
+
+        case 'cancel_payment_intent': {
+          const { data } = await client.post(`/payment_intents/${inputs.paymentIntentId}/cancel`);
+          return { success: true, data: { status: data.status } };
+        }
+
+        case 'create_subscription': {
+          const params = new URLSearchParams();
+          params.append('customer', inputs.customerId);
+          params.append('items[0][price]', inputs.priceId);
+          const { data } = await client.post('/subscriptions', params);
+          return { success: true, data: { subscriptionId: data.id } };
+        }
+
+        case 'get_subscription': {
+          const { data } = await client.get(`/subscriptions/${inputs.subscriptionId}`);
+          return { success: true, data: { subscriptionId: data.id, status: data.status } };
+        }
+
+        case 'cancel_subscription': {
+          await client.delete(`/subscriptions/${inputs.subscriptionId}`);
+          return { success: true, data: { success: true } };
+        }
+
+        case 'create_product': {
+          const params = new URLSearchParams();
+          params.append('name', inputs.name);
+          const { data } = await client.post('/products', params);
+          return { success: true, data: { productId: data.id } };
+        }
+
+        case 'create_price': {
+          const params = new URLSearchParams();
+          params.append('product', inputs.productId);
+          params.append('unit_amount', String(inputs.unitAmount));
+          params.append('currency', inputs.currency || 'usd');
+          const { data } = await client.post('/prices', params);
+          return { success: true, data: { priceId: data.id } };
+        }
+
+        case 'refund_charge': {
+          const params = new URLSearchParams();
+          params.append('charge', inputs.chargeId);
+          if (inputs.amount) params.append('amount', String(inputs.amount));
+          const { data } = await client.post('/refunds', params);
+          return { success: true, data: { refundId: data.id } };
         }
 
         default:

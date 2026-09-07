@@ -47,6 +47,29 @@ const notionManifest: ConnectorManifest = {
         { key: 'lastEditedTime', label: 'Last Edited Time', type: 'string', required: true },
       ],
     },
+    {
+      id: 'page_restored',
+      name: 'Page Restored',
+      description: 'Triggers when an archived page is restored.',
+      type: 'trigger',
+      deliveryMethod: 'polling',
+      inputs: [],
+      outputs: [
+        { key: 'pageId', label: 'Page ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'new_user_added',
+      name: 'New User Joined Workspace',
+      description: 'Triggers when a new user joins the workspace.',
+      type: 'trigger',
+      deliveryMethod: 'polling',
+      inputs: [],
+      outputs: [
+        { key: 'userId', label: 'User ID', type: 'string', required: true },
+        { key: 'name', label: 'User Name', type: 'string', required: true },
+      ],
+    },
   ],
   actions: [
     {
@@ -129,6 +152,80 @@ const notionManifest: ConnectorManifest = {
       outputs: [
         { key: 'count', label: 'Results Count', type: 'number', required: true },
         { key: 'results', label: 'Results Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'get_database',
+      name: 'Get Database Metadata',
+      description: 'Retrieves schema and metadata of a Notion database.',
+      type: 'action',
+      inputs: [
+        { key: 'databaseId', label: 'Database ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'id', label: 'Database ID', type: 'string', required: true },
+        { key: 'title', label: 'Title', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_database',
+      name: 'Create Database',
+      description: 'Creates an inline database inside a parent page.',
+      type: 'action',
+      inputs: [
+        { key: 'parentPageId', label: 'Parent Page ID', type: 'string', required: true },
+        { key: 'title', label: 'Database Title', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'databaseId', label: 'Database ID', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'get_block',
+      name: 'Get Block Details',
+      description: 'Retrieves details of a specific content block.',
+      type: 'action',
+      inputs: [
+        { key: 'blockId', label: 'Block ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'id', label: 'Block ID', type: 'string', required: true },
+        { key: 'type', label: 'Type', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'delete_block',
+      name: 'Delete Block',
+      description: 'Deletes/archives a specific content block.',
+      type: 'action',
+      inputs: [
+        { key: 'blockId', label: 'Block ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'update_page_properties',
+      name: 'Update Page Properties',
+      description: 'Updates page property values in Notion.',
+      type: 'action',
+      inputs: [
+        { key: 'pageId', label: 'Page ID', type: 'string', required: true },
+        { key: 'propertiesJson', label: 'Properties JSON string', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'list_users',
+      name: 'List Workspace Users',
+      description: 'Lists all users in Notion workspace.',
+      type: 'action',
+      inputs: [],
+      outputs: [
+        { key: 'users', label: 'Users Array', type: 'array', required: true },
       ],
     },
   ],
@@ -220,6 +317,41 @@ export class NotionConnector extends BaseConnector {
         case 'search': {
           const { data } = await api.post('/search', { query: inputs.query });
           return { success: true, data: { count: data.results?.length || 0, results: data.results || [] } };
+        }
+
+        case 'get_database': {
+          const { data } = await api.get(`/databases/${inputs.databaseId}`);
+          return { success: true, data: { id: data.id, title: data.title?.[0]?.plain_text || '' } };
+        }
+
+        case 'create_database': {
+          const { data } = await api.post('/databases', {
+            parent: { page_id: inputs.parentPageId },
+            title: [{ type: 'text', text: { content: inputs.title } }],
+            properties: { Name: { title: {} } },
+          });
+          return { success: true, data: { databaseId: data.id } };
+        }
+
+        case 'get_block': {
+          const { data } = await api.get(`/blocks/${inputs.blockId}`);
+          return { success: true, data: { id: data.id, type: data.type } };
+        }
+
+        case 'delete_block': {
+          await api.delete(`/blocks/${inputs.blockId}`);
+          return { success: true, data: { success: true } };
+        }
+
+        case 'update_page_properties': {
+          const props = typeof inputs.propertiesJson === 'string' ? JSON.parse(inputs.propertiesJson) : inputs.propertiesJson;
+          await api.patch(`/pages/${inputs.pageId}`, { properties: props });
+          return { success: true, data: { success: true } };
+        }
+
+        case 'list_users': {
+          const { data } = await api.get('/users');
+          return { success: true, data: { users: data.results || [] } };
         }
 
         default:
