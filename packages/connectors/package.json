@@ -1,0 +1,17 @@
+{
+  "name": "@automation/connectors",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@automation/shared-types": "*",
+    "@automation/connector-sdk": "*",
+    "@automation/domain": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

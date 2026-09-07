@@ -1,0 +1,19 @@
+{
+  "name": "@automation/application",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@automation/shared-types": "*",
+    "@automation/domain": "*",
+    "@automation/events": "*",
+    "@automation/workflow-engine": "*",
+    "@automation/observability": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
