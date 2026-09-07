@@ -14,6 +14,31 @@ import {
   getGoogleDriveChoices,
   getOpenAIChoices,
   getAnthropicChoices,
+  getMsTeamsChoices,
+  getMsOutlookChoices,
+  getMsExcelChoices,
+  getDropboxChoices,
+  getZoomChoices,
+  getWooCommerceChoices,
+  getPayPalChoices,
+  getMailchimpChoices,
+  getTrelloChoices,
+  getCalendlyChoices,
+  getPipedriveChoices,
+  getAsanaChoices,
+  getMondayChoices,
+  getInstagramChoices,
+  getFacebookChoices,
+  getMetaMessengerChoices,
+  getActiveCampaignChoices,
+  getGoogleGeminiChoices,
+  getAIDocumentOCRChoices,
+  getGitLabChoices,
+  getLinearChoices,
+  getVercelChoices,
+  getQuickBooksChoices,
+  getDocuSignChoices,
+  getWebhookTriggerChoices,
 } from '@automation/connector-sdk';
 
 /**
@@ -105,6 +130,81 @@ export class ConnectorChoicesController {
           break;
         case 'anthropic':
           choices = await getAnthropicChoices(fieldId, credentials as any);
+          break;
+        case 'ms-teams':
+          choices = await getMsTeamsChoices(fieldId, credentials as any, parsedDependsOn);
+          break;
+        case 'ms-outlook':
+          choices = await getMsOutlookChoices(fieldId, credentials as any);
+          break;
+        case 'ms-excel':
+          choices = await getMsExcelChoices(fieldId, credentials as any, parsedDependsOn);
+          break;
+        case 'dropbox':
+          choices = await getDropboxChoices(fieldId, credentials as any);
+          break;
+        case 'zoom':
+          choices = await getZoomChoices(fieldId, credentials as any);
+          break;
+        case 'woocommerce':
+          choices = await getWooCommerceChoices(fieldId, credentials as any);
+          break;
+        case 'paypal':
+          choices = await getPayPalChoices(fieldId, credentials as any);
+          break;
+        case 'mailchimp':
+          choices = await getMailchimpChoices(fieldId, credentials as any);
+          break;
+        case 'trello':
+          choices = await getTrelloChoices(fieldId, credentials as any, parsedDependsOn);
+          break;
+        case 'calendly':
+          choices = await getCalendlyChoices(fieldId, credentials as any);
+          break;
+        case 'pipedrive':
+          choices = await getPipedriveChoices(fieldId, credentials as any, parsedDependsOn);
+          break;
+        case 'asana':
+          choices = await getAsanaChoices(fieldId, credentials as any, parsedDependsOn);
+          break;
+        case 'monday':
+          choices = await getMondayChoices(fieldId, credentials as any);
+          break;
+        case 'instagram':
+          choices = await getInstagramChoices(fieldId, credentials as any);
+          break;
+        case 'facebook':
+          choices = await getFacebookChoices(fieldId, credentials as any);
+          break;
+        case 'meta-messenger':
+          choices = await getMetaMessengerChoices(fieldId, credentials as any);
+          break;
+        case 'activecampaign':
+          choices = await getActiveCampaignChoices(fieldId, credentials as any);
+          break;
+        case 'google-gemini':
+          choices = await getGoogleGeminiChoices(fieldId, credentials as any);
+          break;
+        case 'ai-document-ocr':
+          choices = await getAIDocumentOCRChoices(fieldId, credentials as any);
+          break;
+        case 'gitlab':
+          choices = await getGitLabChoices(fieldId, credentials as any);
+          break;
+        case 'linear':
+          choices = await getLinearChoices(fieldId, credentials as any);
+          break;
+        case 'vercel':
+          choices = await getVercelChoices(fieldId, credentials as any);
+          break;
+        case 'quickbooks':
+          choices = await getQuickBooksChoices(fieldId, credentials as any);
+          break;
+        case 'docusign':
+          choices = await getDocuSignChoices(fieldId, credentials as any);
+          break;
+        case 'webhook-trigger':
+          choices = await getWebhookTriggerChoices(fieldId, credentials as any);
           break;
         default:
           throw new AppError(`No dynamic choices handler implemented for connector '${appId}'`, 404);
