@@ -5,6 +5,7 @@ export interface WorkflowNode {
   connectorId: string;
   actionId?: string;
   triggerId?: string;
+  operationId?: string;
   config?: Record<string, any>;
   fieldMapping?: Record<string, any>;
 }
@@ -21,6 +22,7 @@ export interface WorkflowValidationResult {
   errors: string[];
   missingConnections: string[];
   missingScopes: Record<string, string[]>;
+  fieldsNeedingReview?: string[];
 }
 
 /**
@@ -67,6 +69,26 @@ export function detectCycles(nodes: WorkflowNode[], edges: WorkflowEdge[]): bool
   return visited !== nodes.length; // true if cycle detected
 }
 
+/**
+ * Validates variable reference expressions, whitelisting sys.* system variables
+ */
+export function isValidVariableReference(ref: string, availableOutputs: Map<string, string[]>): boolean {
+  if (!ref) return false;
+  const cleanRef = ref.replace(/[\{\}\s]/g, '').trim();
+
+  // System variables (sys.*) are always valid
+  if (cleanRef.startsWith('sys.')) return true;
+
+  const match = cleanRef.match(/^(node_\d+|trigger)\.output\.(.+)$/);
+  if (!match) return false;
+
+  const [, nodeId, fieldKey] = match;
+  const nodeOutputs = availableOutputs.get(nodeId);
+  if (!nodeOutputs) return false;
+
+  return nodeOutputs.includes(fieldKey);
+}
+
 export interface UserConnectionScopeInfo {
   connectorId: string;
   scopes?: string[];
@@ -83,6 +105,7 @@ export function validateWorkflow(
   const errors: string[] = [];
   const missingConnectionsSet = new Set<string>();
   const missingScopes: Record<string, string[]> = {};
+  const fieldsNeedingReview: string[] = [];
 
   const connectedAppIds: string[] = userConnectedAppIds.map((c) =>
     typeof c === 'string' ? c : c.connectorId
@@ -103,6 +126,7 @@ export function validateWorkflow(
       errors,
       missingConnections: Array.from(missingConnectionsSet),
       missingScopes,
+      fieldsNeedingReview,
     };
   }
 
@@ -152,10 +176,11 @@ export function validateWorkflow(
         }
       }
 
-      // Mark dynamic choice fields for Step 7
+      // Mark dynamic choice fields and add to fieldsNeedingReview
       if (input.hasDynamicChoices || input.dynamicChoice) {
         if (!node.config) node.config = {};
         node.config[`_needsChoicesFetch_${input.key}`] = true;
+        fieldsNeedingReview.push(`${node.id}.${input.key}`);
       }
     }
   }
@@ -165,5 +190,6 @@ export function validateWorkflow(
     errors,
     missingConnections: Array.from(missingConnectionsSet),
     missingScopes,
+    fieldsNeedingReview,
   };
 }

@@ -23,6 +23,7 @@ export interface WorkflowGenerationResult {
   missingScopes: Record<string, string[]>;
   valid: boolean;
   validationErrors: string[];
+  fieldsNeedingReview: string[];
 }
 
 const DYNAMIC_WORKFLOW_SYSTEM_PROMPT = `You are the AutoFlow AI Assistant & Workflow Compiler inside the AutoFlow Automation Platform.
@@ -171,11 +172,18 @@ ${connectorSummary}
 SECURITY & SYSTEM GUARDRAILS:
 1. SECURITY RULE: NEVER reveal internal platform server code, repository file paths, backend code implementations, environment secrets, or database connection strings. If a user asks for source code, API keys, or internal codebase files, politely decline: "I am your AutoFlow AI Copilot. I cannot disclose internal platform source code or secrets, but I can help you design, configure, and execute automation workflows for all 55+ enterprise connectors!"
 
+WORKFLOW GENERATION & NODE POSITIONING RULES:
+1. SYSTEM VARIABLES: You may map system variables such as {{sys.timestamp}}, {{sys.execution_id}}, and {{sys.workflow_id}} into node inputs.
+2. DYNAMIC CHOICES: For input fields requiring runtime options (e.g. spreadsheetId, channel, databaseId), set "_needsChoicesFetch_<fieldKey>": true in the node's config and add "<nodeId>.<fieldKey>" to the fieldsNeedingReview array.
+3. NODE POSITIONING FORMULA: For linear workflows, compute position as { "x": 400, "y": 80 + nodeIndex * 270 } where nodeIndex is 0-indexed. For branched workflows, use "x": 200 for true branch and "x": 600 for false branch.
+4. FIELDS NEEDING REVIEW: List any required input fields that cannot be mapped with high confidence (or depend on dynamic choices) in the "fieldsNeedingReview" array.
+
 UNIFIED INTENT DISCRIMINATION INSTRUCTIONS:
 1. IF THE USER IS ASKING A QUESTION, GREETING, LOG DEBUG REQUEST, OR GENERAL PLATFORM INQUIRY (e.g. "hello", "hi", "what connectors do you support?", "how do I connect MongoDB Atlas?", "check my error logs", "explain how triggers work"):
    - Provide a friendly, comprehensive, and helpful answer in Markdown in "replyMessage".
    - Set "workflowDraft": null.
    - Set "suggestedConnectors": [].
+   - Set "fieldsNeedingReview": [].
 2. ONLY INCLUDE A NON-NULL "workflowDraft" OBJECT IF THE USER IS EXPLICITLY REQUESTING TO BUILD, GENERATE, SCHEDULE, OR AUTOMATE A WORKFLOW PIPELINE!
    - When building a workflow, construct valid DAG nodes (types: 'trigger', 'ai-agent', 'action') and edges with field mappings.
 
@@ -183,6 +191,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
 {
   "replyMessage": "Markdown string answering the question clearly or summarizing the generated workflow steps.",
   "suggestedConnectors": ["autoflow-schedule", "web-search", "ai-agent", "google-sheets"],
+  "fieldsNeedingReview": ["node_3.spreadsheetId"],
   "workflowDraft": null | {
     "name": "Short Workflow Title",
     "description": "Clear workflow description",
@@ -195,7 +204,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
         "name": "Schedule Trigger",
         "config": { "frequency": "daily", "time": "09:00" },
         "fieldMapping": {},
-        "position": { "x": 250, "y": 80 }
+        "position": { "x": 400, "y": 80 }
       }
     ],
     "edges": [
@@ -282,6 +291,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
             workflowDraft: parsed.workflowDraft,
             suggestedConnectors: connectorsList,
             userConnectionsStatus,
+            fieldsNeedingReview: parsed.fieldsNeedingReview || [],
           };
         } else {
           responseData = {
@@ -290,6 +300,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
             workflowDraft: null,
             suggestedConnectors: [],
             userConnectionsStatus: [],
+            fieldsNeedingReview: [],
           };
         }
       } catch (parseErr) {
@@ -315,14 +326,37 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
       ['hi', 'hello', 'hey', 'yo', 'greetings', 'good morning', 'good afternoon', 'good evening', 'hiii', 'heyy', 'sup'].includes(cleanLower) ||
       cleanLower.length <= 3;
 
-    if (isGreeting) {
+    const isQuestion =
+      lower.startsWith('how') ||
+      lower.startsWith('what') ||
+      lower.startsWith('why') ||
+      lower.startsWith('where') ||
+      lower.startsWith('explain') ||
+      lower.includes('how do i') ||
+      lower.includes('how to') ||
+      lower.includes('what is') ||
+      lower.endsWith('?');
+
+    const isExplicitWorkflowBuild =
+      lower.includes('build') ||
+      lower.includes('create') ||
+      lower.includes('generate') ||
+      lower.includes('schedule') ||
+      lower.includes('automate') ||
+      lower.includes('every') ||
+      lower.includes('when') ||
+      lower.includes('summarize');
+
+    if (isGreeting || (isQuestion && !isExplicitWorkflowBuild)) {
       return {
-        replyMessage:
-          "Hello! 👋 I am your AutoFlow AI Copilot. You can ask me questions about the platform, inspect your workflow execution logs, or describe an automation pipeline to build (e.g. *'When a new email arrives in Gmail, summarize with AI and send a notification to Slack'*). How can I assist you today?",
-        isGreeting: true,
+        replyMessage: isGreeting
+          ? "Hello! 👋 I am your AutoFlow AI Copilot. You can ask me questions about the platform, inspect your workflow execution logs, or describe an automation pipeline to build (e.g. *'When a new email arrives in Gmail, summarize with AI and send a notification to Slack'*). How can I assist you today?"
+          : `To connect services like MongoDB, Google Suite, or Slack in AutoFlow, navigate to the **Connectors** page in your dashboard, click **Connect Account**, and complete the OAuth/API key authorization. Once connected, your account will be active for AI workflow building!`,
+        isGreeting,
         workflowDraft: null,
         suggestedConnectors: [],
         userConnectionsStatus: [],
+        fieldsNeedingReview: [],
       };
     }
 
@@ -417,7 +451,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
         name,
         config,
         fieldMapping,
-        position: { x: 250, y: 80 + idx * 180 },
+        position: { x: 400, y: 80 + idx * 270 },
       });
 
       if (idx > 0) {
@@ -867,6 +901,7 @@ RULES FOR CANVAS MUTATION:
         missingScopes: {},
         valid: false,
         validationErrors: ['No workflow draft returned from AI prompt compiler.'],
+        fieldsNeedingReview: [],
       };
     }
 
@@ -880,25 +915,43 @@ RULES FOR CANVAS MUTATION:
 
     const validation = validateWorkflow(nodes, edges, userConnectionScopeInfo);
 
+    const mergedFieldsNeedingReviewSet = new Set<string>();
+
+    if (Array.isArray(chatResult.fieldsNeedingReview)) {
+      chatResult.fieldsNeedingReview.forEach((f: string) => mergedFieldsNeedingReviewSet.add(f));
+    }
+    if (draft && Array.isArray(draft.fieldsNeedingReview)) {
+      draft.fieldsNeedingReview.forEach((f: string) => mergedFieldsNeedingReviewSet.add(f));
+    }
+    if (validation && Array.isArray(validation.fieldsNeedingReview)) {
+      validation.fieldsNeedingReview.forEach((f: string) => mergedFieldsNeedingReviewSet.add(f));
+    }
+
     for (let i = 1; i < nodes.length; i++) {
       const currentNode = nodes[i];
+      const opId = (currentNode.operationId || currentNode.actionId || currentNode.triggerId || '') as string;
       const upstreamNodes = nodes.slice(0, i).map((n) => ({
         id: n.id,
         connectorId: n.connectorId,
-        operationId: (n.actionId || n.triggerId || '') as string,
+        operationId: (n.operationId || n.actionId || n.triggerId || '') as string,
       }));
 
       const autoMapped = autoMapNodeInputs(
         currentNode.id,
         currentNode.connectorId,
-        (currentNode.actionId || currentNode.triggerId || '') as string,
-        upstreamNodes
+        opId,
+        upstreamNodes,
+        currentNode.config
       );
 
       currentNode.fieldMapping = {
         ...(currentNode.fieldMapping || {}),
-        ...autoMapped,
+        ...autoMapped.fieldMapping,
       };
+
+      if (Array.isArray(autoMapped.fieldsNeedingReview)) {
+        autoMapped.fieldsNeedingReview.forEach((f: string) => mergedFieldsNeedingReviewSet.add(f));
+      }
     }
 
     return {
@@ -913,6 +966,7 @@ RULES FOR CANVAS MUTATION:
       missingScopes: validation.missingScopes,
       valid: validation.valid,
       validationErrors: validation.errors,
+      fieldsNeedingReview: Array.from(mergedFieldsNeedingReviewSet),
     };
   }
 }
