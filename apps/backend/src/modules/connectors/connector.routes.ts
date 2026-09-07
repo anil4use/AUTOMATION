@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ConnectorController } from './connector.controller';
 import { ConnectorChoicesController } from './connector-choices.controller';
+import { ConnectorRegistryController } from './connector-registry.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { validationMiddleware } from '../../middleware/validation.middleware';
 import { createApiKeyConnectionSchema, oauthCallbackSchema } from './connector.validation';
@@ -8,6 +9,11 @@ import { createApiKeyConnectionSchema, oauthCallbackSchema } from './connector.v
 const router = Router();
 
 router.use(authMiddleware as any);
+
+// Registry endpoints (Phase 2)
+router.get('/registry/manifests', ConnectorRegistryController.getAllManifests as any);
+router.get('/registry/manifests/:appId', ConnectorRegistryController.getManifestById as any);
+router.get('/registry/export-ai', ConnectorRegistryController.exportForAI as any);
 
 router.get('/available', ConnectorController.listAvailable as any);
 router.get('/connections', ConnectorController.listUserConnections as any);

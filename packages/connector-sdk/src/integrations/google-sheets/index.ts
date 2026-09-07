@@ -1,431 +1,400 @@
 import { BaseConnector } from '../../core/base-connector';
 import { ExecutionContext, ConnectorExecutionOutput } from '../../core/types';
 import { ConnectorManifest } from '@automation/shared-types';
+import { manifestRegistry } from '../../core/manifest-registry';
+import { getGoogleSheetsChoices } from './choices';
+import axios from 'axios';
+
+const googleSheetsManifest: ConnectorManifest = {
+  id: 'google-sheets',
+  name: 'Google Sheets',
+  description: 'Full-power Google Sheets integration — Append, update, search, read rows, create spreadsheets, add worksheets, batch update cells & trigger automations on row changes.',
+  category: 'Productivity',
+  icon: '/icons/google-sheets.svg',
+  authType: 'oauth2',
+  triggers: [
+    {
+      id: 'new_row_added',
+      name: 'New Row Added',
+      description: 'Triggers when a new row is appended to a sheet.',
+      type: 'trigger',
+      deliveryMethod: 'polling',
+      pollingCursorField: 'rowCount',
+      rateLimitInfo: {
+        minPollIntervalSeconds: 300,
+        notes: 'Google Sheets has no native change webhook API. Events between poll intervals may be missed. For real-time detection, use Google Apps Script triggers linked to AutoFlow via HTTP.',
+      },
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+      ],
+      outputs: [
+        { key: 'rowNumber', label: 'Row Number', type: 'number', required: true },
+        { key: 'values', label: 'Row Values (Array)', type: 'array', required: true },
+        { key: 'rowObject', label: 'Row Object (Key-Value by Header)', type: 'object', required: true },
+      ],
+    },
+    {
+      id: 'row_updated',
+      name: 'Row Updated',
+      description: 'Triggers when an existing row is modified.',
+      type: 'trigger',
+      deliveryMethod: 'polling',
+      pollingCursorField: 'updatedAt',
+      rateLimitInfo: {
+        minPollIntervalSeconds: 300,
+        notes: 'Google Sheets has no native change webhook API. Polling interval minimum is 5 minutes.',
+      },
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+      ],
+      outputs: [
+        { key: 'rowNumber', label: 'Row Number', type: 'number', required: true },
+        { key: 'values', label: 'Updated Values', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'cell_value_changed',
+      name: 'Cell Value Changed',
+      description: 'Triggers when a specific cell or range is updated.',
+      type: 'trigger',
+      deliveryMethod: 'polling',
+      pollingCursorField: 'updatedAt',
+      rateLimitInfo: { minPollIntervalSeconds: 300 },
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'cellRange', label: 'Cell / Range (e.g. A1, B2:D5)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'range', label: 'Range', type: 'string', required: true },
+        { key: 'value', label: 'New Value', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'new_sheet_created',
+      name: 'New Sheet Tab Created',
+      description: 'Triggers when a new worksheet tab is added to a spreadsheet.',
+      type: 'trigger',
+      deliveryMethod: 'polling',
+      pollingCursorField: 'sheetCount',
+      rateLimitInfo: { minPollIntervalSeconds: 300 },
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+      ],
+      outputs: [
+        { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
+        { key: 'title', label: 'Sheet Title', type: 'string', required: true },
+      ],
+    },
+  ],
+  actions: [
+    {
+      id: 'append_row',
+      name: 'Append Row',
+      description: 'Appends a new row of values to the bottom of a sheet.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'values', label: 'Row Values (JSON array or comma-separated string)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
+        { key: 'updatedRows', label: 'Updated Rows Count', type: 'number', required: true },
+      ],
+    },
+    {
+      id: 'update_row',
+      name: 'Update Row by Number',
+      description: 'Overwrites values in a specific row number.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'rowNumber', label: 'Row Number (1-based)', type: 'number', required: true },
+        { key: 'values', label: 'New Values (JSON array)', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'get_row',
+      name: 'Get Single Row',
+      description: 'Retrieves values from a specific row number.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'rowNumber', label: 'Row Number (1-based)', type: 'number', required: true },
+      ],
+      outputs: [
+        { key: 'rowNumber', label: 'Row Number', type: 'number', required: true },
+        { key: 'values', label: 'Values Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'get_all_rows',
+      name: 'Get All Rows',
+      description: 'Retrieves all rows and header mappings from a worksheet.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'hasHeaders', label: 'First row is header?', type: 'boolean', required: false },
+      ],
+      outputs: [
+        { key: 'count', label: 'Total Rows', type: 'number', required: true },
+        { key: 'rows', label: 'Rows Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'search_rows',
+      name: 'Search Rows',
+      description: 'Searches rows where a column matches a target value.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'columnName', label: 'Column Header or Letter (e.g. Email, A)', type: 'string', required: true },
+        { key: 'searchValue', label: 'Search Value', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'count', label: 'Matches Found', type: 'number', required: true },
+        { key: 'matches', label: 'Matching Rows Array', type: 'array', required: true },
+      ],
+    },
+    {
+      id: 'clear_row',
+      name: 'Clear Row Content',
+      description: 'Clears cell contents of a row without shifting remaining rows.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'rowNumber', label: 'Row Number', type: 'number', required: true },
+      ],
+      outputs: [
+        { key: 'clearedRange', label: 'Cleared Range', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'delete_row',
+      name: 'Delete Row (Shift Up)',
+      description: 'Deletes a row completely and shifts remaining rows up.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetId', label: 'Sheet Numeric ID', type: 'number', required: true },
+        { key: 'rowNumber', label: 'Row Index (1-based)', type: 'number', required: true },
+      ],
+      outputs: [
+        { key: 'success', label: 'Success Status', type: 'boolean', required: true },
+      ],
+    },
+    {
+      id: 'update_cell',
+      name: 'Update Single Cell',
+      description: 'Updates value of a specific cell (e.g. B5).',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
+        { key: 'cell', label: 'Cell Identifier (e.g. C12)', type: 'string', required: true },
+        { key: 'value', label: 'Cell Value', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'updatedRange', label: 'Updated Cell Range', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'create_spreadsheet',
+      name: 'Create Blank Spreadsheet',
+      description: 'Creates a brand new Google Spreadsheet.',
+      type: 'action',
+      inputs: [
+        { key: 'title', label: 'Spreadsheet Title', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
+        { key: 'spreadsheetUrl', label: 'Spreadsheet URL', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'add_worksheet',
+      name: 'Add Worksheet Tab',
+      description: 'Adds a new sheet tab to an existing spreadsheet.',
+      type: 'action',
+      inputs: [
+        { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
+        { key: 'title', label: 'New Sheet Title', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
+        { key: 'title', label: 'Sheet Title', type: 'string', required: true },
+      ],
+    },
+  ],
+};
 
 export class GoogleSheetsConnector extends BaseConnector {
-  manifest: ConnectorManifest = {
-    id: 'google-sheets',
-    name: 'Google Sheets',
-    description: 'Real Google Sheets integration — Read, write, create, append rows, and update spreadsheet data.',
-    category: 'Productivity',
-    icon: '/icons/google-sheets.svg',
-    authType: 'oauth2',
-    triggers: [
-      {
-        id: 'new_row',
-        name: 'New Row Added',
-        description: 'Triggers when a new row is appended to a Google Sheet.',
-        type: 'trigger',
-        inputs: [
-          { key: 'spreadsheetId', label: 'Spreadsheet ID or Google Sheet Link', type: 'string', required: true },
-          { key: 'worksheet', label: 'Sheet Name (e.g. Sheet1)', type: 'string', required: false },
-        ],
-        outputs: [
-          { key: 'rowValues', label: 'Row Values Array', type: 'array', required: true },
-          { key: 'rowIndex', label: 'Row Index', type: 'number', required: true },
-        ],
-      },
-    ],
-    actions: [
-      {
-        id: 'append_row',
-        name: 'Append Row',
-        description: 'Appends a new row of values to the end of a Google Sheet.',
-        type: 'action',
-        inputs: [
-          { key: 'spreadsheetId', label: 'Spreadsheet ID or Link', type: 'string', required: true },
-          { key: 'worksheet', label: 'Sheet Name (e.g. Sheet1)', type: 'string', required: false },
-          { key: 'values', label: 'Row Values (Comma-separated or JSON Array)', type: 'string', required: true },
-        ],
-        outputs: [
-          { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
-          { key: 'updatedRows', label: 'Rows Added', type: 'number', required: true },
-          { key: 'spreadsheetUrl', label: 'Google Sheet Link', type: 'string', required: true },
-        ],
-      },
-      {
-        id: 'read_rows',
-        name: 'Read Sheet Rows / Range',
-        description: 'Reads data values from a specified range in a Google Sheet.',
-        type: 'action',
-        inputs: [
-          { key: 'spreadsheetId', label: 'Spreadsheet ID or Link', type: 'string', required: true },
-          { key: 'range', label: 'Range (e.g. Sheet1!A1:Z50 or Sheet1)', type: 'string', required: true },
-        ],
-        outputs: [
-          { key: 'range', label: 'Range Read', type: 'string', required: true },
-          { key: 'values', label: 'Cell Data Matrix', type: 'array', required: true },
-          { key: 'rowCount', label: 'Row Count', type: 'number', required: true },
-        ],
-      },
-      {
-        id: 'update_range',
-        name: 'Update Cell Range',
-        description: 'Overwrites cell values in a specific range of a Google Sheet.',
-        type: 'action',
-        inputs: [
-          { key: 'spreadsheetId', label: 'Spreadsheet ID or Link', type: 'string', required: true },
-          { key: 'range', label: 'Range (e.g. Sheet1!A2:B2)', type: 'string', required: true },
-          { key: 'values', label: 'Cell Values (JSON Array or Comma-separated)', type: 'string', required: true },
-        ],
-        outputs: [
-          { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
-          { key: 'updatedCells', label: 'Updated Cell Count', type: 'number', required: true },
-        ],
-      },
-      {
-        id: 'create_spreadsheet',
-        name: 'Create New Spreadsheet',
-        description: 'Creates a brand new Google Sheet in your Google Drive.',
-        type: 'action',
-        inputs: [
-          { key: 'title', label: 'Spreadsheet Title', type: 'string', required: true },
-        ],
-        outputs: [
-          { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
-          { key: 'spreadsheetUrl', label: 'Google Sheet Link', type: 'string', required: true },
-        ],
-      },
-      {
-        id: 'clear_values',
-        name: 'Clear Range Values',
-        description: 'Clears cell content from a specified range in a Google Sheet.',
-        type: 'action',
-        inputs: [
-          { key: 'spreadsheetId', label: 'Spreadsheet ID or Link', type: 'string', required: true },
-          { key: 'range', label: 'Range (e.g. Sheet1!A2:Z100)', type: 'string', required: true },
-        ],
-        outputs: [
-          { key: 'clearedRange', label: 'Cleared Range', type: 'string', required: true },
-        ],
-      },
-    ],
-  };
+  manifest = googleSheetsManifest;
 
-  async executeAction(actionId: string, context: ExecutionContext): Promise<ConnectorExecutionOutput> {
-    const creds = context.connectionCredentials || {};
-    const accessToken = creds.accessToken || process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
-    const userEmail = creds.userEmail || creds.email || 'me';
+  async executeAction(
+    actionId: string,
+    context: ExecutionContext
+  ): Promise<ConnectorExecutionOutput> {
+    const inputs = context.stepInput;
+    const credentials = context.connectionCredentials;
+    const token = credentials?.accessToken;
 
-    const token = this.requireAccessToken(accessToken, userEmail);
-
-    // 1. Action: CREATE SPREADSHEET
-    if (actionId === 'create_spreadsheet') {
-      const title = context.stepInput.title || 'Untitled Automation Sheet';
-      const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ properties: { title } }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(`Google Sheets API Error (${res.status}): ${data.error?.message || res.statusText}`);
-
-      return {
-        success: true,
-        data: {
-          spreadsheetId: data.spreadsheetId,
-          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${data.spreadsheetId}`,
-          title: data.properties?.title,
-        },
-      };
+    if (!token) {
+      return { success: false, data: {}, error: 'Google Sheets access token is required.' };
     }
 
-    let rawId = context.stepInput.spreadsheetId || context.stepInput.spreadsheetName || 'Daily_Email_Summaries_Log';
-    let spreadsheetId = await this.ensureRealSpreadsheetId(token, rawId);
+    const api = axios.create({
+      baseURL: 'https://sheets.googleapis.com/v4/spreadsheets',
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    // 2. Action: APPEND ROW
-    if (actionId === 'append_row') {
-      const sheetName = context.stepInput.worksheet || context.stepInput.worksheetName || 'Sheet1';
-      const rawValues = context.stepInput.values || context.stepInput.rowData;
+    try {
+      switch (actionId) {
+        case 'append_row': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const values = typeof inputs.values === 'string'
+            ? (inputs.values.startsWith('[') ? JSON.parse(inputs.values) : inputs.values.split(',').map(s => s.trim()))
+            : inputs.values;
 
-      let parsedRow: any[] = [];
-      if (Array.isArray(rawValues)) {
-        parsedRow = rawValues;
-      } else if (typeof rawValues === 'string') {
-        const str = rawValues.trim();
-        if (str.startsWith('[') && str.endsWith(']')) {
-          try {
-            parsedRow = JSON.parse(str);
-            if (!Array.isArray(parsedRow)) parsedRow = [str];
-          } catch {
-            // Handle unescaped newlines or quotes inside JSON array string
-            const inner = str.slice(1, -1);
-            parsedRow = inner.split(/,\s*(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map((s) => s.trim().replace(/^["']|["']$/g, ''));
-          }
-        } else {
-          parsedRow = str.split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''));
-        }
-      }
+          const { data } = await api.post(`/${inputs.spreadsheetId}/values/${encodeURIComponent(sheetName)}:append`, {
+            values: [values],
+          }, { params: { valueInputOption: 'USER_ENTERED' } });
 
-      const range = `${sheetName}!A1`;
-      let res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ values: [parsedRow] }),
-        }
-      );
-
-      let data = await res.json();
-      if (!res.ok && res.status === 404) {
-        // Retry by auto-creating spreadsheet if 404
-        const newId = await this.createNewSpreadsheet(token, rawId);
-        spreadsheetId = newId;
-        res = await fetch(
-          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ values: [parsedRow] }),
-          }
-        );
-        data = await res.json();
-      }
-
-      // Handle 400 "Unable to parse range" (worksheet tab does not exist)
-      if (!res.ok && res.status === 400 && data.error?.message?.includes('Unable to parse range')) {
-        try {
-          // Auto-create missing worksheet tab via batchUpdate
-          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              requests: [{ addSheet: { properties: { title: sheetName } } }],
-            }),
-          });
-        } catch {}
-
-        // Retry append to the newly created worksheet tab
-        res = await fetch(
-          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ values: [parsedRow] }),
-          }
-        );
-        data = await res.json();
-
-        // Final fallback: append directly to A1 without tab prefix
-        if (!res.ok) {
-          res = await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ values: [parsedRow] }),
-            }
-          );
-          data = await res.json();
-        }
-      }
-
-      if (!res.ok) {
-        if (res.status === 401 || token.startsWith('demo_') || data.error?.message?.includes('invalid authentication credentials') || data.error?.message?.includes('OAuth 2')) {
           return {
             success: true,
             data: {
-              spreadsheetId: spreadsheetId || 'demo_sheet_id',
-              spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId || 'demo_sheet_id'}`,
-              updatedRange: `${sheetName}!A1:${String.fromCharCode(65 + Math.max(0, parsedRow.length - 1))}1`,
-              updatedRows: 1,
-              updatedColumns: parsedRow.length || 3,
-              appendedValues: parsedRow,
-              note: '🟢 Step executed in Test Verification Mode. Connect live Google OAuth to append rows to your actual Google Sheet file.',
+              updatedRange: data.updates?.updatedRange,
+              updatedRows: data.updates?.updatedRows || 1,
             },
           };
         }
-        throw new Error(`Google Sheets Append Error (${res.status}): ${data.error?.message || res.statusText}`);
-      }
 
-      return {
-        success: true,
-        data: {
-          spreadsheetId,
-          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
-          updatedRange: data.updates?.updatedRange || `${sheetName}!A:A`,
-          updatedRows: data.updates?.updatedRows || 1,
-          updatedColumns: data.updates?.updatedColumns || parsedRow.length,
-        },
-      };
-    }
+        case 'update_row': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const rowNum = inputs.rowNumber;
+          const range = `${sheetName}!A${rowNum}`;
+          const values = typeof inputs.values === 'string'
+            ? (inputs.values.startsWith('[') ? JSON.parse(inputs.values) : inputs.values.split(','))
+            : inputs.values;
 
-    // 3. Action: READ ROWS / RANGE
-    if (actionId === 'read_rows') {
-      const range = context.stepInput.range || 'Sheet1!A1:Z100';
-      const res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+          const { data } = await api.put(`/${inputs.spreadsheetId}/values/${encodeURIComponent(range)}`, {
+            values: [values],
+          }, { params: { valueInputOption: 'USER_ENTERED' } });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(`Google Sheets Read Error (${res.status}): ${data.error?.message || res.statusText}`);
-
-      const rows = data.values || [];
-      return {
-        success: true,
-        data: {
-          range: data.range || range,
-          rowCount: rows.length,
-          values: rows,
-        },
-      };
-    }
-
-    // 4. Action: UPDATE RANGE
-    if (actionId === 'update_range') {
-      const range = context.stepInput.range;
-      if (!range) throw new Error('Google Sheets Update error: "range" parameter is required.');
-
-      const rawValues = context.stepInput.values;
-      let valuesMatrix: any[][] = [];
-      if (Array.isArray(rawValues)) {
-        valuesMatrix = Array.isArray(rawValues[0]) ? rawValues : [rawValues];
-      } else if (typeof rawValues === 'string') {
-        try {
-          const parsed = JSON.parse(rawValues);
-          valuesMatrix = Array.isArray(parsed) ? (Array.isArray(parsed[0]) ? parsed : [parsed]) : [[rawValues]];
-        } catch {
-          valuesMatrix = [rawValues.split(',').map((s) => s.trim())];
+          return { success: true, data: { updatedRange: data.updatedRange } };
         }
-      }
 
-      const res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ values: valuesMatrix }),
+        case 'get_row': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const range = `${sheetName}!A${inputs.rowNumber}:${inputs.rowNumber}`;
+          const { data } = await api.get(`/${inputs.spreadsheetId}/values/${encodeURIComponent(range)}`);
+          const values = data.values?.[0] || [];
+          return { success: true, data: { rowNumber: inputs.rowNumber, values } };
         }
-      );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(`Google Sheets Update Error (${res.status}): ${data.error?.message || res.statusText}`);
+        case 'get_all_rows': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const { data } = await api.get(`/${inputs.spreadsheetId}/values/${encodeURIComponent(sheetName)}`);
+          const allValues = data.values || [];
 
-      return {
-        success: true,
-        data: {
-          updatedRange: data.updatedRange || range,
-          updatedCells: data.updatedCells || 1,
-        },
-      };
-    }
+          if (inputs.hasHeaders !== false && allValues.length > 1) {
+            const headers = allValues[0];
+            const rows = allValues.slice(1).map((row: any[], index: number) => {
+              const obj: Record<string, any> = { _rowNumber: index + 2 };
+              headers.forEach((h: string, i: number) => {
+                obj[h] = row[i] ?? '';
+              });
+              return obj;
+            });
+            return { success: true, data: { count: rows.length, rows } };
+          }
 
-    // 5. Action: CLEAR VALUES
-    if (actionId === 'clear_values') {
-      const range = context.stepInput.range;
-      if (!range) throw new Error('Google Sheets Clear error: "range" parameter is required.');
-
-      const res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:clear`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          return { success: true, data: { count: allValues.length, rows: allValues } };
         }
-      );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(`Google Sheets Clear Error (${res.status}): ${data.error?.message || res.statusText}`);
+        case 'search_rows': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const { data } = await api.get(`/${inputs.spreadsheetId}/values/${encodeURIComponent(sheetName)}`);
+          const allValues = data.values || [];
+          if (allValues.length === 0) return { success: true, data: { count: 0, matches: [] } };
 
-      return {
-        success: true,
-        data: {
-          clearedRange: data.clearedRange || range,
-          status: 'cleared',
-        },
-      };
-    }
+          const headers = allValues[0];
+          let colIndex = headers.findIndex((h: string) => h.toLowerCase() === inputs.columnName.toLowerCase());
+          if (colIndex === -1 && inputs.columnName.length === 1) {
+            colIndex = inputs.columnName.toUpperCase().charCodeAt(0) - 65;
+          }
 
-    throw new Error(`Unsupported Google Sheets action: ${actionId}`);
-  }
+          const matches: any[] = [];
+          allValues.forEach((row: any[], i: number) => {
+            if (i === 0) return;
+            if (row[colIndex]?.toString().toLowerCase() === inputs.searchValue.toLowerCase()) {
+              matches.push({ rowNumber: i + 1, values: row });
+            }
+          });
 
-  /** Resolves raw string input to a real 44-char Google Spreadsheet ID. Searches Google Drive or auto-creates if missing. */
-  private async ensureRealSpreadsheetId(token: string, input: string): Promise<string> {
-    const extracted = this.extractSpreadsheetId(input);
-    // If it looks like a valid 44-character Google Sheet ID, return it directly
-    if (/^[a-zA-Z0-9-_]{25,60}$/.test(extracted) && !extracted.includes(' ') && !extracted.includes('_Log')) {
-      return extracted;
-    }
+          return { success: true, data: { count: matches.length, matches } };
+        }
 
-    const searchTitle = (input || 'Daily_Email_Summaries_Log').trim();
-    try {
-      const driveRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${searchTitle}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const driveData = await driveRes.json();
-      if (driveRes.ok && driveData.files && driveData.files.length > 0) {
-        return driveData.files[0].id;
+        case 'clear_row': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const range = `${sheetName}!A${inputs.rowNumber}:Z${inputs.rowNumber}`;
+          const { data } = await api.post(`/${inputs.spreadsheetId}/values/${encodeURIComponent(range)}:clear`);
+          return { success: true, data: { clearedRange: data.clearedRange } };
+        }
+
+        case 'update_cell': {
+          const sheetName = inputs.sheetName || 'Sheet1';
+          const range = `${sheetName}!${inputs.cell}`;
+          const { data } = await api.put(`/${inputs.spreadsheetId}/values/${encodeURIComponent(range)}`, {
+            values: [[inputs.value]],
+          }, { params: { valueInputOption: 'USER_ENTERED' } });
+          return { success: true, data: { updatedRange: data.updatedRange } };
+        }
+
+        case 'create_spreadsheet': {
+          const { data } = await api.post('', {
+            properties: { title: inputs.title },
+          });
+          return {
+            success: true,
+            data: {
+              spreadsheetId: data.spreadsheetId,
+              spreadsheetUrl: data.spreadsheetUrl,
+            },
+          };
+        }
+
+        case 'add_worksheet': {
+          const { data } = await api.post(`/${inputs.spreadsheetId}:batchUpdate`, {
+            requests: [
+              { addSheet: { properties: { title: inputs.title } } },
+            ],
+          });
+          const reply = data.replies[0]?.addSheet?.properties;
+          return { success: true, data: { sheetId: reply?.sheetId, title: reply?.title } };
+        }
+
+        default:
+          return { success: false, data: {}, error: `Unsupported Google Sheets action: ${actionId}` };
       }
-    } catch {}
-
-    // Auto-create spreadsheet if not found on Drive
-    return await this.createNewSpreadsheet(token, searchTitle);
-  }
-
-  /** Creates a brand new Google Spreadsheet on user's Google Drive */
-  private async createNewSpreadsheet(token: string, title: string): Promise<string> {
-    const searchTitle = title || 'Daily_Email_Summaries_Log';
-    const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        properties: { title: searchTitle },
-        sheets: [{ properties: { title: 'Sheet1' } }],
-      }),
-    });
-    const createData = await createRes.json();
-    if (createRes.ok && createData.spreadsheetId) {
-      console.log(`[GoogleSheetsConnector] Auto-created new Google Spreadsheet: "${searchTitle}" (ID: ${createData.spreadsheetId})`);
-      return createData.spreadsheetId;
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message || err?.message || 'Google Sheets API error';
+      return { success: false, data: {}, error: `Google Sheets error: ${msg}` };
     }
-
-    if (!createRes.ok && (createRes.status === 401 || createData.error?.message?.includes('invalid authentication credentials') || createData.error?.message?.includes('OAuth 2'))) {
-      console.warn(`[GoogleSheetsConnector] Google OAuth token unauthenticated/expired for "${searchTitle}". Falling back to verified test mode.`);
-      return `demo_sheet_id_${Date.now()}`;
-    }
-
-    throw new Error(`Google Sheets Creation Error: ${createData.error?.message || 'Could not auto-create spreadsheet'}`);
-  }
-
-  /** Ensures access token exists, returning token or fallback for test verification mode */
-  private requireAccessToken(accessToken: string | undefined, userEmail: string): string {
-    if (!accessToken || accessToken.startsWith('default_') || accessToken.startsWith('access_token_')) {
-      return 'demo_oauth_test_token';
-    }
-    return accessToken;
-  }
-
-  /** Extracts 44-character Google Spreadsheet ID from either raw ID or full Google Sheet URL */
-  private extractSpreadsheetId(input: string): string {
-    if (!input) return '';
-    const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    return match ? match[1] : input.trim();
   }
 }
+
+export const googleSheetsConnector = new GoogleSheetsConnector();
+manifestRegistry.register(googleSheetsManifest);
+export { getGoogleSheetsChoices };

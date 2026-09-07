@@ -10,6 +10,14 @@ export interface IWorkflow extends Document {
     nodes: Array<any>;
     edges: Array<any>;
   };
+  triggerState?: {
+    pollingCursor?: string;
+    lastPolledAt?: Date;
+    webhookId?: string;
+    providerHookId?: string; // Always string (Patch 5)
+    slackSharedEndpoint?: boolean;
+    devFallbackPolling?: boolean;
+  };
   isAiGenerated: boolean;
   aiPrompt?: string;
   lastExecutedAt?: Date;
@@ -28,6 +36,14 @@ const WorkflowSchema = new Schema<IWorkflow>(
     definition: {
       nodes: { type: Schema.Types.Mixed, default: [] },
       edges: { type: Schema.Types.Mixed, default: [] },
+    },
+    triggerState: {
+      pollingCursor: { type: String },
+      lastPolledAt: { type: Date },
+      webhookId: { type: String },
+      providerHookId: { type: String }, // string (Patch 5)
+      slackSharedEndpoint: { type: Boolean },
+      devFallbackPolling: { type: Boolean },
     },
     isAiGenerated: { type: Boolean, default: false },
     aiPrompt: { type: String },

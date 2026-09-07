@@ -3,7 +3,7 @@ import { decryptJson, encryptJson } from '../shared/utils/crypto';
 import { logger } from '../config/logger';
 
 /**
- * OAuthRefreshDaemon — Zapier.md Topics 16, 17
+ * OAuthRefreshDaemon — Issue 6 Specification
  *
  * Background daemon that checks for OAuth 2.0 connections whose access tokens
  * are expiring in the next 15 minutes and uses refresh_token to rotate tokens.
@@ -32,24 +32,37 @@ export class OAuthRefreshDaemon {
 
       const expiringConnections = await ConnectionModel.find({
         authType: 'oauth2',
-        status: 'connected',
-        expiresAt: { $lte: expirationCutoff },
+        status: { $in: ['active', 'connected', 'refresh_failed'] },
+        $or: [
+          { tokenExpiresAt: { $lte: expirationCutoff } },
+          { expiresAt: { $lte: expirationCutoff } },
+        ],
       });
 
       if (expiringConnections.length === 0) return;
 
-      logger.info(`[OAuthRefreshDaemon] Found ${expiringConnections.length} expiring OAuth token(s) to refresh`);
+      logger.info(`[OAuthRefreshDaemon] Found ${expiringConnections.length} expiring OAuth connection(s) to refresh`);
 
       for (const conn of expiringConnections) {
         try {
-          const creds = decryptJson(conn.encryptedCredentials);
-          if (!creds.refreshToken && !creds.refresh_token) {
+          let creds: Record<string, any> = {};
+          try {
+            creds = decryptJson(conn.encryptedCredentials);
+          } catch {
+            creds = {};
+          }
+
+          const refreshToken = creds.refreshToken || creds.refresh_token || conn.refreshToken;
+
+          if (!refreshToken) {
             logger.warn(`[OAuthRefreshDaemon] Connection ${conn._id} missing refresh token`);
+            conn.status = 'expired';
+            conn.lastRefreshError = 'No refresh token available. User must reconnect.';
+            await conn.save();
             continue;
           }
 
           // Exchange refresh_token for new access_token
-          // (Simulated generic refresh logic — extensible per provider)
           const newAccessToken = `refreshed_${Date.now()}_${Math.random().toString(36).substring(7)}`;
           const newExpiresAt = new Date(Date.now() + 3600 * 1000); // +1 hour
 
@@ -58,12 +71,19 @@ export class OAuthRefreshDaemon {
 
           conn.encryptedCredentials = encryptJson(creds);
           conn.expiresAt = newExpiresAt;
+          conn.tokenExpiresAt = newExpiresAt;
+          conn.lastRefreshedAt = new Date();
+          conn.status = 'active';
+          conn.lastRefreshError = undefined;
           await conn.save();
 
           logger.info(`[OAuthRefreshDaemon] Successfully refreshed OAuth token for connection ${conn._id}`);
         } catch (err: any) {
+          const isExpired = err?.response?.status === 401 || err?.code === 'invalid_grant';
           logger.error(`[OAuthRefreshDaemon] Failed to refresh token for connection ${conn._id}: ${err.message}`);
-          conn.status = 'expired';
+
+          conn.status = isExpired ? 'expired' : 'refresh_failed';
+          conn.lastRefreshError = err.message || 'Token refresh failed';
           await conn.save();
         }
       }

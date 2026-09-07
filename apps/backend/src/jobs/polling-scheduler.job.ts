@@ -1,6 +1,7 @@
 import { ConnectionModel, WorkflowModel, ExecutionLogModel } from '@automation/database';
 import { getWorkflowQueue } from '../infrastructure/queue';
 import { logger } from '../config/logger';
+import { getRedisPublisher } from '../infrastructure/redis';
 
 /**
  * PollingSchedulerJob — Zapier.md Topics 7, 42
@@ -42,6 +43,19 @@ export class PollingSchedulerJob {
 
       for (const workflow of pollingWorkflows) {
         try {
+          // Distributed lock via Redis (Decision 6)
+          const lockKey = `lock:poll:${workflow._id}`;
+          try {
+            const redis = getRedisPublisher();
+            const acquired = await redis.set(lockKey, 'locked', 'EX', 270, 'NX'); // 270s = 4.5m lock
+            if (!acquired) {
+              logger.info(`[PollingSchedulerJob] Workflow ${workflow._id} is locked by another worker instance. Skipping.`);
+              continue;
+            }
+          } catch (lockErr) {
+            logger.warn('[PollingSchedulerJob] Redis lock acquire warning:', lockErr);
+          }
+
           const triggerNode = (workflow.definition?.nodes || []).find((n: any) => n.type === 'trigger');
           const connectionId = triggerNode?.config?.connectionId || triggerNode?.connectionId;
           const conn = connectionId ? await ConnectionModel.findById(connectionId) : null;

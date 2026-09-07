@@ -1,12 +1,12 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserRole } from '@/context/UserRoleContext';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { Loader2, Zap, AlertCircle } from 'lucide-react';
 
-export default function GoogleAuthCallbackPage() {
+function GoogleAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useUserRole();
@@ -14,7 +14,7 @@ export default function GoogleAuthCallbackPage() {
 
   useEffect(() => {
     const code = searchParams.get('code') || `demo_code_${Date.now()}`;
-    
+
     async function exchangeCode() {
       try {
         const res = await apiClient.post('/v1/auth/google/callback', { code });
@@ -58,26 +58,46 @@ export default function GoogleAuthCallbackPage() {
       <div className="w-full max-w-md bg-bgSecondary border border-borderColor/80 rounded-2xl shadow-2xl p-8 text-center">
         {error ? (
           <div className="flex flex-col items-center gap-3">
-            <AlertCircle size={32} className="text-red-400" />
-            <h2 className="text-lg font-bold text-white">Google Sign-In Error</h2>
-            <p className="text-xs text-red-300">{error}</p>
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-400">
+              <AlertCircle size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-white">Authentication Failed</h3>
+            <p className="text-xs text-textMuted leading-relaxed">{error}</p>
             <button
-              onClick={() => router.push('/login')}
-              className="mt-4 px-4 py-2 bg-accentPurple text-white rounded-xl text-xs font-semibold"
+              onClick={() => router.push('/')}
+              className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition-all"
             >
-              Back to Login
+              Return to Home
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 size={32} className="text-accentPurple animate-spin" />
-            <h2 className="text-lg font-bold text-white">Authenticating with Google...</h2>
-            <p className="text-xs text-textSecondary">
-              Exchanging OAuth tokens &amp; setting up your workspace in MongoDB Atlas.
-            </p>
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full bg-accentPurple/20 flex items-center justify-center text-accentPurple">
+                <Loader2 className="animate-spin" size={24} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white">Completing Google Authentication</h3>
+              <p className="text-xs text-textMuted mt-1">Exchanging security tokens with AutoFlow...</p>
+            </div>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function GoogleAuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-bgPrimary flex items-center justify-center p-4">
+          <Loader2 className="animate-spin text-accentPurple" size={32} />
+        </div>
+      }
+    >
+      <GoogleAuthCallbackContent />
+    </Suspense>
   );
 }

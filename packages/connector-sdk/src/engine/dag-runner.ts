@@ -109,6 +109,27 @@ export class DAGRunner {
             }
           });
         }
+
+        // Decision 8: Merge / Parallel Node handling with namespaced branch outputs
+        const isMergeNode = node.connectorId === 'merge' || (node.type as string) === 'merge';
+        if (isMergeNode) {
+          const incomingEdges = edges.filter((e) => e.target === node.id);
+          const namespacedOutputs: Record<string, any> = {};
+
+          incomingEdges.forEach((edge: any) => {
+            const sourceResult = nodeResults[edge.source];
+            if (sourceResult && sourceResult.status === 'completed') {
+              const handleName = edge.sourceHandle || edge.data?.branch || 'main';
+              namespacedOutputs[`branch_${handleName}`] = sourceResult.output;
+            }
+          });
+
+          nodeResults[node.id].output = {
+            ...output,
+            ...namespacedOutputs,
+          };
+          console.log(`[DAGRunner Engine] Merge node '${node.id}' namespaced outputs:`, Object.keys(namespacedOutputs));
+        }
       } catch (err: any) {
         const durationMs = Date.now() - startTime;
         console.error(`[DAGRunner Engine] Step Failed: ${node.name || node.id} (${node.connectorId}) after ${durationMs}ms - Error:`, err.message);

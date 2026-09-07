@@ -7,6 +7,7 @@ import { WorkflowSchedulerService } from './services/workflow-scheduler.service'
 import { startMemoryExtractionWorker } from './jobs/memory-extraction.job';
 import { OAuthRefreshDaemon } from './jobs/oauth-refresh.job';
 import { PollingSchedulerJob } from './jobs/polling-scheduler.job';
+import { WebhookRenewalDaemon } from './jobs/webhook-renewal.job';
 import { TelegramPollingDaemon } from './jobs/telegram-polling.job';
 
 async function bootstrap(retries = 3) {
@@ -53,7 +54,10 @@ async function bootstrap(retries = 3) {
       // 7. Start Polling Trigger Worker (polls non-webhook triggers every 5 mins)
       PollingSchedulerJob.start(300000);
 
-      // 8. Start Telegram Bot Polling Daemon (polls Telegram messages every 3s)
+      // 8. Start Webhook Renewal Daemon (renews Jira/Drive webhooks every 6 hours) (Patch 4)
+      WebhookRenewalDaemon.start(21600000);
+
+      // 9. Start Telegram Bot Polling Daemon (polls Telegram messages every 3s)
       TelegramPollingDaemon.start(3000);
 
       // 9. Start Memory Extraction Worker (processes async memory extraction after conversations)

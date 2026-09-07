@@ -34,8 +34,17 @@ export class AIAgentController {
 
   static async generate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const messages = [{ role: 'user' as const, content: req.body.prompt || '' }];
-      const data = await AIAgentService.processChat(messages, req.user!.organizationId, req.user!.userId);
+      const prompt = req.body.prompt || req.body.message || '';
+      const orgId = req.user!.organizationId;
+      const userId = req.user!.userId;
+
+      if (req.body.mode === 'workflow' || prompt) {
+        const result = await AIAgentService.generateWorkflowFromPrompt(prompt, orgId, userId);
+        return sendResponse(res, 200, true, result, 'Workflow generated from AI prompt via registry-driven compiler');
+      }
+
+      const messages = [{ role: 'user' as const, content: prompt }];
+      const data = await AIAgentService.processChat(messages, orgId, userId);
       return sendResponse(res, 200, true, data, 'Workflow generated from AI prompt');
     } catch (err) {
       next(err);

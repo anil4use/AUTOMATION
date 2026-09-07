@@ -1,6 +1,9 @@
 import { ConnectionModel, AIChatModel } from '@automation/database';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
+import { manifestRegistry } from '@automation/connector-sdk';
+import { validateWorkflow, WorkflowNode, WorkflowEdge } from './ai-agent.workflow-validator';
+import { autoMapNodeInputs } from './ai-agent.io-mapper';
 
 export interface ChatMessage {
   id?: string;
@@ -10,6 +13,16 @@ export interface ChatMessage {
   suggestedConnectors?: string[];
   userConnectionsStatus?: any[];
   workflowDraft?: any;
+}
+
+export interface WorkflowGenerationResult {
+  replyMessage: string;
+  suggestedConnectors: string[];
+  workflowDraft: any;
+  missingConnections: string[];
+  missingScopes: Record<string, string[]>;
+  valid: boolean;
+  validationErrors: string[];
 }
 
 const DYNAMIC_WORKFLOW_SYSTEM_PROMPT = `You are the AutoFlow AI Assistant & Workflow Compiler inside the AutoFlow Automation Platform.
@@ -817,6 +830,84 @@ RULES FOR CANVAS MUTATION:
       aiSuggestions,
       nodes,
       edges,
+    };
+  }
+
+  /**
+   * Registry-driven Workflow Generation Engine (Phase 4 & Patch 6)
+   */
+  static async generateWorkflowFromPrompt(
+    prompt: string,
+    orgId: string,
+    userId: string
+  ): Promise<WorkflowGenerationResult> {
+    logger.info(`[AIAgentService] Registry-driven workflow generation for prompt: "${prompt}"`);
+
+    let userConnections: any[] = [];
+    try {
+      userConnections = await ConnectionModel.find({ organizationId: orgId, status: 'active' });
+    } catch {}
+
+    const connectedAppIds = userConnections.map((c) => c.connectorId);
+
+    const chatResult = await AIAgentService.processChat(
+      [{ role: 'user', content: prompt }],
+      orgId,
+      userId
+    );
+
+    const draft = chatResult.workflowDraft;
+
+    if (!draft || !draft.nodes) {
+      return {
+        replyMessage: chatResult.replyMessage || 'Unable to generate workflow from prompt.',
+        suggestedConnectors: chatResult.suggestedConnectors || [],
+        workflowDraft: null,
+        missingConnections: [],
+        missingScopes: {},
+        valid: false,
+        validationErrors: ['No workflow draft returned from AI prompt compiler.'],
+      };
+    }
+
+    const nodes: WorkflowNode[] = draft.nodes || [];
+    const edges: WorkflowEdge[] = draft.edges || [];
+
+    const validation = validateWorkflow(nodes, edges, connectedAppIds);
+
+    for (let i = 1; i < nodes.length; i++) {
+      const currentNode = nodes[i];
+      const upstreamNodes = nodes.slice(0, i).map((n) => ({
+        id: n.id,
+        connectorId: n.connectorId,
+        operationId: (n.actionId || n.triggerId || '') as string,
+      }));
+
+      const autoMapped = autoMapNodeInputs(
+        currentNode.id,
+        currentNode.connectorId,
+        (currentNode.actionId || currentNode.triggerId || '') as string,
+        upstreamNodes
+      );
+
+      currentNode.fieldMapping = {
+        ...(currentNode.fieldMapping || {}),
+        ...autoMapped,
+      };
+    }
+
+    return {
+      replyMessage: chatResult.replyMessage,
+      suggestedConnectors: chatResult.suggestedConnectors || [],
+      workflowDraft: {
+        ...draft,
+        nodes,
+        edges,
+      },
+      missingConnections: validation.missingConnections,
+      missingScopes: validation.missingScopes,
+      valid: validation.valid,
+      validationErrors: validation.errors,
     };
   }
 }
