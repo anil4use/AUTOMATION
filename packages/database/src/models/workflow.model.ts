@@ -6,6 +6,8 @@ export interface IWorkflow extends Document {
   name: string;
   description?: string;
   status: 'draft' | 'active' | 'paused' | 'archived';
+  version: number;
+  environment: 'dev' | 'staging' | 'prod';
   definition: {
     nodes: Array<any>;
     edges: Array<any>;
@@ -18,6 +20,7 @@ export interface IWorkflow extends Document {
     slackSharedEndpoint?: boolean;
     devFallbackPolling?: boolean;
   };
+  history?: Array<{ version: number; definition: any; savedAt: Date }>;
   isAiGenerated: boolean;
   aiPrompt?: string;
   lastExecutedAt?: Date;
@@ -33,6 +36,8 @@ const WorkflowSchema = new Schema<IWorkflow>(
     name: { type: String, required: true },
     description: { type: String },
     status: { type: String, enum: ['draft', 'active', 'paused', 'archived'], default: 'draft', index: true },
+    version: { type: Number, default: 1 },
+    environment: { type: String, enum: ['dev', 'staging', 'prod'], default: 'dev' },
     definition: {
       nodes: { type: Schema.Types.Mixed, default: [] },
       edges: { type: Schema.Types.Mixed, default: [] },
@@ -45,6 +50,7 @@ const WorkflowSchema = new Schema<IWorkflow>(
       slackSharedEndpoint: { type: Boolean },
       devFallbackPolling: { type: Boolean },
     },
+    history: { type: Schema.Types.Mixed, default: [] },
     isAiGenerated: { type: Boolean, default: false },
     aiPrompt: { type: String },
     lastExecutedAt: { type: Date },

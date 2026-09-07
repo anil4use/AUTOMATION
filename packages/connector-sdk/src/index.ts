@@ -59,6 +59,19 @@ export * from './connectors/web-search.connector';
 export * from './connectors/condition.connector';
 export * from './connectors/amazon-flipkart.connector';
 export * from './connectors/universal.connector';
+export * from './connectors/control-flow.connector';
+
+// Next-Gen Advanced Engine Connectors
+export * from './integrations/transform-nodes';
+export * from './integrations/ai-nodes';
+export * from './integrations/vector-rag';
+export * from './integrations/postgresql';
+export * from './integrations/mysql';
+export * from './integrations/supabase';
+export * from './integrations/redis';
+export * from './integrations/mongodb';
+export * from './integrations/amazon-s3';
+export * from './integrations/cloudflare-r2';
 
 export * from './engine/step-executor';
 export * from './engine/dag-runner';
