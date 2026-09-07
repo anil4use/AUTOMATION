@@ -6,6 +6,9 @@ const iconMap: Record<string, any> = {
   'autoflow-schedule': Clock,
   gmail: Mail,
   slack: MessageSquare,
+  telegram: Send,
+  'command-router': GitFork,
+  'autoflow-command-router': GitFork,
   'google-sheets': Table,
   'google-drive': HardDrive,
   notion: FileText,
@@ -82,7 +85,7 @@ export const CustomNode = memo(({ data, selected, id }: NodeProps) => {
           </div>
 
           {/* Connection Status Badge directly on Canvas Node Card */}
-          {['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request'].includes(data.connectorId) ? (
+          {['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request', 'command-router', 'autoflow-command-router'].includes(data.connectorId) ? (
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>System</span>

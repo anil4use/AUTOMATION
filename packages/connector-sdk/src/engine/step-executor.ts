@@ -14,6 +14,8 @@ import { WebSearchConnector } from '../connectors/web-search.connector';
 import { AutoFlowScheduleConnector } from '../connectors/autoflow-schedule.connector';
 import { ConditionConnector } from '../connectors/condition.connector';
 import { AmazonFlipkartConnector } from '../connectors/amazon-flipkart.connector';
+import { TelegramConnector } from '../connectors/telegram.connector';
+import { CommandRouterConnector } from '../connectors/command-router.connector';
 import { UniversalConnector } from '../connectors/universal.connector';
 import * as crypto from 'crypto';
 
@@ -21,6 +23,9 @@ export const connectorRegistry: Record<string, any> = {
   'autoflow-schedule': new AutoFlowScheduleConnector(),
   gmail: new GmailConnector(),
   slack: new SlackConnector(),
+  telegram: new TelegramConnector(),
+  'command-router': new CommandRouterConnector(),
+  'autoflow-command-router': new CommandRouterConnector(),
   'google-sheets': new GoogleSheetsConnector(),
   'google-drive': new GoogleDriveConnector(),
   'google-calendar': new GoogleCalendarConnector(),

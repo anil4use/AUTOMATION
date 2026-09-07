@@ -407,7 +407,7 @@ export default function ConnectorsPage() {
     setIsTestModalOpen(true);
   };
 
-  const catalogConnectors: AvailableConnector[] = availableConnectors.length > 0
+  const rawCatalog: AvailableConnector[] = availableConnectors.length > 0
     ? availableConnectors
     : [
         { id: 'gmail', name: 'Gmail', category: 'Google Suite', authType: 'oauth2', description: 'Read emails, search, send notifications, reply & create drafts.' },
@@ -419,7 +419,7 @@ export default function ConnectorsPage() {
         { id: 'ms-teams', name: 'Microsoft Teams', category: 'Communication', authType: 'oauth2', description: 'Post channel announcements, send adaptive cards & chat messages.' },
         { id: 'slack', name: 'Slack Workspace', category: 'Communication', authType: 'oauth2', description: 'Post messages, upload snippets & listen for events.' },
         { id: 'discord', name: 'Discord Bot', category: 'Communication', authType: 'api_key', description: 'Send channel embeds, dispatch webhooks & bot notifications.' },
-        { id: 'telegram', name: 'Telegram Bot', category: 'Communication', authType: 'api_key', description: 'Send bot messages, broadcast channel alerts & handle commands.' },
+        { id: 'telegram', name: 'Telegram Bot', category: 'Communication', authType: 'api_key', description: 'Listen to inbound chat messages and send responses, alerts & formatting via Telegram bots.' },
         { id: 'whatsapp', name: 'WhatsApp Business', category: 'Communication', authType: 'api_key', description: 'Send template messages, receive replies & dispatch alerts.' },
         { id: 'notion', name: 'Notion DB', category: 'Productivity', authType: 'oauth2', description: 'Create pages, query workspace databases & update blocks.' },
         { id: 'airtable', name: 'Airtable Base', category: 'Productivity', authType: 'api_key', description: 'Add records to Airtable bases, update grid cells & search rows.' },
@@ -462,7 +462,37 @@ export default function ConnectorsPage() {
         { id: 'zoom', name: 'Zoom Meetings', category: 'Communication', authType: 'oauth2', description: 'Schedule video meetings, webinars & registrants.' },
         { id: 'amazon-flipkart', name: 'Amazon & Flipkart', category: 'E-Commerce', authType: 'none', description: 'Track price drops, compare product deals & monitor stock.' },
         { id: 'autoflow-condition', name: 'If / Else Condition', category: 'Logic & Control Flow', authType: 'none', description: 'Split workflow execution paths into TRUE and FALSE branches.' },
+        { id: 'rest-api', name: 'REST API Connector', category: 'Developer Tools', authType: 'api_key', description: 'Execute structured REST API calls with OAuth 2.0 or API Keys.' },
+        { id: 'graphql', name: 'GraphQL Query Client', category: 'Developer Tools', authType: 'api_key', description: 'Execute custom GraphQL query and mutation requests.' },
+        { id: 'openai', name: 'OpenAI GPT-4o', category: 'AI Native', authType: 'api_key', description: 'ChatGPT, GPT-4o vision, custom system prompts & JSON tools.' },
+        { id: 'anthropic', name: 'Anthropic Claude 3.5', category: 'AI Native', authType: 'api_key', description: 'Claude 3.5 Sonnet, long context analysis & code reasoning.' },
+        { id: 'gemini', name: 'Google Gemini 2.0', category: 'AI Native', authType: 'api_key', description: 'Gemini 2.0 Flash, multimodal processing & fast reasoning.' },
+        { id: 'groq', name: 'Groq Llama 3', category: 'AI Native', authType: 'api_key', description: 'Sub-second ultrafast Llama 3 70B inference engine.' },
+        { id: 'elevenlabs', name: 'ElevenLabs Voice AI', category: 'AI Native', authType: 'api_key', description: 'AI Text-to-Speech audio synthesis & voice cloning.' },
+        { id: 'huggingface', name: 'Hugging Face ML', category: 'AI Native', authType: 'api_key', description: 'Run open-source Machine Learning models & image generation.' },
+        { id: 'twilio', name: 'Twilio SMS', category: 'Communication', authType: 'api_key', description: 'Send SMS text messages, dispatch WhatsApp templates & calls.' },
+        { id: 'sendgrid', name: 'SendGrid Email API', category: 'Marketing', authType: 'api_key', description: 'Send transactional emails & manage contact suppression lists.' },
+        { id: 'mailchimp', name: 'Mailchimp Marketing', category: 'Marketing', authType: 'api_key', description: 'Add campaign subscribers & trigger email automation sequences.' },
+        { id: 'resend', name: 'Resend Email API', category: 'Marketing', authType: 'api_key', description: 'Send modern developer-friendly transactional emails.' },
+        { id: 'jira', name: 'Jira Software', category: 'Productivity', authType: 'oauth2', description: 'Create Jira issue tickets, update sprint boards & statuses.' },
+        { id: 'linear', name: 'Linear App', category: 'Productivity', authType: 'api_key', description: 'Create Linear issue tickets, set priorities & assign cycles.' },
+        { id: 'clickup', name: 'ClickUp Tasks', category: 'Productivity', authType: 'oauth2', description: 'Create ClickUp tasks, set assignees & update custom fields.' },
+        { id: 'trello', name: 'Trello Boards', category: 'Productivity', authType: 'oauth2', description: 'Create Trello cards, move cards across board columns.' },
+        { id: 'google-analytics', name: 'Google Analytics 4', category: 'Analytics', authType: 'oauth2', description: 'Query GA4 metrics, track conversions & active sessions.' },
+        { id: 'calendly', name: 'Calendly Bookings', category: 'Productivity', authType: 'oauth2', description: 'Trigger on new booking invitees & cancel events.' },
+        { id: 'typeform', name: 'Typeform Forms', category: 'Productivity', authType: 'oauth2', description: 'Trigger on new form submission responses & answers.' },
+        { id: 'zoom', name: 'Zoom Meetings', category: 'Communication', authType: 'oauth2', description: 'Schedule video meetings, webinars & registrants.' },
+        { id: 'amazon-flipkart', name: 'Amazon & Flipkart', category: 'E-Commerce', authType: 'none', description: 'Track price drops, compare product deals & monitor stock.' },
+        { id: 'autoflow-condition', name: 'If / Else Condition', category: 'Logic & Control Flow', authType: 'none', description: 'Split workflow execution paths into TRUE and FALSE branches.' },
       ];
+
+  const uniqueConnectorsMap = new Map<string, AvailableConnector>();
+  rawCatalog.forEach((c) => {
+    if (!uniqueConnectorsMap.has(c.id)) {
+      uniqueConnectorsMap.set(c.id, c);
+    }
+  });
+  const catalogConnectors = Array.from(uniqueConnectorsMap.values());
 
   const categoriesList = ['All', 'Google Suite', 'Communication', 'AI Native', 'Developer Tools', 'Databases', 'Finance', 'CRM & Sales', 'Productivity'];
 

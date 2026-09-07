@@ -18,6 +18,8 @@ export * from './connectors/google-docs.connector';
 export * from './connectors/notion.connector';
 export * from './connectors/stripe.connector';
 export * from './connectors/whatsapp.connector';
+export * from './connectors/telegram.connector';
+export * from './connectors/command-router.connector';
 export * from './connectors/http-request.connector';
 export * from './connectors/web-search.connector';
 export * from './connectors/condition.connector';

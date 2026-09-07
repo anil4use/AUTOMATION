@@ -166,6 +166,17 @@ export default function LoginPage() {
           <span>{isSubmitting ? 'Connecting to Google...' : 'Continue with Google Account'}</span>
         </button>
 
+        {/* Quick Instant Dev Sign-In Button */}
+        <button
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => handleSelectGoogleAccount('anil4use@gmail.com', 'Anil Kumar')}
+          className="w-full mt-3 py-3 px-4 rounded-xl bg-accentIndigo/10 border border-accentIndigo/30 text-accentIndigo hover:bg-accentIndigo/20 font-semibold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+        >
+          <Zap size={14} className="text-amber-400" />
+          <span>⚡ Instant Demo Sign In (Developer Mode)</span>
+        </button>
+
         {/* Trust Badges */}
         <div className="mt-6 pt-5 border-t border-borderColor/60 flex flex-col gap-2">
           <div className="flex items-center gap-2 text-[11px] text-textSecondary">

@@ -28,6 +28,7 @@ export function AccountConnectModal({ connectorId, onSuccess, onClose }: Account
       const res = await apiClient.post('/v1/connectors/connections/api-key', {
         connectorId,
         name: accountName,
+        apiKey,
         credentials: { apiKey, key: apiKey },
       });
 

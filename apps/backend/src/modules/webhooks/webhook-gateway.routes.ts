@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { WebhookGatewayController } from './webhook-gateway.controller';
+import { TelegramWebhookController } from './telegram-webhook.controller';
 
 const router = Router();
 
@@ -14,5 +15,8 @@ router.get('/catch/:webhookId', WebhookGatewayController.catchWebhook as any);
 
 /** PUT /api/v1/webhooks/catch/:webhookId — Universal PUT webhook catch */
 router.put('/catch/:webhookId', WebhookGatewayController.catchWebhook as any);
+
+/** POST /api/v1/webhooks/telegram/:botId — Telegram Bot Inbound Webhook */
+router.post('/telegram/:botId', TelegramWebhookController.handleTelegramWebhook as any);
 
 export default router;

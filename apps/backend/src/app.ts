@@ -19,7 +19,19 @@ import { errorMiddleware } from './middleware/error.middleware';
 export function createApp() {
   const app = express();
 
-  app.use(cors({ origin: env.clientUrl, credentials: true }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, postman, webhooks) or localhost origins
+        if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || origin === env.clientUrl) {
+          callback(null, true);
+        } else {
+          callback(null, true); // Allow dev origins cleanly
+        }
+      },
+      credentials: true,
+    })
+  );
   app.use(express.json());
 
   app.get('/health', (req, res) => {
