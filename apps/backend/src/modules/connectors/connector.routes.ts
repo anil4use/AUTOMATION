@@ -27,6 +27,11 @@ router.post('/install-all', ConnectorController.installAll as any);
 router.delete('/connections/:id', ConnectorController.deleteConnection as any);
 router.post('/test/:connectorId', ConnectorController.testConnection as any);
 
+// Database Architecture Endpoints
+router.post('/test-connection', ConnectorController.testRawConnectionConfig as any);
+router.post('/connections/:connectionId/test', ConnectorController.testSavedConnection as any);
+router.put('/connections/:connectionId', ConnectorController.updateConnection as any);
+
 // Dynamic Dropdown Choices API (Zapier.md Topics 21, 22)
 router.get('/:appId/choices/:actionId', ConnectorChoicesController.getDynamicChoices as any);
 

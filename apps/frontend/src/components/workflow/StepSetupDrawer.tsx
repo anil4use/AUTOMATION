@@ -4,6 +4,7 @@ import { X, Play, CheckCircle2, AlertCircle, Database, Layers, Key, Sliders, Spa
 import { DataTreePicker } from './DataTreePicker';
 import { ConnectionSelector } from './ConnectionSelector';
 import { AccountConnectModal } from './AccountConnectModal';
+import { DatabaseConnectModal } from '@/components/connectors/DatabaseConnectModal';
 import { apiClient } from '@/lib/api-client';
 import { ALL_50_CONNECTOR_MANIFESTS, getActionOrTriggerSchema, getManifestById } from '@/lib/connector-manifests';
 
@@ -617,18 +618,38 @@ export function StepSetupDrawer({
       </div>
       {/* Inline Account Connection Modal */}
       {showConnectModal && (
-        <AccountConnectModal
-          connectorId={connectorId}
-          onSuccess={(newId) => {
-            setConnectionId(newId);
-            apiClient.get('/v1/connectors/connections').then((res) => {
-              if (res.data.data) setUserConnections(res.data.data);
-            });
-            setActiveTab('setup');
-          }}
-          onClose={() => setShowConnectModal(false)}
-        />
+        ['postgresql', 'mysql', 'mongodb', 'redis', 'dynamodb', 'mssql', 'sqlite', 'supabase', 'planetscale', 'neon'].includes(connectorId) || currentManifest?.category === 'Databases' ? (
+          <DatabaseConnectModal
+            isOpen={showConnectModal}
+            defaultEngine={connectorId}
+            onClose={() => setShowConnectModal(false)}
+            onSuccess={() => {
+              apiClient.get('/v1/connectors/connections').then((res) => {
+                if (res.data.data) {
+                  setUserConnections(res.data.data);
+                  const matching = res.data.data.find((c: any) => c.connectorId === connectorId || connectorId.includes(c.connectorId));
+                  if (matching) setConnectionId(matching._id || matching.id);
+                }
+              });
+              setShowConnectModal(false);
+              setActiveTab('setup');
+            }}
+          />
+        ) : (
+          <AccountConnectModal
+            connectorId={connectorId}
+            onSuccess={(newId) => {
+              setConnectionId(newId);
+              apiClient.get('/v1/connectors/connections').then((res) => {
+                if (res.data.data) setUserConnections(res.data.data);
+              });
+              setActiveTab('setup');
+            }}
+            onClose={() => setShowConnectModal(false)}
+          />
+        )
       )}
     </div>
   );
 }
+

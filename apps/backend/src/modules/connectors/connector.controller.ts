@@ -51,13 +51,14 @@ export class ConnectorController {
   static async createApiKeyConnection(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { connectorId, name, apiKey, credentials } = req.body;
-      const keyToUse = apiKey || credentials?.apiKey || credentials?.key || req.body.key;
+      const keyToUse = apiKey || (credentials ? JSON.stringify(credentials) : undefined) || req.body.key;
       const connection = await ConnectorService.createApiKeyConnection(
         req.user!.organizationId,
         req.user!.userId,
         connectorId,
         name,
-        keyToUse
+        keyToUse,
+        req.body
       );
       return sendResponse(res, 201, true, connection, 'API Key connection saved securely');
     } catch (err) {
@@ -79,6 +80,35 @@ export class ConnectorController {
       const { connectorId } = req.params;
       const data = await ConnectorService.testConnection(connectorId, req.user!.organizationId, req.body);
       return sendResponse(res, 200, true, data, 'Connection test successful');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async testRawConnectionConfig(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await ConnectorService.testConnectionConfig(req.body);
+      return sendResponse(res, 200, result.success, result, result.success ? 'Database connection verified' : result.error);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async testSavedConnection(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { connectionId } = req.params;
+      const result = await ConnectorService.testSavedConnection(connectionId, req.user!.organizationId);
+      return sendResponse(res, 200, result.success, result, result.success ? 'Saved connection re-test successful' : result.error);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async updateConnection(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { connectionId } = req.params;
+      const updated = await ConnectorService.updateDatabaseConnection(connectionId, req.user!.organizationId, req.body);
+      return sendResponse(res, 200, true, updated, 'Database connection updated successfully');
     } catch (err) {
       next(err);
     }

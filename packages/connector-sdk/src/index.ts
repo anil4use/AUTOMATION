@@ -72,6 +72,11 @@ export * from './integrations/redis';
 export * from './integrations/mongodb';
 export * from './integrations/amazon-s3';
 export * from './integrations/cloudflare-r2';
+export * from './integrations/dynamodb';
+
+export * from './core/query-sanitizer';
+export * from './core/database-tester';
+export * from './core/database-driver.factory';
 
 export * from './engine/step-executor';
 export * from './engine/dag-runner';

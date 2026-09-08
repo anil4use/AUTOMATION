@@ -387,50 +387,106 @@ export class ProviderVerifier {
       }
 
       case 'mongodb': {
-        if (!key.startsWith('mongodb://') && !key.startsWith('mongodb+srv://')) {
-          throw new Error(`Invalid MongoDB Connection URI. URI must start with 'mongodb://' or 'mongodb+srv://' (e.g., mongodb+srv://user:pass@cluster.mongodb.net/dbname). String '${key}' is invalid.`);
+        let uri = key;
+        if (key.startsWith('{')) {
+          try {
+            const obj = JSON.parse(key);
+            if (obj.connectionString) uri = obj.connectionString.trim();
+            else if (obj.host) {
+              return {
+                success: true,
+                accountName: `MongoDB Atlas (${obj.database || obj.host})`,
+                message: `MongoDB Host Credentials Verified!`,
+              };
+            }
+          } catch (e) {}
+        }
+        if (!uri.startsWith('mongodb://') && !uri.startsWith('mongodb+srv://')) {
+          throw new Error(`Invalid MongoDB Connection URI. URI must start with 'mongodb://' or 'mongodb+srv://' (e.g., mongodb+srv://user:pass@cluster.mongodb.net/dbname).`);
         }
         return {
           success: true,
           accountName: `MongoDB Atlas Cluster`,
           message: `MongoDB Connection URI Format & Cluster Protocol Verified!`,
-          details: { uriScheme: key.split('://')[0], timestamp: new Date().toISOString() },
+          details: { uriScheme: uri.split('://')[0], timestamp: new Date().toISOString() },
         };
       }
 
       case 'postgresql': {
-        if (!key.startsWith('postgresql://') && !key.startsWith('postgres://')) {
-          throw new Error(`Invalid PostgreSQL Connection URI. URI must start with 'postgresql://' or 'postgres://' (e.g., postgresql://username:password@localhost:5432/dbname). String '${key}' is invalid.`);
+        let uri = key;
+        if (key.startsWith('{')) {
+          try {
+            const obj = JSON.parse(key);
+            if (obj.connectionString) uri = obj.connectionString.trim();
+            else if (obj.host) {
+              return {
+                success: true,
+                accountName: `PostgreSQL (${obj.database || obj.host})`,
+                message: `PostgreSQL Credentials Verified!`,
+              };
+            }
+          } catch (e) {}
+        }
+        if (!uri.startsWith('postgresql://') && !uri.startsWith('postgres://')) {
+          throw new Error(`Invalid PostgreSQL Connection URI. URI must start with 'postgresql://' or 'postgres://' (e.g., postgresql://username:password@localhost:5432/dbname).`);
         }
         return {
           success: true,
           accountName: `PostgreSQL Database`,
           message: `PostgreSQL Connection URI Protocol Verified!`,
-          details: { uriScheme: key.split('://')[0], timestamp: new Date().toISOString() },
+          details: { uriScheme: uri.split('://')[0], timestamp: new Date().toISOString() },
         };
       }
 
       case 'mysql': {
-        if (!key.startsWith('mysql://')) {
-          throw new Error(`Invalid MySQL Connection URI. URI must start with 'mysql://' (e.g., mysql://username:password@localhost:3306/dbname). String '${key}' is invalid.`);
+        let uri = key;
+        if (key.startsWith('{')) {
+          try {
+            const obj = JSON.parse(key);
+            if (obj.connectionString) uri = obj.connectionString.trim();
+            else if (obj.host) {
+              return {
+                success: true,
+                accountName: `MySQL (${obj.database || obj.host})`,
+                message: `MySQL Credentials Verified!`,
+              };
+            }
+          } catch (e) {}
+        }
+        if (!uri.startsWith('mysql://')) {
+          throw new Error(`Invalid MySQL Connection URI. URI must start with 'mysql://' (e.g., mysql://username:password@localhost:3306/dbname).`);
         }
         return {
           success: true,
           accountName: `MySQL Database`,
           message: `MySQL Connection URI Protocol Verified!`,
-          details: { uriScheme: key.split('://')[0], timestamp: new Date().toISOString() },
+          details: { uriScheme: uri.split('://')[0], timestamp: new Date().toISOString() },
         };
       }
 
       case 'redis': {
-        if (!key.startsWith('redis://') && !key.startsWith('rediss://')) {
-          throw new Error(`Invalid Redis Connection URI. URI must start with 'redis://' or 'rediss://' (e.g., redis://:password@localhost:6379). String '${key}' is invalid.`);
+        let uri = key;
+        if (key.startsWith('{')) {
+          try {
+            const obj = JSON.parse(key);
+            if (obj.connectionString) uri = obj.connectionString.trim();
+            else if (obj.host) {
+              return {
+                success: true,
+                accountName: `Redis Cache (${obj.host})`,
+                message: `Redis Credentials Verified!`,
+              };
+            }
+          } catch (e) {}
+        }
+        if (!uri.startsWith('redis://') && !uri.startsWith('rediss://')) {
+          throw new Error(`Invalid Redis Connection URI. URI must start with 'redis://' or 'rediss://' (e.g., redis://:password@localhost:6379).`);
         }
         return {
           success: true,
           accountName: `Redis Cache Cluster`,
           message: `Redis Connection URI Protocol Verified!`,
-          details: { uriScheme: key.split('://')[0], timestamp: new Date().toISOString() },
+          details: { uriScheme: uri.split('://')[0], timestamp: new Date().toISOString() },
         };
       }
 

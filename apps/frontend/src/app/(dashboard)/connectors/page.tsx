@@ -4,13 +4,14 @@ import {
   Cpu, Lock, Trash2, ShieldCheck, X, Loader2, RefreshCw, CheckCircle2,
   Mail, Key, ExternalLink, Send, Play, AlertCircle, FileText, Calendar,
   HardDrive, FileCode, Sparkles, Search, Layers, Database, Code, CreditCard,
-  Building, Check, ChevronRight, Zap, Globe
+  Building, Check, ChevronRight, Zap, Globe, AlertTriangle, Edit3, Plus
 } from 'lucide-react';
 import { Button, Heading, Text, SectionCard, Badge } from '@/components/ui';
 import { useUserRole } from '@/context/UserRoleContext';
 import { apiClient } from '@/lib/api-client';
 import { signInWithGoogleFirebase } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { DatabaseConnectModal, ENVIRONMENT_COLORS } from '@/components/connectors/DatabaseConnectModal';
 
 export interface ConnectionAccount {
   _id: string;
@@ -18,8 +19,16 @@ export interface ConnectionAccount {
   connectorId: string;
   userId?: string;
   authType: string;
-  status: 'connected' | 'expired';
+  status: 'connected' | 'expired' | 'error';
   createdAt: string;
+  label?: string;
+  environmentTag?: 'local' | 'development' | 'staging' | 'beta' | 'production';
+  connectionMethod?: string;
+  dbType?: string;
+  lastTestedAt?: string;
+  lastTestError?: string;
+  credentials?: any;
+  allowedStatements?: string[];
 }
 
 export interface AvailableConnector {
@@ -80,6 +89,10 @@ const APP_AUTH_SPECS: Record<string, AppAuthSpec> = {
   'ms-teams': { label: 'Microsoft Azure App Registration', placeholder: 'client_id:client_secret:tenant_id', help: 'Register app in Azure Portal -> App Registrations.', docUrl: 'https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps' },
 };
 
+const DATABASE_CONNECTOR_IDS = [
+  'postgresql', 'mysql', 'mongodb', 'redis', 'dynamodb', 'mssql', 'sqlite', 'supabase', 'planetscale', 'neon'
+];
+
 export default function ConnectorsPage() {
   const { user } = useUserRole();
   const [connections, setConnections] = useState<ConnectionAccount[]>([]);
@@ -92,6 +105,18 @@ export default function ConnectorsPage() {
   const [activeTab, setActiveTab] = useState<'hub' | 'connections'>('hub');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Database Connection Modal State
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [dbModalEngine, setDbModalEngine] = useState('postgresql');
+  const [dbModalEditConnection, setDbModalEditConnection] = useState<ConnectionAccount | null>(null);
+
+  // Inline Re-testing State
+  const [retestingConnectionId, setRetestingConnectionId] = useState<string | null>(null);
+
+  // Delete Confirmation Modal State
+  const [deleteConfirmConn, setDeleteConfirmConn] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // General API Key Modal
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -178,6 +203,58 @@ export default function ConnectorsPage() {
     fetchConnectors();
     fetchConnections();
   }, [fetchConnectors, fetchConnections]);
+
+  const isDatabaseConnector = (connector: AvailableConnector) => {
+    return connector.category === 'Databases' || DATABASE_CONNECTOR_IDS.includes(connector.id);
+  };
+
+  const handleOpenDatabaseModal = (engineId: string, editConn?: ConnectionAccount) => {
+    setDbModalEngine(engineId);
+    setDbModalEditConnection(editConn || null);
+    setIsDbModalOpen(true);
+  };
+
+  const handleRetestConnection = async (connId: string) => {
+    setRetestingConnectionId(connId);
+    try {
+      const res = await apiClient.post(`/v1/connectors/connections/${connId}/test`, {});
+      const data = res.data;
+      if (data.success && (data.data?.success || data.data?.status === 'success')) {
+        const pingMs = data.data?.pingMs ?? 24;
+        const version = data.data?.version || 'Connected';
+        toast.success(`Connection verified — ${pingMs}ms`, { description: `Engine: ${version}` });
+        setConnections((prev) =>
+          prev.map((c) =>
+            c._id === connId
+              ? { ...c, status: 'connected', lastTestedAt: new Date().toISOString(), lastTestError: undefined }
+              : c
+          )
+        );
+      } else {
+        const errDesc = data.message || data.data?.error || 'Verification failed';
+        toast.error(`Connection failed — ${errDesc}`);
+        setConnections((prev) =>
+          prev.map((c) =>
+            c._id === connId
+              ? { ...c, status: 'error', lastTestedAt: new Date().toISOString(), lastTestError: errDesc }
+              : c
+          )
+        );
+      }
+    } catch (err: any) {
+      const errDesc = err?.response?.data?.message || err?.message || 'Connection test error';
+      toast.error(`Connection failed — ${errDesc}`);
+      setConnections((prev) =>
+        prev.map((c) =>
+          c._id === connId
+            ? { ...c, status: 'error', lastTestedAt: new Date().toISOString(), lastTestError: errDesc }
+            : c
+        )
+      );
+    } finally {
+      setRetestingConnectionId(null);
+    }
+  };
 
   const handleConnectOAuth = async (connector: AvailableConnector) => {
     if (connector.id === 'gmail' || connector.id.startsWith('google')) {
@@ -370,17 +447,23 @@ export default function ConnectorsPage() {
     }
   };
 
-  const handleDeleteConnection = async (id: string, name: string) => {
+  const confirmDelete = async () => {
+    if (!deleteConfirmConn) return;
+
+    setIsDeleting(true);
     try {
-      await apiClient.delete(`/v1/connectors/connections/${id}`);
-      setConnections((prev) => prev.filter((c) => c._id !== id));
-      toast.error(`Connection Deleted`, {
-        description: `"${name}" removed from MongoDB Atlas encrypted database.`,
+      await apiClient.delete(`/v1/connectors/connections/${deleteConfirmConn.id}`);
+      setConnections((prev) => prev.filter((c) => c._id !== deleteConfirmConn.id));
+      toast.success(`Connection Deleted`, {
+        description: `"${deleteConfirmConn.name}" removed successfully.`,
       });
+      setDeleteConfirmConn(null);
     } catch (err: any) {
       toast.error('Failed to delete connection', {
         description: err?.response?.data?.message || 'Could not delete connection.',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -407,6 +490,21 @@ export default function ConnectorsPage() {
     setIsTestModalOpen(true);
   };
 
+  const formatRelativeTime = (isoString?: string) => {
+    if (!isoString) return 'Not tested yet';
+    const date = new Date(isoString);
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins === 1) return '1 minute ago';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return '1 hour ago';
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} days ago`;
+  };
+
   const rawCatalog: AvailableConnector[] = availableConnectors.length > 0
     ? availableConnectors
     : [
@@ -430,38 +528,21 @@ export default function ConnectorsPage() {
         { id: 'razorpay', name: 'Razorpay (India)', category: 'Finance', authType: 'api_key', description: 'Create UPI & card payment links, handle payment captures.' },
         { id: 'github', name: 'GitHub Repositories', category: 'Developer Tools', authType: 'oauth2', description: 'Create issues, post pull request comments & trigger workflows.' },
         { id: 'gitlab', name: 'GitLab CI/CD', category: 'Developer Tools', authType: 'oauth2', description: 'Trigger CI/CD pipelines, manage repository issues & MRs.' },
-        { id: 'postgresql', name: 'PostgreSQL Database', category: 'Databases', authType: 'api_key', description: 'Execute SQL queries, insert rows & stream database triggers.' },
-        { id: 'mysql', name: 'MySQL Database', category: 'Databases', authType: 'api_key', description: 'Run MySQL queries, query tables & insert structured records.' },
-        { id: 'mongodb', name: 'MongoDB Atlas', category: 'Databases', authType: 'api_key', description: 'Insert JSON documents, query collections & aggregations.' },
-        { id: 'redis', name: 'Redis Cache & Store', category: 'Databases', authType: 'api_key', description: 'Get/Set key-value pairs, handle pub/sub channels & rate limits.' },
+        { id: 'postgresql', name: 'PostgreSQL Database', category: 'Databases', authType: 'api_key', description: 'Execute SQL queries, insert rows, SSH tunneling & SSL connections.' },
+        { id: 'mysql', name: 'MySQL Database', category: 'Databases', authType: 'api_key', description: 'Run MySQL queries, query tables, SSH tunnels & SSL certs.' },
+        { id: 'mongodb', name: 'MongoDB Atlas', category: 'Databases', authType: 'api_key', description: 'Insert JSON documents, query collections, aggregations & URIs.' },
+        { id: 'redis', name: 'Redis Cache & Store', category: 'Databases', authType: 'api_key', description: 'Get/Set key-value pairs, db indices & flush protection.' },
+        { id: 'dynamodb', name: 'DynamoDB (AWS)', category: 'Databases', authType: 'api_key', description: 'AWS IAM key/secret auth, local endpoints & region tables.' },
+        { id: 'mssql', name: 'SQL Server (MSSQL)', category: 'Databases', authType: 'api_key', description: 'Execute T-SQL queries, table selects & Windows/SQL auth.' },
+        { id: 'sqlite', name: 'SQLite File DB', category: 'Databases', authType: 'api_key', description: 'Local zero-config embedded SQL database files.' },
         { id: 'supabase', name: 'Supabase Database', category: 'Databases', authType: 'api_key', description: 'Query Postgres tables, handle Supabase Auth & storage events.' },
+        { id: 'planetscale', name: 'PlanetScale MySQL', category: 'Databases', authType: 'api_key', description: 'Serverless branching MySQL database connections.' },
+        { id: 'neon', name: 'Neon Postgres', category: 'Databases', authType: 'api_key', description: 'Serverless instant branching Postgres database connections.' },
         { id: 'firebase', name: 'Firebase Firestore', category: 'Databases', authType: 'api_key', description: 'Read & write Firestore documents, handle Auth triggers.' },
         { id: 'aws-s3', name: 'AWS S3 Storage', category: 'Databases', authType: 'api_key', description: 'Upload S3 file objects, generate presigned URLs & manage buckets.' },
         { id: 'bigquery', name: 'Google BigQuery', category: 'Databases', authType: 'oauth2', description: 'Run SQL analytics queries, append rows & export reports.' },
         { id: 'http-request', name: 'HTTP Request Call', category: 'Developer Tools', authType: 'none', description: 'Send custom REST API GET, POST, PUT, or DELETE requests.' },
         { id: 'webhooks', name: 'Inbound Webhooks', category: 'Developer Tools', authType: 'none', description: 'Catch real-time HTTP POST webhooks from external apps.' },
-        { id: 'rest-api', name: 'REST API Connector', category: 'Developer Tools', authType: 'api_key', description: 'Execute structured REST API calls with OAuth 2.0 or API Keys.' },
-        { id: 'graphql', name: 'GraphQL Query Client', category: 'Developer Tools', authType: 'api_key', description: 'Execute custom GraphQL query and mutation requests.' },
-        { id: 'openai', name: 'OpenAI GPT-4o', category: 'AI Native', authType: 'api_key', description: 'ChatGPT, GPT-4o vision, custom system prompts & JSON tools.' },
-        { id: 'anthropic', name: 'Anthropic Claude 3.5', category: 'AI Native', authType: 'api_key', description: 'Claude 3.5 Sonnet, long context analysis & code reasoning.' },
-        { id: 'gemini', name: 'Google Gemini 2.0', category: 'AI Native', authType: 'api_key', description: 'Gemini 2.0 Flash, multimodal processing & fast reasoning.' },
-        { id: 'groq', name: 'Groq Llama 3', category: 'AI Native', authType: 'api_key', description: 'Sub-second ultrafast Llama 3 70B inference engine.' },
-        { id: 'elevenlabs', name: 'ElevenLabs Voice AI', category: 'AI Native', authType: 'api_key', description: 'AI Text-to-Speech audio synthesis & voice cloning.' },
-        { id: 'huggingface', name: 'Hugging Face ML', category: 'AI Native', authType: 'api_key', description: 'Run open-source Machine Learning models & image generation.' },
-        { id: 'twilio', name: 'Twilio SMS', category: 'Communication', authType: 'api_key', description: 'Send SMS text messages, dispatch WhatsApp templates & calls.' },
-        { id: 'sendgrid', name: 'SendGrid Email API', category: 'Marketing', authType: 'api_key', description: 'Send transactional emails & manage contact suppression lists.' },
-        { id: 'mailchimp', name: 'Mailchimp Marketing', category: 'Marketing', authType: 'api_key', description: 'Add campaign subscribers & trigger email automation sequences.' },
-        { id: 'resend', name: 'Resend Email API', category: 'Marketing', authType: 'api_key', description: 'Send modern developer-friendly transactional emails.' },
-        { id: 'jira', name: 'Jira Software', category: 'Productivity', authType: 'oauth2', description: 'Create Jira issue tickets, update sprint boards & statuses.' },
-        { id: 'linear', name: 'Linear App', category: 'Productivity', authType: 'api_key', description: 'Create Linear issue tickets, set priorities & assign cycles.' },
-        { id: 'clickup', name: 'ClickUp Tasks', category: 'Productivity', authType: 'oauth2', description: 'Create ClickUp tasks, set assignees & update custom fields.' },
-        { id: 'trello', name: 'Trello Boards', category: 'Productivity', authType: 'oauth2', description: 'Create Trello cards, move cards across board columns.' },
-        { id: 'google-analytics', name: 'Google Analytics 4', category: 'Analytics', authType: 'oauth2', description: 'Query GA4 metrics, track conversions & active sessions.' },
-        { id: 'calendly', name: 'Calendly Bookings', category: 'Productivity', authType: 'oauth2', description: 'Trigger on new booking invitees & cancel events.' },
-        { id: 'typeform', name: 'Typeform Forms', category: 'Productivity', authType: 'oauth2', description: 'Trigger on new form submission responses & answers.' },
-        { id: 'zoom', name: 'Zoom Meetings', category: 'Communication', authType: 'oauth2', description: 'Schedule video meetings, webinars & registrants.' },
-        { id: 'amazon-flipkart', name: 'Amazon & Flipkart', category: 'E-Commerce', authType: 'none', description: 'Track price drops, compare product deals & monitor stock.' },
-        { id: 'autoflow-condition', name: 'If / Else Condition', category: 'Logic & Control Flow', authType: 'none', description: 'Split workflow execution paths into TRUE and FALSE branches.' },
         { id: 'rest-api', name: 'REST API Connector', category: 'Developer Tools', authType: 'api_key', description: 'Execute structured REST API calls with OAuth 2.0 or API Keys.' },
         { id: 'graphql', name: 'GraphQL Query Client', category: 'Developer Tools', authType: 'api_key', description: 'Execute custom GraphQL query and mutation requests.' },
         { id: 'openai', name: 'OpenAI GPT-4o', category: 'AI Native', authType: 'api_key', description: 'ChatGPT, GPT-4o vision, custom system prompts & JSON tools.' },
@@ -506,12 +587,59 @@ export default function ConnectorsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Database Connection Modal */}
+      {isDbModalOpen && (
+        <DatabaseConnectModal
+          isOpen={isDbModalOpen}
+          defaultEngine={dbModalEngine}
+          editConnection={dbModalEditConnection}
+          onClose={() => {
+            setIsDbModalOpen(false);
+            setDbModalEditConnection(null);
+          }}
+          onSuccess={() => {
+            fetchConnections();
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmConn && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-6 relative text-xs">
+            <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-2">
+              <AlertTriangle size={18} />
+              <span>Confirm Connection Deletion</span>
+            </div>
+            <p className="text-slate-300 mb-4 leading-relaxed">
+              Are you sure you want to delete <strong className="text-white">{deleteConfirmConn.name}</strong>? Workflows depending on this connection may fail.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirmConn(null)}
+                className="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold flex items-center gap-1.5"
+              >
+                {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                <span>Delete Connection</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <Heading as="h1">Integrations &amp; Connections SDK</Heading>
           <Text variant="secondary">
-            Manage authenticated accounts for <strong className="text-white">{user.email}</strong>. Encrypted via AES-256-CBC.
+            Manage authenticated accounts &amp; database connections for <strong className="text-white">{user.email}</strong>. Encrypted via AES-256-CBC.
           </Text>
         </div>
         <div className="flex items-center gap-2">
@@ -543,7 +671,7 @@ export default function ConnectorsPage() {
           </div>
           <div>
             <div className="text-2xl font-extrabold text-white font-mono">{catalogConnectors.length}</div>
-            <div className="text-[11px] text-textMuted font-medium">Enterprise Apps Available</div>
+            <div className="text-[11px] text-textMuted font-medium">Enterprise Apps &amp; Databases</div>
           </div>
         </SectionCard>
 
@@ -563,7 +691,7 @@ export default function ConnectorsPage() {
           </div>
           <div>
             <div className="text-sm font-bold text-white">AES-256-CBC</div>
-            <div className="text-[11px] text-textMuted font-medium">Encrypted Storage Layer</div>
+            <div className="text-[11px] text-textMuted font-medium">Encrypted Credentials Layer</div>
           </div>
         </SectionCard>
 
@@ -572,8 +700,8 @@ export default function ConnectorsPage() {
             <Globe size={20} />
           </div>
           <div>
-            <div className="text-sm font-bold text-white">OAuth2 &amp; API Key</div>
-            <div className="text-[11px] text-textMuted font-medium">Live Authorization Protocols</div>
+            <div className="text-sm font-bold text-white">SSH &amp; SSL Supported</div>
+            <div className="text-[11px] text-textMuted font-medium">Multi-Environment Isolation</div>
           </div>
         </SectionCard>
       </div>
@@ -616,7 +744,7 @@ export default function ConnectorsPage() {
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-textMuted" />
               <input
                 type="text"
-                placeholder="Search 55+ connectors (e.g. Gmail, OpenAI, Postgres, Stripe)..."
+                placeholder="Search 55+ connectors (e.g. Postgres, MongoDB, OpenAI, Stripe)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-bgPrimary border border-borderColor rounded-xl text-xs text-white outline-none focus:border-accentPurple"
@@ -644,8 +772,12 @@ export default function ConnectorsPage() {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredCatalog.map((c) => {
-              const activeConn = connections.find((conn) => conn.connectorId === c.id);
-              const isAlreadyConnected = Boolean(activeConn);
+              const isDb = isDatabaseConnector(c);
+              const savedDbConnections = connections.filter(
+                (conn) => conn.connectorId === c.id || conn.dbType === c.id
+              );
+              const activeConn = savedDbConnections[0] || connections.find((conn) => conn.connectorId === c.id);
+              const isAlreadyConnected = savedDbConnections.length > 0 || Boolean(activeConn);
               const isConnecting = connectingConnectorId === c.id;
 
               return (
@@ -661,11 +793,13 @@ export default function ConnectorsPage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className={`p-2 rounded-xl border ${
-                          isAlreadyConnected
+                          isDb
+                            ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
+                            : isAlreadyConnected
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-accentEmerald'
                             : 'bg-white/5 border-borderColor text-accentPurple'
                         }`}>
-                          <Cpu size={20} />
+                          {isDb ? <Database size={20} /> : <Cpu size={20} />}
                         </div>
                         <div>
                           <Heading as="h3" className="text-sm font-bold">{c.name}</Heading>
@@ -677,7 +811,7 @@ export default function ConnectorsPage() {
                       {isAlreadyConnected ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
                           <CheckCircle2 size={11} />
-                          <span>CONNECTED</span>
+                          <span>{isDb ? `${savedDbConnections.length} ACTIVE` : 'CONNECTED'}</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-textMuted">
@@ -686,12 +820,83 @@ export default function ConnectorsPage() {
                       )}
                     </div>
 
-                    <Text variant="secondary" className="text-xs mb-4 min-h-[36px] line-clamp-2">
+                    <Text variant="secondary" className="text-xs mb-3 min-h-[32px] line-clamp-2">
                       {c.description || 'Connect to trigger automation workflows and sync data payloads.'}
                     </Text>
 
-                    {/* Connected Account Detail Pill if Connected */}
-                    {isAlreadyConnected && (
+                    {/* MULTI-CONNECTION LIST FOR DATABASE CONNECTORS */}
+                    {isDb && savedDbConnections.length > 0 ? (
+                      <div className="space-y-2 mb-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Saved Connections ({savedDbConnections.length})
+                        </div>
+                        <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                          {savedDbConnections.map((conn) => {
+                            const envKey = (conn.environmentTag || 'development').toLowerCase();
+                            const envStyle = ENVIRONMENT_COLORS[envKey] || ENVIRONMENT_COLORS.development;
+                            const isTestingThis = retestingConnectionId === conn._id;
+
+                            return (
+                              <div
+                                key={conn._id}
+                                className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] gap-2"
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  {/* Environment Badge */}
+                                  <span
+                                    className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase shrink-0 flex items-center gap-0.5"
+                                    style={{
+                                      backgroundColor: envStyle.bg,
+                                      color: envStyle.text,
+                                      border: `1px solid ${envStyle.border}`,
+                                    }}
+                                  >
+                                    {envKey === 'production' && <span>⚠️</span>}
+                                    <span>{envStyle.label}</span>
+                                  </span>
+
+                                  <div className="truncate min-w-0">
+                                    <div className="font-bold text-white truncate">{conn.label || conn.name}</div>
+                                    <div className="text-[9px] text-slate-400 truncate">
+                                      Last tested: {formatRelativeTime(conn.lastTestedAt)} • {conn.status === 'connected' ? 'Active 🟢' : 'Failed 🔴'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Connection Actions */}
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => handleRetestConnection(conn._id)}
+                                    disabled={isTestingThis}
+                                    className="px-2 py-1 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-bold hover:bg-indigo-500/30 transition-all flex items-center gap-1"
+                                    title="Re-test Connection"
+                                  >
+                                    <RefreshCw size={10} className={isTestingThis ? 'animate-spin' : ''} />
+                                    <span>{isTestingThis ? 'Testing...' : 'Re-test'}</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleOpenDatabaseModal(c.id, conn)}
+                                    className="p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                                    title="Edit Connection"
+                                  >
+                                    <Edit3 size={11} />
+                                  </button>
+
+                                  <button
+                                    onClick={() => setDeleteConfirmConn({ id: conn._id, name: conn.label || conn.name })}
+                                    className="p-1.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+                                    title="Delete Connection"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : !isDb && isAlreadyConnected ? (
                       <div className="p-2 rounded-lg bg-emerald-900/20 border border-emerald-500/30 mb-4 flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-1.5 text-emerald-300 font-medium truncate">
                           <ShieldCheck size={12} className="text-emerald-400" />
@@ -699,16 +904,24 @@ export default function ConnectorsPage() {
                         </div>
                         <span className="text-[10px] font-mono text-emerald-400/80 uppercase">{activeConn?.authType}</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Card Footer Actions */}
                   <div className="pt-3 border-t border-borderColor/60 flex items-center justify-between gap-2">
                     <span className="text-[10px] font-mono text-textMuted uppercase tracking-wider">
-                      AUTH: {c.authType.toUpperCase()}
+                      {isDb ? 'PROTOCOL: DATABASE DRIVER' : `AUTH: ${c.authType.toUpperCase()}`}
                     </span>
 
-                    {isAlreadyConnected ? (
+                    {isDb ? (
+                      <button
+                        onClick={() => handleOpenDatabaseModal(c.id)}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-600/30 transition-all flex items-center gap-1"
+                      >
+                        <Plus size={12} />
+                        <span>{savedDbConnections.length > 0 ? '+ Add Another Connection' : '+ Connect Account'}</span>
+                      </button>
+                    ) : isAlreadyConnected ? (
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <button
                           onClick={() => handleOpenTestModal(c)}
@@ -730,7 +943,7 @@ export default function ConnectorsPage() {
 
                         {activeConn && (
                           <button
-                            onClick={() => handleDeleteConnection(activeConn._id, activeConn.name)}
+                            onClick={() => setDeleteConfirmConn({ id: activeConn._id, name: activeConn.name })}
                             className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors"
                             title="Disconnect Account"
                           >
@@ -762,6 +975,7 @@ export default function ConnectorsPage() {
           )}
         </div>
       )}
+
 
       {/* TAB 2: Active Connected Accounts */}
       {activeTab === 'connections' && (

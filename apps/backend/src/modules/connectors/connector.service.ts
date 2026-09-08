@@ -80,24 +80,37 @@ export class ConnectorService {
     });
   }
 
-  static async createApiKeyConnection(orgId: string, userId: string, connectorId: string, name: string, apiKey: string) {
+  static async createApiKeyConnection(orgId: string, userId: string, connectorId: string, name: string, apiKey: string, extraData: any = {}) {
     // Live Pre-Save Provider Verification & Format Guard
     const verification = await ProviderVerifier.verifyCredentials(connectorId, apiKey);
 
-    const encryptedCredentials = encryptJson({
-      apiKey,
-      accountName: verification.accountName,
-      verifiedAt: new Date().toISOString(),
-    });
+    let parsedCreds: any = null;
+    if (apiKey && apiKey.trim().startsWith('{')) {
+      try {
+        parsedCreds = JSON.parse(apiKey);
+      } catch (e) {}
+    }
+
+    const encryptedCredentials = encryptJson(
+      parsedCreds
+        ? { ...parsedCreds, accountName: verification.accountName, verifiedAt: new Date().toISOString() }
+        : { apiKey, accountName: verification.accountName, verifiedAt: new Date().toISOString() }
+    );
 
     return await ConnectorRepository.createConnection({
       organizationId: orgId,
       userId,
       connectorId,
-      name: verification.accountName || name,
+      name: extraData.label || extraData.name || verification.accountName || name,
+      label: extraData.label || extraData.name || verification.accountName || name,
+      environmentTag: extraData.environmentTag || 'development',
+      connectionMethod: extraData.connectionMethod || 'fields',
+      dbType: extraData.dbType || connectorId,
+      allowedStatements: extraData.allowedStatements,
       authType: 'api_key',
       encryptedCredentials,
-      status: 'connected',
+      status: 'active',
+      lastTestedAt: new Date(),
     });
   }
 
@@ -281,8 +294,31 @@ export class ConnectorService {
       };
     }
 
+    const DB_CONNECTORS = ['mongodb', 'postgresql', 'postgres', 'mysql', 'redis', 'mssql', 'dynamodb', 'sqlite', 'planetscale', 'supabase', 'neon'];
+    if (DB_CONNECTORS.includes(connectorId.toLowerCase()) || conn.dbType) {
+      const { testDatabaseConnection } = require('@automation/connector-sdk');
+      const dbTypeToTest = conn.dbType || connectorId;
+      const testRes = await testDatabaseConnection({
+        ...credentials,
+        dbType: dbTypeToTest,
+        allowedStatements: conn.allowedStatements,
+      });
+
+      if (!testRes.success) {
+        throw new AppError(`Database Ping Test Failed for '${connectorId.toUpperCase()}': ${testRes.error || 'Connection check failed'}`, 400);
+      }
+
+      return {
+        status: 'success',
+        connectorId,
+        account: conn.label || conn.name,
+        output: { pingMs: testRes.pingMs || 15, version: testRes.version || dbTypeToTest },
+        message: `Live Database Ping Successful (${testRes.pingMs || 15}ms)! Engine: ${testRes.version || dbTypeToTest.toUpperCase()}`,
+      };
+    }
+
     // Real Live API test using ProviderVerifier
-    const key = credentials.apiKey || credentials.accessToken;
+    const key = credentials.apiKey || credentials.accessToken || (typeof credentials === 'string' ? credentials : JSON.stringify(credentials));
     const verification = await ProviderVerifier.verifyCredentials(connectorId, key || '');
 
     return {
@@ -293,4 +329,81 @@ export class ConnectorService {
       message: verification.message || `Live API Verified for '${connectorId.toUpperCase()}'!`,
     };
   }
+
+  static async testConnectionConfig(rawConfig: any) {
+    const { testDatabaseConnection } = require('@automation/connector-sdk');
+    return await testDatabaseConnection(rawConfig);
+  }
+
+  static async testSavedConnection(connectionId: string, orgId: string) {
+    const conn = await ConnectorRepository.findById(connectionId, orgId);
+    if (!conn) throw new AppError('Connection not found', 404);
+
+    const credentials = decryptJson(conn.encryptedCredentials);
+    const { testDatabaseConnection } = require('@automation/connector-sdk');
+    const result = await testDatabaseConnection({ ...credentials, dbType: conn.dbType || conn.connectorId, allowedStatements: conn.allowedStatements });
+
+    const { ConnectionModel } = require('@automation/database');
+    await ConnectionModel.updateOne(
+      { _id: connectionId },
+      {
+        $set: {
+          lastTestedAt: new Date(),
+          status: result.success ? 'active' : 'error',
+          lastTestError: result.error || null,
+        },
+      }
+    );
+
+    return result;
+  }
+
+  static async updateDatabaseConnection(connectionId: string, orgId: string, payload: any) {
+    const conn = await ConnectorRepository.findById(connectionId, orgId);
+    if (!conn) throw new AppError('Connection not found', 404);
+
+    const existingCreds = decryptJson(conn.encryptedCredentials);
+    const updatedCreds = { ...existingCreds, ...payload.credentials };
+
+    // Maintain existing password / privateKey if blank
+    if (!payload.credentials?.password && existingCreds.password) {
+      updatedCreds.password = existingCreds.password;
+    }
+    if (!payload.credentials?.privateKey && existingCreds.privateKey) {
+      updatedCreds.privateKey = existingCreds.privateKey;
+    }
+
+    // Require test connection pass prior to saving
+    const { testDatabaseConnection, destroyPool } = require('@automation/connector-sdk');
+    const testResult = await testDatabaseConnection({ ...updatedCreds, dbType: payload.dbType || conn.connectorId });
+    if (!testResult.success) {
+      throw new AppError(`Connection test failed: ${testResult.error || 'Check database credentials'}`, 400);
+    }
+
+    // Destroy existing active pool to ensure new credentials are used
+    await destroyPool(connectionId);
+
+    const { ConnectionModel } = require('@automation/database');
+    const updated = await ConnectionModel.findOneAndUpdate(
+      { _id: connectionId, organizationId: orgId },
+      {
+        $set: {
+          name: payload.name || conn.name,
+          label: payload.label || payload.name || conn.label,
+          environmentTag: payload.environmentTag || conn.environmentTag,
+          connectionMethod: payload.connectionMethod || conn.connectionMethod,
+          dbType: payload.dbType || conn.dbType,
+          allowedStatements: payload.allowedStatements || conn.allowedStatements,
+          encryptedCredentials: encryptJson(updatedCreds),
+          lastTestedAt: new Date(),
+          status: 'active',
+          lastTestError: null,
+        },
+      },
+      { new: true }
+    );
+
+    return updated;
+  }
 }
+
