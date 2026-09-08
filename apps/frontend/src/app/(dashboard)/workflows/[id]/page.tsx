@@ -24,11 +24,25 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
   const [canvasEdges, setCanvasEdges] = useState<Edge[]>([]);
   const [initialNodes, setInitialNodes] = useState<any[] | null>(null);
   const [initialEdges, setInitialEdges] = useState<any[] | null>(null);
+  const [userConnections, setUserConnections] = useState<any[]>([]);
 
-  const [loadingWorkflow, setLoadingWorkflow] = useState<boolean>(params.id !== 'new');
+  const [loadingWorkflow, setLoadingWorkflow] = useState<boolean>(params?.id !== 'new');
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState<boolean>(false);
+
+  // Load User Connections for StepSetupDrawer
+  useEffect(() => {
+    async function loadConnections() {
+      try {
+        const res = await apiClient.get('/v1/connectors/connections');
+        if (res.data?.data) {
+          setUserConnections(res.data.data);
+        }
+      } catch (e) {}
+    }
+    loadConnections();
+  }, []);
 
   // Auto-Save Draft state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -196,16 +210,30 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
         target: e.target,
       }));
 
-      const res = await apiClient.post(`/v1/workflows/${params.id}/execute`, {
+      let targetId = params?.id;
+      if (targetId === 'new') {
+        const createRes = await apiClient.post('/v1/workflows', {
+          name: workflowName || 'New Workflow',
+          description: workflowDesc || 'Automated workflow.',
+          status: 'draft',
+          definition: { nodes: currentNodes, edges: currentEdges },
+        });
+        const savedWf = createRes.data.data;
+        if (savedWf && (savedWf._id || savedWf.id)) {
+          targetId = savedWf._id || savedWf.id;
+          router.replace(`/workflows/${targetId}`);
+        }
+      }
+
+      const res = await apiClient.post(`/v1/workflows/${targetId}/execute`, {
         triggerPayload: { manualTrigger: true, isTestRun: true, triggeredAt: new Date().toISOString() },
         definition: { nodes: currentNodes, edges: currentEdges },
         nodes: currentNodes,
         edges: currentEdges,
       });
 
-      const data = res.data.data;
       toast.success('Live Execution Completed!', {
-        description: `Ran ${currentNodes.length} DAG steps for ${user.email}. Timers bypassed! Check Execution Logs.`,
+        description: `Ran ${currentNodes.length} DAG steps for ${user?.email || 'user'}. Timers bypassed! Check Execution Logs.`,
       });
     } catch (err: any) {
       toast.error('Execution Failed', {
@@ -399,7 +427,7 @@ export default function WorkflowBuilderPage({ params }: { params: { id: string }
               connectorId: n.data?.connectorId || 'gmail',
             }))}
             edges={canvasEdges}
-            connections={[]}
+            connections={userConnections}
             onSaveNode={(updated) => {
               handleUpdateNodeData(updated.id, {
                 name: updated.name,
