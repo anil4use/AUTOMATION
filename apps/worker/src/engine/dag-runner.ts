@@ -1,1 +1,1 @@
-export { DAGRunner } from '@automation/connector-sdk';
+export { DAGRunner } from '@automation/workflow-engine';

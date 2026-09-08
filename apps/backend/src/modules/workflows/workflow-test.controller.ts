@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../../shared/types/common.types';
 import { sendResponse } from '../../shared/utils/response';
 import { AppError } from '../../shared/errors/app.error';
-import { StepExecutor } from '@automation/connector-sdk';
+import { StepExecutor } from '@automation/workflow-engine';
 
 /**
  * WorkflowTestController — Zapier.md Topics 23, 47

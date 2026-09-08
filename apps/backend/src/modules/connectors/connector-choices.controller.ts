@@ -39,7 +39,7 @@ import {
   getQuickBooksChoices,
   getDocuSignChoices,
   getWebhookTriggerChoices,
-} from '@automation/connector-sdk';
+} from '@automation/connectors';
 
 /**
  * ConnectorChoicesController — Zapier.md Topics 21, 22

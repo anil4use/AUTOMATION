@@ -1,7 +1,7 @@
 import { WorkflowModel, ConnectionModel } from '@automation/database';
 import { logger } from '../config/logger';
 import { decryptJson } from '../shared/utils/crypto';
-import { jiraConnector, googleDriveConnector } from '@automation/connector-sdk';
+import { jiraConnector, googleDriveConnector } from '@automation/connectors';
 
 /**
  * WebhookRenewalDaemon — Patch 4 Specification

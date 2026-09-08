@@ -3,7 +3,7 @@ import { WorkflowService } from './workflow.service';
 import { AuthenticatedRequest } from '../../shared/types/common.types';
 import { sendResponse } from '../../shared/utils/response';
 import { WorkflowModel, ExecutionLogModel } from '@automation/database';
-import { StepExecutor, DAGRunner } from '@automation/connector-sdk';
+import { StepExecutor, DAGRunner } from '@automation/workflow-engine';
 import { AppError } from '../../shared/errors/app.error';
 
 export class WorkflowController {

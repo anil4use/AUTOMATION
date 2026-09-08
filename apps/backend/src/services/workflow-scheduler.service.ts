@@ -1,5 +1,5 @@
 import { WorkflowModel, ExecutionLogModel } from '@automation/database';
-import { DAGRunner } from '@automation/connector-sdk';
+import { DAGRunner } from '@automation/workflow-engine';
 import { logger } from '../config/logger';
 
 export class WorkflowSchedulerService {

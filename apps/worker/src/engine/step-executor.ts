@@ -1,1 +1,1 @@
-export { StepExecutor } from '@automation/connector-sdk';
+export { StepExecutor } from '@automation/workflow-engine';

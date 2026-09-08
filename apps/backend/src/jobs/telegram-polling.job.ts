@@ -3,7 +3,7 @@ import { WorkflowModel, ExecutionLogModel, ConnectionModel } from '@automation/d
 import { getWorkflowQueue } from '../infrastructure/queue';
 import { logger } from '../config/logger';
 import { decryptJson } from '../shared/utils/crypto';
-import { DAGRunner } from '@automation/connector-sdk';
+import { DAGRunner } from '@automation/workflow-engine';
 
 export class TelegramPollingDaemon {
   private static isRunning = false;
