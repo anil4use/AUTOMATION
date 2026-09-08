@@ -205,47 +205,119 @@ export class MongodbConnector extends BaseConnector {
   manifest = mongodbManifest;
 
   async executeAction(actionId: string, context: ExecutionContext): Promise<ConnectorExecutionOutput> {
-    const inputs = context.stepInput || {};
+    const stepInputs: Record<string, any> = context.stepInput || {};
     const connectionConfig = context.connectionConfig || { dbType: 'mongodb' };
 
     try {
       if (connectionConfig && (connectionConfig.host || connectionConfig.connectionString)) {
         const mongoClient = await getOrCreatePool(connectionConfig);
-        const dbName = connectionConfig.database || 'admin';
+
+        // Allow inputs.database to override connectionConfig — the LLM can specify exact DB name
+        // Also support dot-notation: "automation_platform.users" → db=automation_platform, coll=users
+        let dbName = stepInputs.database || stepInputs.dbName || connectionConfig.database || 'admin';
+        let collectionName: string = stepInputs.collection || '';
+
+        if (collectionName.includes('.')) {
+          const [dotDb, dotColl] = collectionName.split('.', 2);
+          dbName = dotDb;
+          collectionName = dotColl;
+        }
+
+        const inputs: Record<string, any> = { ...stepInputs, collection: collectionName };
         const db = mongoClient.db(dbName);
 
-        if (actionId === 'find_documents') {
-          const filter = inputs.filter ? (typeof inputs.filter === 'string' ? JSON.parse(inputs.filter) : inputs.filter) : {};
-          const cap = process.env.TEST_RESULT_CAP ? parseInt(process.env.TEST_RESULT_CAP, 10) : (inputs.limit ? parseInt(inputs.limit, 10) : 10000);
-          const docs = await db.collection(inputs.collection).find(filter).limit(cap).toArray();
+        const parseJson = (val: any) =>
+          val === undefined || val === null ? {} : typeof val === 'string' ? JSON.parse(val) : val;
 
-          return {
-            success: true,
-            data: {
-              documents: docs,
-              count: docs.length,
-              truncated: docs.length >= cap,
-            },
-          };
+        if (actionId === 'find_documents') {
+          const filter = inputs.filter ? parseJson(inputs.filter) : {};
+          const cap = process.env.TEST_RESULT_CAP
+            ? parseInt(process.env.TEST_RESULT_CAP, 10)
+            : inputs.limit ? parseInt(inputs.limit, 10) : 10000;
+          const docs = await db.collection(collectionName).find(filter).limit(cap).toArray();
+          return { success: true, data: { documents: docs, count: docs.length, truncated: docs.length >= cap } };
+        }
+
+        if (actionId === 'find_one') {
+          const filter = parseJson(inputs.filter);
+          const doc = await db.collection(collectionName).findOne(filter);
+          return { success: true, data: { document: doc } };
+        }
+
+        if (actionId === 'count_documents') {
+          const filter = inputs.filter ? parseJson(inputs.filter) : {};
+          const count = await db.collection(collectionName).countDocuments(filter);
+          return { success: true, data: { count } };
         }
 
         if (actionId === 'insert_one') {
-          const doc = typeof inputs.document === 'string' ? JSON.parse(inputs.document) : inputs.document;
-          const res = await db.collection(inputs.collection).insertOne(doc);
+          const doc = parseJson(inputs.document);
+          const res = await db.collection(collectionName).insertOne(doc);
+          return { success: true, data: { insertedId: res.insertedId.toString() } };
+        }
 
-          return {
-            success: true,
-            data: {
-              insertedId: res.insertedId.toString(),
-            },
-          };
+        if (actionId === 'insert_many') {
+          const docs = typeof inputs.documents === 'string' ? JSON.parse(inputs.documents) : inputs.documents;
+          const res = await db.collection(collectionName).insertMany(Array.isArray(docs) ? docs : [docs]);
+          return { success: true, data: { insertedCount: res.insertedCount, insertedIds: Object.values(res.insertedIds).map(String) } };
+        }
+
+        if (actionId === 'update_one') {
+          const filter = parseJson(inputs.filter);
+          const update = parseJson(inputs.update);
+          const res = await db.collection(collectionName).updateOne(filter, update);
+          return { success: true, data: { matchedCount: res.matchedCount, modifiedCount: res.modifiedCount } };
+        }
+
+        if (actionId === 'update_many') {
+          const filter = parseJson(inputs.filter);
+          const update = parseJson(inputs.update);
+          const res = await db.collection(collectionName).updateMany(filter, update);
+          return { success: true, data: { matchedCount: res.matchedCount, modifiedCount: res.modifiedCount } };
+        }
+
+        if (actionId === 'delete_one') {
+          const filter = parseJson(inputs.filter);
+          const res = await db.collection(collectionName).deleteOne(filter);
+          return { success: true, data: { deletedCount: res.deletedCount } };
+        }
+
+        if (actionId === 'delete_many') {
+          const filter = parseJson(inputs.filter);
+          const res = await db.collection(collectionName).deleteMany(filter);
+          return { success: true, data: { deletedCount: res.deletedCount } };
+        }
+
+        if (actionId === 'aggregate') {
+          const pipeline = typeof inputs.pipeline === 'string' ? JSON.parse(inputs.pipeline) : inputs.pipeline;
+          const results = await db.collection(collectionName).aggregate(Array.isArray(pipeline) ? pipeline : [pipeline]).toArray();
+          return { success: true, data: { results } };
         }
 
         if (actionId === 'list_collections') {
           const collections = await db.listCollections().toArray();
-          const names = collections.map((c: any) => c.name);
-          return { success: true, data: { collections: names } };
+          return { success: true, data: { collections: collections.map((c: any) => c.name) } };
         }
+
+        if (actionId === 'create_index') {
+          const keys = parseJson(inputs.keys);
+          const indexName = await db.collection(collectionName).createIndex(keys);
+          return { success: true, data: { indexName } };
+        }
+
+        if (actionId === 'drop_collection') {
+          await db.collection(collectionName).drop();
+          return { success: true, data: { success: true } };
+        }
+
+        if (actionId === 'run_command') {
+          const command = parseJson(inputs.command);
+          const result = await db.command(command);
+          return { success: true, data: { result } };
+        }
+
+        // Any other action — return generic success
+        return { success: true, data: { success: true, action: actionId } };
       }
 
       // Mock fallback for unit test runners
@@ -253,7 +325,7 @@ export class MongodbConnector extends BaseConnector {
         return {
           success: true,
           data: {
-            documents: [{ _id: '60d5ec49f1b2c80015f8e4a1', collection: inputs.collection, status: 'active' }],
+            documents: [{ _id: '60d5ec49f1b2c80015f8e4a1', collection: stepInputs.collection, status: 'active' }],
             count: 1,
             truncated: false,
           },

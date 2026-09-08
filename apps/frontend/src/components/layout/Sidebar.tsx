@@ -2,12 +2,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Workflow, Cpu, Activity, Sparkles, Settings, Terminal, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Workflow, Cpu, Activity, Sparkles, Settings, Terminal, MessageCircle, Bot } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/workflows', label: 'Workflows', icon: Workflow },
   { href: '/ai-agent', label: 'AI Agent Generator', icon: Sparkles },
+  { href: '/agent-chat', label: 'Agent Chat', icon: Bot },
   { href: '/whatsapp-agent', label: 'WhatsApp Agent', icon: MessageCircle },
   { href: '/connectors', label: 'Integrations SDK', icon: Cpu },
   { href: '/executions', label: 'Execution Logs', icon: Activity },

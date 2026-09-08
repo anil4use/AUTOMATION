@@ -13,6 +13,7 @@ import logsRoutes from './modules/logs/logs.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import whatsappAgentRoutes from './modules/whatsapp-agent/whatsapp-agent.routes';
 import webhookGatewayRoutes from './modules/webhooks/webhook-gateway.routes';
+import agentChatRoutes from './modules/agent-chat/agent-chat.routes';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
@@ -53,6 +54,9 @@ export function createApp() {
 
   // WhatsApp Agent Automation
   app.use('/api/v1/wa', whatsappAgentRoutes);
+
+  // Dynamic Agent Chat — Connected Apps Natural Language Executor
+  app.use('/api/v1/agent-chat', agentChatRoutes);
 
   app.use(errorMiddleware as any);
 

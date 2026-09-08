@@ -14,3 +14,5 @@ export * from './models/wa-message.model';
 export * from './models/user-memory.model';
 export * from './models/workflow-version.model';
 export * from './models/webhook.model';
+export * from './models/agent-conversation.model';
+
