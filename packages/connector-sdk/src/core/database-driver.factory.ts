@@ -1,11 +1,3 @@
-import { Client as PGClient, Pool as PGPool } from 'pg';
-import mysql from 'mysql2/promise';
-import { MongoClient } from 'mongodb';
-import Redis from 'ioredis';
-import mssql from 'mssql';
-import { DynamoDB } from '@aws-sdk/client-dynamodb';
-import tunnelSSH from 'tunnel-ssh';
-
 export interface SSHTunnelConfig {
   enabled: boolean;
   host: string;
@@ -63,16 +55,33 @@ const poolMap = new Map<string, PoolRecord>();
 const MAX_ACTIVE_TUNNELS = 20;
 let activeTunnelCount = 0;
 
-// Idle pool sweeper (runs every 60s, closes pools unused for >10 minutes)
-setInterval(() => {
-  const now = Date.now();
-  const TEN_MINUTES = 10 * 60 * 1000;
-  for (const [connId, record] of poolMap.entries()) {
-    if (now - record.lastUsedAt > TEN_MINUTES) {
-      destroyPool(connId).catch(err => console.error(`[DatabaseFactory] Error sweeping pool ${connId}:`, err));
-    }
+/**
+ * Safely dynamic load Node.js database driver modules without breaking browser client bundles.
+ */
+function safeRequire(moduleName: string): any {
+  if (typeof window !== 'undefined') {
+    throw new Error(`Database driver '${moduleName}' cannot be executed in the browser.`);
   }
-}, 60000);
+  try {
+    const getReq = new Function('name', 'return require(name)');
+    return getReq(moduleName);
+  } catch (err: any) {
+    throw new Error(`Failed to load database driver '${moduleName}': ${err?.message || err}`);
+  }
+}
+
+// Idle pool sweeper (only active in Node.js server environments)
+if (typeof window === 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    const TEN_MINUTES = 10 * 60 * 1000;
+    for (const [connId, record] of poolMap.entries()) {
+      if (now - record.lastUsedAt > TEN_MINUTES) {
+        destroyPool(connId).catch(err => console.error(`[DatabaseFactory] Error sweeping pool ${connId}:`, err));
+      }
+    }
+  }, 60000);
+}
 
 /**
  * Destroys a pool and any associated SSH tunnel.
@@ -115,8 +124,10 @@ async function gracefulShutdown() {
   console.log('[DatabaseFactory] All database connections and SSH tunnels closed.');
 }
 
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
+if (typeof process !== 'undefined' && process.on) {
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+}
 
 /**
  * Creates an SSH tunnel if enabled in configuration.
@@ -152,6 +163,7 @@ async function setupSSHTunnelIfNeeded(config: DatabaseConnectionConfig): Promise
     localPort: localPort,
   };
 
+  const tunnelSSH = safeRequire('tunnel-ssh');
   return new Promise((resolve, reject) => {
     tunnelSSH(tunnelConfig, (error: any, server: any) => {
       if (error) {
@@ -172,12 +184,12 @@ async function setupSSHTunnelIfNeeded(config: DatabaseConnectionConfig): Promise
  */
 export async function createDatabaseClient(config: DatabaseConnectionConfig): Promise<{ client: any; dbType: string; closeTempConnection?: () => Promise<void> }> {
   const { dbType } = config;
-
-  // Setup SSH Tunnel if configured
   const { tunnel, targetHost, targetPort } = await setupSSHTunnelIfNeeded(config);
 
   try {
     if (dbType === 'postgresql') {
+      const pg = safeRequire('pg');
+      const PGClient = pg.Client || pg;
       const sslOption = config.ssl && config.ssl.enabled
         ? {
             rejectUnauthorized: config.ssl.rejectUnauthorized ?? true,
@@ -187,8 +199,7 @@ export async function createDatabaseClient(config: DatabaseConnectionConfig): Pr
           }
         : false;
 
-      let client: PGClient;
-
+      let client: any;
       if (config.connectionString) {
         client = new PGClient({ connectionString: config.connectionString, ssl: sslOption });
       } else {
@@ -215,7 +226,8 @@ export async function createDatabaseClient(config: DatabaseConnectionConfig): Pr
     }
 
     if (dbType === 'mysql') {
-      let connection: mysql.Connection;
+      const mysql = safeRequire('mysql2/promise');
+      let connection: any;
 
       if (config.connectionString) {
         connection = await mysql.createConnection(config.connectionString);
@@ -241,6 +253,7 @@ export async function createDatabaseClient(config: DatabaseConnectionConfig): Pr
     }
 
     if (dbType === 'mongodb') {
+      const { MongoClient } = safeRequire('mongodb');
       const uri = config.connectionString || `mongodb://${encodeURIComponent(config.username || '')}:${encodeURIComponent(config.password || '')}@${targetHost}:${targetPort}/${config.database || 'admin'}`;
       const mongoClient = new MongoClient(uri);
       await mongoClient.connect();
@@ -256,7 +269,10 @@ export async function createDatabaseClient(config: DatabaseConnectionConfig): Pr
     }
 
     if (dbType === 'redis') {
-      let redisClient: Redis;
+      const RedisMod = safeRequire('ioredis');
+      const Redis = RedisMod.default || RedisMod;
+      let redisClient: any;
+
       if (config.connectionString) {
         redisClient = new Redis(config.connectionString);
       } else {
@@ -280,6 +296,7 @@ export async function createDatabaseClient(config: DatabaseConnectionConfig): Pr
     }
 
     if (dbType === 'mssql') {
+      const mssql = safeRequire('mssql');
       const mssqlConfig: any = config.connectionString
         ? config.connectionString
         : {
@@ -303,6 +320,7 @@ export async function createDatabaseClient(config: DatabaseConnectionConfig): Pr
     }
 
     if (dbType === 'dynamodb') {
+      const { DynamoDB } = safeRequire('@aws-sdk/client-dynamodb');
       const dynamo = new DynamoDB({
         region: config.awsRegion || 'us-east-1',
         credentials: config.awsAccessKeyId ? { accessKeyId: config.awsAccessKeyId, secretAccessKey: config.awsSecretAccessKey || '' } : undefined,
@@ -343,6 +361,8 @@ export async function getOrCreatePool(config: DatabaseConnectionConfig): Promise
   let pool: any;
 
   if (dbType === 'postgresql') {
+    const pg = safeRequire('pg');
+    const PGPool = pg.Pool || pg;
     pool = new PGPool({
       host: targetHost,
       port: targetPort,
@@ -354,6 +374,7 @@ export async function getOrCreatePool(config: DatabaseConnectionConfig): Promise
       idleTimeoutMillis: 600000,
     });
   } else if (dbType === 'mysql') {
+    const mysql = safeRequire('mysql2/promise');
     pool = mysql.createPool({
       host: targetHost,
       port: targetPort,
@@ -363,14 +384,18 @@ export async function getOrCreatePool(config: DatabaseConnectionConfig): Promise
       connectionLimit: 5,
     });
   } else if (dbType === 'mongodb') {
+    const { MongoClient } = safeRequire('mongodb');
     const uri = config.connectionString || `mongodb://${encodeURIComponent(config.username || '')}:${encodeURIComponent(config.password || '')}@${targetHost}:${targetPort}/${config.database || 'admin'}`;
     pool = new MongoClient(uri, { maxPoolSize: 5 });
     await pool.connect();
   } else if (dbType === 'redis') {
+    const RedisMod = safeRequire('ioredis');
+    const Redis = RedisMod.default || RedisMod;
     pool = config.connectionString
       ? new Redis(config.connectionString)
       : new Redis({ host: targetHost, port: targetPort, password: config.password, db: config.dbIndex || 0 });
   } else if (dbType === 'dynamodb') {
+    const { DynamoDB } = safeRequire('@aws-sdk/client-dynamodb');
     pool = new DynamoDB({
       region: config.awsRegion || 'us-east-1',
       credentials: config.awsAccessKeyId ? { accessKeyId: config.awsAccessKeyId, secretAccessKey: config.awsSecretAccessKey || '' } : undefined,
@@ -384,7 +409,7 @@ export async function getOrCreatePool(config: DatabaseConnectionConfig): Promise
     pool,
     tunnel,
     lastUsedAt: Date.now(),
-    dbType,
+    dbType: dbType || 'unknown',
   });
 
   return pool;
