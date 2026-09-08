@@ -1056,7 +1056,7 @@ export default function ConnectorsPage() {
                               </>
                             )}
                             <button
-                              onClick={() => handleDeleteConnection(conn._id, conn.name)}
+                              onClick={() => setDeleteConfirmConn({ id: conn._id, name: conn.name })}
                               className="px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded text-xs font-semibold transition-colors flex items-center gap-1"
                               title="Delete Connection"
                             >
