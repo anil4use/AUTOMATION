@@ -55,6 +55,128 @@ interface ConnectedApp {
   status: string;
 }
 
+interface DynamicSuggestion {
+  title: string;
+  query: string;
+  category: string;
+  appName: string;
+  color: string;
+}
+
+// ─── Dynamic Prompt Suggestions Generator (Purely Connected Apps) ─────────────
+const CONNECTOR_SUGGESTIONS_BANK: Record<string, Array<{ title: string; query: string; category: string; color: string }>> = {
+  mongodb: [
+    { title: 'Count Mongo Users', query: 'How many users are in my MongoDB database?', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
+    { title: 'Query Collection', query: 'Find recent user documents in MongoDB collection users', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
+    { title: 'Insert Document', query: 'Insert a new user document with name Alex into MongoDB users', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
+  ],
+  gmail: [
+    { title: 'Latest Email Sender', query: 'Let me know who sent me the last email?', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
+    { title: 'Send Email Notification', query: 'send a email to email@example.com title Status Update message All system tests passing', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
+    { title: 'Read Inbox Messages', query: 'Read 5 recent emails from Gmail inbox', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
+  ],
+  slack: [
+    { title: 'Send Slack Message', query: 'Send a message to general channel on Slack', category: 'Messaging', color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30' },
+    { title: 'Slack Announcement', query: 'Post a status update message to #dev channel on Slack', category: 'Messaging', color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30' },
+  ],
+  github: [
+    { title: 'List Repositories', query: 'Get all repositories from GitHub', category: 'Developer', color: 'from-indigo-500/20 to-cyan-500/20 text-indigo-400 border-indigo-500/30' },
+    { title: 'Search Open Issues', query: 'Fetch open pull requests and issues from GitHub', category: 'Developer', color: 'from-indigo-500/20 to-cyan-500/20 text-indigo-400 border-indigo-500/30' },
+  ],
+  'google-sheets': [
+    { title: 'Create Google Sheet', query: 'Create a new Google Sheet for budget export', category: 'Productivity', color: 'from-emerald-500/20 to-lime-500/20 text-emerald-400 border-emerald-500/30' },
+    { title: 'Append Sheet Row', query: 'Append a row with name John and email john@example.com to Google Sheet', category: 'Productivity', color: 'from-emerald-500/20 to-lime-500/20 text-emerald-400 border-emerald-500/30' },
+  ],
+  postgresql: [
+    { title: 'Query Postgres Users', query: 'Execute SELECT count(*) FROM users in PostgreSQL database', category: 'Database', color: 'from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30' },
+    { title: 'List DB Tables', query: 'List all tables in my PostgreSQL database schema', category: 'Database', color: 'from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30' },
+  ],
+  mysql: [
+    { title: 'Query MySQL Table', query: 'Run query SELECT * FROM users ORDER BY created_at DESC LIMIT 10 in MySQL', category: 'Database', color: 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30' },
+  ],
+  redis: [
+    { title: 'Redis Key Lookup', query: 'Get value for key user_session:1001 from Redis cache', category: 'Cache', color: 'from-red-500/20 to-rose-500/20 text-red-400 border-red-500/30' },
+  ],
+  notion: [
+    { title: 'Notion DB Search', query: 'Query pages from Notion workspace database', category: 'Productivity', color: 'from-slate-500/20 to-zinc-500/20 text-slate-300 border-slate-500/30' },
+  ],
+  telegram: [
+    { title: 'Telegram Notification', query: 'Send notification message via Telegram bot', category: 'Messaging', color: 'from-sky-500/20 to-blue-500/20 text-sky-400 border-sky-500/30' },
+  ],
+  'google-drive': [
+    { title: 'Drive Storage Search', query: 'Search files and folders in Google Drive storage', category: 'Files', color: 'from-yellow-500/20 to-amber-500/20 text-yellow-400 border-yellow-500/30' },
+  ],
+  'google-docs': [
+    { title: 'Create Google Doc', query: 'Create a Google Doc called Meeting Notes', category: 'Productivity', color: 'from-blue-500/20 to-indigo-500/20 text-blue-400 border-blue-500/30' },
+  ],
+  'google-calendar': [
+    { title: 'Schedule Calendar Event', query: 'Schedule a meeting titled Team Standup on Google Calendar', category: 'Calendar', color: 'from-sky-500/20 to-indigo-500/20 text-sky-400 border-sky-500/30' },
+  ],
+  stripe: [
+    { title: 'List Stripe Payments', query: 'Fetch recent customer payments and charges from Stripe', category: 'Finance', color: 'from-purple-500/20 to-violet-500/20 text-purple-400 border-purple-500/30' },
+  ],
+  'web-search': [
+    { title: 'AI News Web Search', query: 'Search for today\'s AI news on the web', category: 'Search', color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30' },
+  ],
+};
+
+function getDynamicSuggestions(connectedApps: ConnectedApp[]): DynamicSuggestion[] {
+  const suggestions: DynamicSuggestion[] = [];
+
+  if (connectedApps.length > 0) {
+    connectedApps.forEach((app) => {
+      const cid = app.connectorId.toLowerCase().trim();
+      const bank = CONNECTOR_SUGGESTIONS_BANK[cid] || CONNECTOR_SUGGESTIONS_BANK[cid.replace(/-/g, '_')];
+      if (bank && bank.length > 0) {
+        bank.forEach((item) => {
+          suggestions.push({
+            ...item,
+            appName: app.name,
+          });
+        });
+      } else {
+        suggestions.push({
+          title: `${app.name} Query`,
+          query: `Execute actions and query data using my connected ${app.name}`,
+          category: 'Integration',
+          appName: app.name,
+          color: 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30',
+        });
+      }
+    });
+
+    let i = 0;
+    while (suggestions.length < 10 && connectedApps.length > 0) {
+      const app = connectedApps[i % connectedApps.length];
+      suggestions.push({
+        title: `${app.name} Health Check`,
+        query: `Verify connection status and list available actions for ${app.name}`,
+        category: 'Health Check',
+        appName: app.name,
+        color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30',
+      });
+      i++;
+    }
+  } else {
+    suggestions.push({
+      title: 'Connect Integrations',
+      query: 'Open Integrations SDK page to connect MongoDB, Gmail, Slack or GitHub',
+      category: 'Setup',
+      appName: 'System',
+      color: 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30',
+    });
+    suggestions.push({
+      title: 'Web Search',
+      query: 'Search for today\'s AI news on the web',
+      category: 'Search',
+      appName: 'Web Search',
+      color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30',
+    });
+  }
+
+  return suggestions.slice(0, 12);
+}
+
 // ─── Markdown Renderer ─────────────────────────────────────────────────────────
 function renderMarkdown(text: string): string {
   if (!text) return '';
@@ -85,7 +207,6 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
 
   return (
     <div className="w-full bg-slate-900/80 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-md mb-2 transition-all">
-      {/* Stepper Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800/60 mb-2.5">
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -104,7 +225,6 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
         </div>
       </div>
 
-      {/* Step items */}
       <div className="space-y-1.5">
         {steps.map((step, idx) => {
           const isExpanded = expandedStepId === step.id;
@@ -145,7 +265,6 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
                 </div>
               </div>
 
-              {/* Step Expanded Content / Preview */}
               {isExpanded && (
                 <div className="px-3 pb-2.5 pt-1 border-t border-slate-800/60 bg-slate-950/40 rounded-b-lg">
                   {step.error && (
@@ -157,9 +276,9 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
                   {step.preview ? (
                     <div>
                       <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                        <span>Output Data Payload</span>
+                        <span>Output Payload</span>
                       </div>
-                      <pre className="p-2 rounded bg-slate-900 border border-slate-800 text-[10px] text-indigo-200 font-mono overflow-x-auto max-h-36">
+                      <pre className="p-2 rounded bg-slate-900 border border-slate-800 text-[10px] text-indigo-200 font-mono overflow-x-auto max-h-36 no-scrollbar">
                         {typeof step.preview === 'object' ? JSON.stringify(step.preview, null, 2) : String(step.preview)}
                       </pre>
                     </div>
@@ -198,7 +317,6 @@ function MessageBubble({
 
   return (
     <div className={`flex gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start group`}>
-      {/* Avatar */}
       <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shadow-md transition-transform group-hover:scale-105 ${
         isUser
           ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white ring-2 ring-indigo-500/20'
@@ -208,17 +326,14 @@ function MessageBubble({
       </div>
 
       <div className={`max-w-[82%] sm:max-w-[78%] flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
-        {/* Timestamp */}
         <span className="text-[10px] text-slate-500 px-1 font-mono">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
 
-        {/* Execution steps */}
         {message.steps && message.steps.length > 0 && (
           <StepPipeline steps={message.steps} />
         )}
 
-        {/* Message Bubble Card */}
         <div className={`relative rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-lg backdrop-blur-md transition-all ${
           isUser
             ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-tr-xs border border-indigo-400/30'
@@ -232,14 +347,13 @@ function MessageBubble({
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
                 <Sparkles className="w-2.5 h-2.5 text-purple-400 absolute animate-pulse" />
               </div>
-              <span className="text-xs font-medium text-slate-300">Processing live request...</span>
+              <span className="text-xs font-medium text-slate-300">Executing dynamic action plan...</span>
             </div>
           ) : (
             <div dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }} />
           )}
         </div>
 
-        {/* Action Toolbar for Agent messages */}
         {!isUser && !message.isStreaming && message.content && (
           <div className="flex items-center gap-1.5 pt-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
             <button
@@ -413,7 +527,6 @@ export default function AgentChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load conversations & connected apps on mount
   useEffect(() => {
     fetchConversations();
     fetchConnectedApps();
@@ -440,7 +553,7 @@ export default function AgentChatPage() {
     setMessages([{
       id: 'welcome',
       role: 'agent',
-      content: `### Welcome to AutoFlow Dynamic Agent Chat! ⚡\n\nI have live, direct execution access across all your connected apps. Ask any question or request real actions — zero manual workflow configuration needed.\n\nTry asking me:\n- *"How many users are in my MongoDB database?"*\n- *"Send an email to anil@example.com with title Hello"* \n- *"Post a status message to #general on Slack"*\n- *"Fetch GitHub repos or search the web for latest AI news"`,
+      content: `### Welcome to AutoFlow Dynamic Agent Chat! ⚡\n\nI have live execution access across all your connected integrations. Ask any question or request real actions — zero manual workflow configuration needed.\n\nAll prompt suggestions below are dynamically generated based **only on your active connected apps**.`,
       timestamp: new Date(),
     }]);
   };
@@ -694,10 +807,12 @@ export default function AgentChatPage() {
     (c.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const dynamicSuggestions = getDynamicSuggestions(connectedApps);
+
   return (
     <div className="flex h-screen bg-[#080d16] text-slate-200 overflow-hidden font-sans">
 
-      {/* ── Left Sidebar (Conversations Hub) ── */}
+      {/* ── Left Sidebar (Conversations Hub - No Visible Scrollbar) ── */}
       {showSidebar && (
         <div className="w-72 bg-[#0b121f] border-r border-slate-800/80 flex flex-col flex-shrink-0 z-20 backdrop-blur-xl">
           {/* Header */}
@@ -735,8 +850,8 @@ export default function AgentChatPage() {
             </div>
           </div>
 
-          {/* Sessions List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {/* Sessions List (Clean no-scrollbar) */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar">
             {filteredConversations.length === 0 ? (
               <div className="text-center py-8 px-4">
                 <MessageSquare className="w-8 h-8 text-slate-700 mx-auto mb-2" />
@@ -775,7 +890,7 @@ export default function AgentChatPage() {
           {/* Footer Integration Widget */}
           <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400 text-[11px]">Active Apps</span>
+              <span className="text-slate-400 text-[11px]">Active Authenticated Apps</span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px]">
                 {connectedApps.length} Connected
               </span>
@@ -784,11 +899,11 @@ export default function AgentChatPage() {
         </div>
       )}
 
-      {/* ── Main Chat Area ── */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* ── Main Chat Area (Fixed Viewport Container) ── */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
 
         {/* ── Header Toolbar ── */}
-        <div className="border-b border-slate-800/80 bg-[#0a111c]/90 backdrop-blur-xl px-5 py-3 z-10">
+        <div className="border-b border-slate-800/80 bg-[#0a111c]/90 backdrop-blur-xl px-5 py-3 z-10 flex-shrink-0">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
@@ -842,7 +957,7 @@ export default function AgentChatPage() {
 
         {/* ── Confirmation Banner ── */}
         {confirmation && (
-          <div className="p-4 border-b border-amber-500/30 bg-amber-950/20 backdrop-blur-md">
+          <div className="p-4 border-b border-amber-500/30 bg-amber-950/20 backdrop-blur-md flex-shrink-0">
             <ConfirmationDialog
               message={confirmation.message}
               onConfirm={() => handleConfirm(true)}
@@ -851,8 +966,8 @@ export default function AgentChatPage() {
           </div>
         )}
 
-        {/* ── Message History Stream ── */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6">
+        {/* ── Message History Stream (Only Internal Thread Scrolls) ── */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6 no-scrollbar">
           {messages.map(msg => (
             <MessageBubble
               key={msg.id}
@@ -864,31 +979,34 @@ export default function AgentChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Empty State Hero Inspiration Cards ── */}
+        {/* ── Dynamic Inspiration Cards (100% Derived From Connected Apps) ── */}
         {messages.length === 1 && (
-          <div className="px-6 pb-4 max-w-4xl mx-auto w-full">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Suggested Real-World Prompt Actions:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              {[
-                { title: 'MongoDB Database', query: 'How many users are in my MongoDB database?', icon: Database, color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
-                { title: 'Gmail Inbox', query: 'Let me know who sent me the last email?', icon: Mail, color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
-                { title: 'Slack Messaging', query: 'Send a message to general channel on Slack', icon: MessageSquare, color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30' },
-                { title: 'GitHub Repos', query: 'Get all repositories from GitHub', icon: Globe, color: 'from-indigo-500/20 to-cyan-500/20 text-indigo-400 border-indigo-500/30' },
-              ].map((card, i) => (
+          <div className="px-6 pb-4 max-w-5xl mx-auto w-full flex-shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Dynamic Suggestions (Based on Connected Apps):
+              </p>
+              <span className="text-[10px] text-emerald-400 font-mono font-medium">
+                {connectedApps.length} Connected App{connectedApps.length !== 1 ? 's' : ''} Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1 no-scrollbar">
+              {dynamicSuggestions.map((card, i) => (
                 <button
                   key={i}
                   onClick={() => sendMessage(card.query)}
-                  className={`text-left p-3 rounded-2xl border bg-gradient-to-br ${card.color} bg-slate-900/60 hover:bg-slate-800/80 transition-all group flex flex-col justify-between shadow-lg hover:-translate-y-0.5`}
+                  className={`text-left p-3 rounded-2xl border bg-gradient-to-br ${card.color} bg-slate-900/70 hover:bg-slate-800/90 transition-all group flex flex-col justify-between shadow-lg hover:-translate-y-0.5 border-slate-800`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <card.icon className="w-4 h-4" />
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-300 px-1.5 py-0.5 rounded bg-slate-800/80">
+                      {card.appName}
+                    </span>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider block opacity-80">{card.title}</span>
-                    <span className="text-xs text-slate-200 line-clamp-2 mt-0.5 font-medium">{card.query}</span>
+                    <span className="text-[11px] font-bold text-white block truncate">{card.title}</span>
+                    <span className="text-[10px] text-slate-300 line-clamp-2 mt-0.5 leading-relaxed">{card.query}</span>
                   </div>
                 </button>
               ))}
@@ -896,23 +1014,20 @@ export default function AgentChatPage() {
           </div>
         )}
 
-        {/* ── Floating Prompt Input Bar ── */}
-        <div className="border-t border-slate-800/80 bg-[#080e18]/95 backdrop-blur-2xl px-4 sm:px-6 py-4">
-          {/* Action Quick Chips */}
+        {/* ── Floating Prompt Input Bar (Fixed Bottom Container) ── */}
+        <div className="border-t border-slate-800/80 bg-[#080e18]/95 backdrop-blur-2xl px-4 sm:px-6 py-4 flex-shrink-0">
+          {/* Dynamic Quick Action Chips */}
           <div className="flex items-center gap-2 mb-2.5 overflow-x-auto no-scrollbar">
-            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider flex-shrink-0">Quick Action:</span>
-            {[
-              { label: '🗄️ Query DB', text: 'How many users are in my MongoDB database?' },
-              { label: '✉️ Send Email', text: 'send a email to email@example.com title Hello message Hi there' },
-              { label: '💬 Slack Msg', text: 'Send a message to general channel on Slack' },
-              { label: '🌐 Web Search', text: 'Search for today\'s AI news on the web' },
-            ].map((chip, idx) => (
+            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider flex-shrink-0">Connected Apps Suggestions:</span>
+            {dynamicSuggestions.slice(0, 8).map((chip, idx) => (
               <button
                 key={idx}
-                onClick={() => setInput(chip.text)}
-                className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-[11px] text-slate-400 hover:text-slate-200 transition-all flex-shrink-0"
+                onClick={() => setInput(chip.query)}
+                className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-[11px] text-slate-300 hover:text-white transition-all flex-shrink-0 flex items-center gap-1.5 shadow-sm"
               >
-                {chip.label}
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="font-semibold text-indigo-300">{chip.appName}:</span>
+                <span className="truncate max-w-[140px]">{chip.title}</span>
               </button>
             ))}
           </div>
@@ -924,7 +1039,7 @@ export default function AgentChatPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything... query databases, send emails, post messages, create docs or export sheets..."
+              placeholder={connectedApps.length > 0 ? `Ask anything about your connected apps (${connectedApps.map(a => a.name.split(' ')[0]).join(', ')})...` : "Ask anything... connect apps to enable direct database & email execution..."}
               rows={1}
               disabled={isExecuting}
               className="flex-1 bg-transparent px-3 py-2 text-xs text-slate-100 placeholder-slate-500 resize-none focus:outline-none disabled:opacity-50 font-sans"

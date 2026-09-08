@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useUserRole } from '@/context/UserRoleContext';
@@ -8,7 +8,10 @@ import { getSocketClient } from '@/lib/socket-client';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoadingSession } = useUserRole();
+
+  const isChatPage = pathname === '/agent-chat';
 
   // Route guard — redirect unauthenticated users only AFTER session restoration check completes
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-bgPrimary p-6">
+        <main className={`flex-1 ${isChatPage ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'} bg-bgPrimary`}>
           {children}
         </main>
       </div>
