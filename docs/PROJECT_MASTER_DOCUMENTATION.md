@@ -1,37 +1,37 @@
 # Automation Platform — Project Master Documentation (Source of Truth)
 
 **Project Name**: AutoFlow AI Automation Platform (Zapier-Style MERN + AI Agent)  
-**Architecture**: Monorepo (Turborepo + NPM Workspaces)  
-**Primary Stack**: Next.js 14 App Router, Node.js / Express (TypeScript), BullMQ / Redis, MongoDB Atlas (Mongoose), Groq / Gemini LLM.  
-**Master Build Plan**: [Automation_Platform_Master_Build_Plan.docx](file:///d:/CODE/AUTOMATIONS/docs/Automation_Platform_Master_Build_Plan.docx)  
+**Architecture**: Domain-Driven Design (DDD) Monorepo (Turborepo + NPM Workspaces + 14 Packages)  
+**Primary Stack**: Next.js 14 App Router, Express REST Gateway (`apps/api`), BullMQ Worker (`apps/worker`), Scheduler Service (`apps/scheduler`), Webhook Ingestion Service (`apps/webhook`), Node.js Backend (`apps/backend`), MongoDB Atlas (Mongoose), Upstash Redis, Groq / Gemini LLM.  
 **Master Integration Roadmap**: [MASTER_INTEGRATION_ROADMAP.md](file:///d:/CODE/AUTOMATIONS/docs/MASTER_INTEGRATION_ROADMAP.md)  
-**System Diagnostics & Roadmap**: [SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md](file:///d:/CODE/AUTOMATIONS/docs/SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md)  
+**Database Architecture Guide**: [DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md](file:///d:/CODE/AUTOMATIONS/docs/DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md)  
 **Master Task Status File**: [TASK_STATUS.md](file:///d:/CODE/AUTOMATIONS/docs/TASK_STATUS.md)  
-**Last Updated**: 2026-08-27  
+**Last Updated**: 2026-09-08  
 
 ---
 
-## 📌 Monorepo & System Architecture
+## 📌 Monorepo & System Architecture (14 Workspace Packages)
 
 ```
 AUTOMATIONS/
 ├── apps/
-│   ├── frontend/            # Next.js 14 App Router UI (Workflows, Canvas Builder, Co-Pilot, Executions, Connectors, AI Agent Chat)
-│   ├── backend/             # Modular Express REST API (7-Layer Architecture + AI Co-Pilot API + MongoDB Atlas)
-│   └── worker/              # BullMQ Background Worker Process (DAG Engine + Auto-Credential Resolver + Redis Rate Limiter)
+│   ├── frontend/            # Next.js 14 App Router UI (Workflows, Canvas Builder, Co-Pilot, Executions, Connectors)
+│   ├── api/                 # Thin Express REST API Gateway (Decoupled Use Cases)
+│   ├── backend/             # Enterprise Modular Express Backend (Connectors, OAuth, Verification)
+│   ├── worker/              # BullMQ Background Execution Worker (DAG Execution Engine)
+│   ├── scheduler/           # Dedicated Polling, Cron & OAuth Renewal Daemon
+│   └── webhook/             # High-Throughput Incoming Webhook Ingestion Service
 ├── packages/
-│   ├── connector-sdk/       # 11 Native Multi-App Plugins (Schedule, Web Search, Gmail, Slack, Sheets, Drive, Notion, Stripe, WhatsApp, Webhooks, AI Node)
-│   ├── database/            # Mongoose ODM Models (User, Org, Workflow, Connection, Log, Usage, AIChat)
-│   ├── shared-types/        # Shared DTOs, DAG Contracts & API interfaces
-│   └── config/              # Shared tsconfig.base.json & eslint.base.json
-├── scripts/
-│   └── test-runner.ts       # End-to-End Automated Integration Test Suite (17/17 PASSED)
+│   ├── domain/              # Pure Domain Entities & Business Logic (Zero Third-Party Dependencies)
+│   ├── events/              # Event Bus & Pub/Sub Domain Event System
+│   ├── observability/       # Structured Logger, Context Tracer & Diagnostics Metrics
+│   ├── workflow-engine/     # Isolated DAG Topological Execution Engine & Step Executor
+│   ├── connector-sdk/       # Multi-App Plugin SDK, Database Drivers, Pool Lifecycle & Provider Verification
+│   ├── connectors/          # 62 Categorized Manifests & Modular Connector Actions/Triggers
+│   ├── application/         # Decoupled Use Cases (CreateWorkflowUseCase, ExecuteWorkflowUseCase)
+│   ├── database/            # Mongoose ODM Models (User, Org, Workflow, Connection, Log, AIChat)
+│   └── shared-types/        # Shared DTOs, Manifest Schemas & API Interfaces
 └── docs/                    # Central Documentation Hub
-    ├── Automation_Platform_Master_Build_Plan.docx  # Original Master Spec
-    ├── SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md       # Diagnostic Health & Roadmap
-    ├── PROJECT_MASTER_DOCUMENTATION.md              # (This File - Source of Truth)
-    ├── TASK_STATUS.md                               # Comprehensive Task Status Tracker
-    └── features/                                    # Detailed Feature Documentation
 ```
 
 ---
@@ -57,8 +57,20 @@ AUTOMATIONS/
 ### 5. Native Web Search & Scraper SDK (`WebSearchConnector`)
 - **Native Platform Connector**: Integrates live Tavily API searching (`search_web`), DuckDuckGo web scraping fallback, and live URL text extraction (`scrape_url`) with zero user API key setup required (`authType: 'none'`).
 
-### 6. Google Sheets 400 Range Repair & Tab Auto-Creation
-- **Automatic Worksheet Creation**: Catches `400 Bad Request: Unable to parse range` errors (e.g. missing `JobListings` tab), issues a `batchUpdate` `addSheet` request to create the worksheet tab dynamically, and retries append operations cleanly.
+### 6. Full-Power 62-Connector Suite & Dynamic Manifest System
+- **62 Platform Connectors**: Exposes 317 actions and 119 triggers across SaaS, AI, Cloud, Storage, and Database integrations.
+- **Dynamic Choices API**: Provides cached choices (`GET /v1/connectors/choices/:appId/:fieldId`) with a 5-minute Redis TTL for dynamic workspace items (Slack channels, Gmail labels, GitHub repositories, DB tables).
+
+### 7. Enterprise Database Connector Subsystem (Full Flexibility Protocol)
+- **10 Database Engines Supported**: PostgreSQL, MySQL, MongoDB, Redis, DynamoDB, SQL Server (MSSQL), Supabase, PlanetScale, Neon Postgres, SQLite.
+- **6 Connection Methods**: Individual Host Fields, Connection URI/String, SSH Tunnel Forwarding, SSL/TLS Certificates, Unix Domain Sockets, Read Replicas.
+- **Dialect-Aware Parameterizer (`query-sanitizer.ts`)**: Auto-translates `{{variable.path}}` parameters into dialect placeholders (`$1, $2` for PostgreSQL; `?` for MySQL; `@p1, @p2` for SQL Server).
+- **Automated `LIMIT` Capper**: Enforces default 10,000 row ceiling (max 50,000) on SQL queries to prevent worker memory exhaustion.
+- **Statement Guard (`allowedStatements`)**: Enforces operation safety (e.g. restricting read-only connections to `SELECT` operations only).
+- **Dynamic SSH Tunnel Management**: Port allocation (`15000-25000`), cap of 20 tunnels, and automatic lifecycle binding to connection pool.
+- **In-Memory Connection Pooling**: Singleton `poolMap` with 10-minute idle eviction sweeper and `destroyPool()` on credential update/deletion.
+- **Production Protection Locks**: Production environment tag (`environmentTag === 'production'`) blocks destructive operations like Redis `FLUSHDB` or SQL `DROP`.
+- **Pre-Save Verification Protocol**: All database connections require a successful live ping test (`POST /v1/connectors/test-connection`) before saving to database.
 
 ---
 
@@ -66,12 +78,6 @@ AUTOMATIONS/
 
 | Feature Area | Document File | Description |
 | :--- | :--- | :--- |
+| **Database Connector Architecture** | [DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md](file:///d:/CODE/AUTOMATIONS/docs/DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md) | Full guide for DB engines, SSH tunnels, pooling, parameterization & security |
 | **System Diagnostics & Roadmap** | [SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md](file:///d:/CODE/AUTOMATIONS/docs/SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md) | Architectural audit, scalability diagnosis, and feature roadmap |
-| **Monorepo & Tooling** | [01_monorepo_and_tooling.md](file:///d:/CODE/AUTOMATIONS/docs/features/01_monorepo_and_tooling.md) | Workspace packages, Turborepo pipeline, tsconfig, Docker setup |
-| **Backend Modular System** | [02_backend_modular_architecture.md](file:///d:/CODE/AUTOMATIONS/docs/features/02_backend_modular_architecture.md) | 7-layer architecture, Express routes, controllers, services, repositories |
-| **Connector SDK & Security** | [03_connector_sdk.md](file:///d:/CODE/AUTOMATIONS/docs/features/03_connector_sdk.md) | AES-256 encryption, 11 native connector plugins, worker auto-configuration |
-| **BullMQ Worker Engine** | [04_bullmq_worker_engine.md](file:///d:/CODE/AUTOMATIONS/docs/features/04_bullmq_worker_engine.md) | DAG topological runner, step execution, retries, rate limiter |
-| **Zapier Next.js UI & Builder** | [05_frontend_nextjs_ui.md](file:///d:/CODE/AUTOMATIONS/docs/features/05_frontend_nextjs_ui.md) | Next.js 14 App Router, visual DAG builder, canvas draft loader, executions inspector |
-| **AI Agent & Co-Pilot** | [06_ai_agent_service.md](file:///d:/CODE/AUTOMATIONS/docs/features/06_ai_agent_service.md) | Gemini/Groq LLM chat, in-canvas AI Co-Pilot assistant, vertical DAG compiler |
-| **Database & Shared Types** | [07_database_and_shared_types.md](file:///d:/CODE/AUTOMATIONS/docs/features/07_database_and_shared_types.md) | Mongoose ODM schemas (`AIChatModel`) & TypeScript contracts |
-| **Design Tokens & Tailwind** | [08_frontend_design_system_and_tokens.md](file:///d:/CODE/AUTOMATIONS/docs/features/08_frontend_design_system_and_tokens.md) | Central design tokens (`tokens.ts`) & Tailwind CSS styling |
+| **Master Task Status** | [TASK_STATUS.md](file:///d:/CODE/AUTOMATIONS/docs/TASK_STATUS.md) | Comprehensive task tracker across all 10 implementation phases (72/72 tasks) |
