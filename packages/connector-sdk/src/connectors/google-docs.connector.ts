@@ -80,8 +80,7 @@ export class GoogleDocsConnector extends BaseConnector {
 
     // 1. Action: CREATE DOCUMENT
     if (actionId === 'create_document') {
-      const title = context.stepInput.title;
-      if (!title) throw new Error('Google Docs Create error: "title" is required.');
+      const title = context.stepInput.title || context.stepInput.name || 'AutoFlow Document';
 
       const res = await fetch('https://docs.googleapis.com/v1/documents', {
         method: 'POST',

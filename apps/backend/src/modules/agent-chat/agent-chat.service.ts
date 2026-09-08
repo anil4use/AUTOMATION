@@ -301,15 +301,115 @@ function getDbConnectorInstance(connectorId: string): any {
   }
 }
 
+// ─── Universal Dynamic Action Input Hydrator ─────────────────────────────────
+export function hydrateActionInputs(
+  step: ExecutionStep,
+  userMessage: string,
+  context: Map<string, any>,
+  credentials: any,
+  resolvedInputs: Record<string, any>
+): Record<string, any> {
+  const inputs = { ...(resolvedInputs || {}) };
+  const cid = step.connectorId.toLowerCase().trim().replace(/_/g, '-');
+  const aid = step.actionId.toLowerCase().trim();
+
+  let manifestInputs: any[] = [];
+  try {
+    const { manifestRegistry } = require('@automation/connector-sdk');
+    const manifest = manifestRegistry.getManifest(cid) || manifestRegistry.getManifest(cid.replace(/-/g, '_'));
+    if (manifest && manifest.actions) {
+      const act = manifest.actions.find((a: any) => a.id === aid || a.id.toLowerCase() === aid);
+      if (act && act.inputs) {
+        manifestInputs = act.inputs;
+      }
+    }
+  } catch {}
+
+  const topic = extractPromptTopic(userMessage);
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  // Dynamic AI Defaults: ONLY used if user/LLM did NOT provide a specific value
+  const dynamicAiDefaults: Record<string, () => any> = {
+    folderName: () => inputs.folderName || inputs.title || inputs.name || `${topic} Folder`,
+    folder_name: () => inputs.folderName || inputs.title || `${topic} Folder`,
+    title: () => inputs.title || inputs.name || `${topic} - ${dateStr}`,
+    name: () => inputs.name || inputs.title || `${topic} - ${dateStr}`,
+    fileName: () => inputs.fileName || inputs.filename || `${topic}_Export.txt`,
+    filename: () => inputs.filename || inputs.fileName || `${topic}_Export.txt`,
+    documentName: () => inputs.documentName || inputs.title || `${topic} Document`,
+    spreadsheetTitle: () => inputs.spreadsheetTitle || inputs.title || `${topic} Sheet`,
+    query: () => inputs.query || inputs.search || topic || 'AI News',
+    search: () => inputs.search || inputs.query || topic || 'AI News',
+    q: () => inputs.q || inputs.query || topic,
+    collection: () => inputs.collection || inputs.table || 'users',
+    database: () => inputs.database || credentials?.database || credentials?.dbName || 'automation_platform',
+    to: () => inputs.to || inputs.email || credentials?.userEmail || credentials?.email || 'user@example.com',
+    recipient: () => inputs.recipient || inputs.to || 'user@example.com',
+    subject: () => inputs.subject || inputs.title || `${topic} Report`,
+    body: () => inputs.body || inputs.message || inputs.text || `AutoFlow automated execution report for ${topic}`,
+    message: () => inputs.message || inputs.text || inputs.body || `AutoFlow automated execution report for ${topic}`,
+    text: () => inputs.text || inputs.message || inputs.body || `AutoFlow automated report for ${topic}`,
+    channel: () => inputs.channel || '#general',
+    limit: () => inputs.limit ? Number(inputs.limit) : 10,
+    rows: () => inputs.rows || (inputs.values ? [inputs.values] : [[topic, dateStr, 'Automated AI Entry']]),
+    values: () => inputs.values || [topic, dateStr, 'Automated AI Entry'],
+  };
+
+  // If user provided a specific value, KEEP IT!
+  // If user/LLM omitted a required or expected field, populate AI dynamic value:
+  manifestInputs.forEach((field: any) => {
+    const key = field.key;
+    const currentVal = inputs[key];
+    const isMissing = currentVal === undefined || currentVal === null || (typeof currentVal === 'string' && currentVal.trim() === '');
+
+    if (isMissing) {
+      if (dynamicAiDefaults[key]) {
+        inputs[key] = dynamicAiDefaults[key]();
+      } else if (field.required) {
+        if (field.type === 'string') inputs[key] = `${field.label || key} for ${topic}`;
+        else if (field.type === 'number') inputs[key] = 10;
+        else if (field.type === 'boolean') inputs[key] = true;
+        else if (field.type === 'array') inputs[key] = [];
+        else if (field.type === 'object') inputs[key] = {};
+      }
+    }
+  });
+
+  // Action-specific dynamic fallback guarantees for any action
+  if ((aid.includes('folder') || aid.includes('create_folder')) && !inputs.folderName) {
+    inputs.folderName = inputs.name || inputs.title || `${topic} Folder`;
+  }
+  if ((aid.includes('create') || aid.includes('sheet') || aid.includes('doc')) && !inputs.title && !inputs.name) {
+    inputs.title = `${topic} - ${dateStr}`;
+  }
+
+  return inputs;
+}
+
+function extractPromptTopic(userMessage: string): string {
+  if (!userMessage) return 'AutoFlow Task';
+  const clean = userMessage
+    .replace(/^(can you|please|i want to|help me|how to|send a|read|get|fetch|find|search|show me|create a|create|make a)\s+/i, '')
+    .replace(/[^\w\s-]/g, '')
+    .trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length > 0) {
+    return words.slice(0, 4).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+  return 'AutoFlow Task';
+}
+
 // ─── Execute Single Step ──────────────────────────────────────────────────────
 async function executeStep(
   step: ExecutionStep,
   context: Map<string, any>,
   credentials: any,
-  connectionId: string
+  connectionId: string,
+  userMessage?: string
 ): Promise<{ success: boolean; output?: any; error?: string; errorCode?: string }> {
   try {
     const resolvedInputs = resolveVariables(step.inputs, context);
+    const finalInputs = hydrateActionInputs(step, userMessage || '', context, credentials, resolvedInputs);
 
     // ── Database connectors ─────────────────────────────────────────────────
     if (DB_CONNECTOR_IDS.has(step.connectorId)) {
@@ -339,7 +439,7 @@ async function executeStep(
         : step.actionId;
 
       const result = await connector.executeAction(targetActionId, {
-        stepInput: resolvedInputs,
+        stepInput: finalInputs,
         connectionConfig,
         connectionCredentials: credentials,
         workflowVariables: {},
@@ -367,7 +467,7 @@ async function executeStep(
       const result = await connector.executeAction(targetActionId, {
         connectionCredentials: credentials,
         workflowVariables: {},
-        stepInput: resolvedInputs,
+        stepInput: finalInputs,
       });
       return { success: true, output: result.data ?? result };
     }
@@ -948,7 +1048,7 @@ export class AgentChatService {
           apiCallCount++;
           const itemContext = new Map(context);
           itemContext.set('item', item);
-          const loopResult = await executeStep(step, itemContext, credentials, conn?.connectionId || '');
+          const loopResult = await executeStep(step, itemContext, credentials, conn?.connectionId || '', userMessage);
           loopResults.push(loopResult.output || loopResult.error);
         }
 
@@ -957,7 +1057,7 @@ export class AgentChatService {
         emitSSE({ type: 'step_complete', stepId: step.stepId, description: `${step.description} (${items.length} items processed)`, preview: loopResults.slice(0, 3) });
       } else {
         apiCallCount++;
-        const result = await executeStep(step, context, credentials, conn?.connectionId || '');
+        const result = await executeStep(step, context, credentials, conn?.connectionId || '', userMessage);
 
         if (result.success) {
           context.set(step.stepId, result.output);

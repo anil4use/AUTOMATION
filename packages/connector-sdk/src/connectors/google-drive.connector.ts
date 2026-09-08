@@ -97,12 +97,8 @@ export class GoogleDriveConnector extends BaseConnector {
 
     // 1. Action: UPLOAD FILE
     if (actionId === 'upload_file') {
-      const fileName = context.stepInput.fileName;
+      const fileName = context.stepInput.fileName || context.stepInput.name || context.stepInput.title || 'AutoFlow_Export.txt';
       const content = context.stepInput.content || '';
-      const folderId = context.stepInput.folderId;
-      const mimeType = context.stepInput.mimeType || 'text/plain';
-
-      if (!fileName) throw new Error('Google Drive Upload error: "fileName" is required.');
 
       const metadata: any = { name: fileName, mimeType };
       if (folderId) metadata.parents = [folderId];
@@ -145,8 +141,7 @@ export class GoogleDriveConnector extends BaseConnector {
 
     // 2. Action: CREATE FOLDER
     if (actionId === 'create_folder') {
-      const folderName = context.stepInput.folderName;
-      if (!folderName) throw new Error('Google Drive Create Folder error: "folderName" is required.');
+      const folderName = context.stepInput.folderName || context.stepInput.name || context.stepInput.title || 'AutoFlow Folder';
 
       const metadata: any = {
         name: folderName,

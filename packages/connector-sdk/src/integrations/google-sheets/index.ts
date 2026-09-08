@@ -466,8 +466,9 @@ export class GoogleSheetsConnector extends BaseConnector {
         }
 
         case 'create_spreadsheet': {
+          const sheetTitle = inputs.title || inputs.name || inputs.spreadsheetTitle || 'AutoFlow Sheet';
           const { data } = await api.post('', {
-            properties: { title: inputs.title },
+            properties: { title: sheetTitle },
           });
           return {
             success: true,
