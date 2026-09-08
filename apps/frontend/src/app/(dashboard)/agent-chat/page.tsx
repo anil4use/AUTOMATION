@@ -61,6 +61,7 @@ interface DynamicSuggestion {
   category: string;
   appName: string;
   color: string;
+  isMultiApp?: boolean;
 }
 
 // ─── Dynamic Prompt Suggestions Generator (Purely Connected Apps) ─────────────
@@ -69,23 +70,28 @@ const CONNECTOR_SUGGESTIONS_BANK: Record<string, Array<{ title: string; query: s
     { title: 'Count Mongo Users', query: 'How many users are in my MongoDB database?', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
     { title: 'Query Collection', query: 'Find recent user documents in MongoDB collection users', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
     { title: 'Insert Document', query: 'Insert a new user document with name Alex into MongoDB users', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
+    { title: 'Update Document', query: 'Update user status to active in MongoDB collection users', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
   ],
   gmail: [
     { title: 'Latest Email Sender', query: 'Let me know who sent me the last email?', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
     { title: 'Send Email Notification', query: 'send a email to email@example.com title Status Update message All system tests passing', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
     { title: 'Read Inbox Messages', query: 'Read 5 recent emails from Gmail inbox', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
+    { title: 'Search Email Subject', query: 'Search Gmail inbox for emails with subject invoice', category: 'Email', color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30' },
   ],
   slack: [
     { title: 'Send Slack Message', query: 'Send a message to general channel on Slack', category: 'Messaging', color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30' },
     { title: 'Slack Announcement', query: 'Post a status update message to #dev channel on Slack', category: 'Messaging', color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30' },
+    { title: 'List Slack Channels', query: 'Fetch available channels from Slack workspace', category: 'Messaging', color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30' },
   ],
   github: [
     { title: 'List Repositories', query: 'Get all repositories from GitHub', category: 'Developer', color: 'from-indigo-500/20 to-cyan-500/20 text-indigo-400 border-indigo-500/30' },
     { title: 'Search Open Issues', query: 'Fetch open pull requests and issues from GitHub', category: 'Developer', color: 'from-indigo-500/20 to-cyan-500/20 text-indigo-400 border-indigo-500/30' },
+    { title: 'Create GitHub Issue', query: 'Create a new GitHub issue titled Bug in Auth Service', category: 'Developer', color: 'from-indigo-500/20 to-cyan-500/20 text-indigo-400 border-indigo-500/30' },
   ],
   'google-sheets': [
     { title: 'Create Google Sheet', query: 'Create a new Google Sheet for budget export', category: 'Productivity', color: 'from-emerald-500/20 to-lime-500/20 text-emerald-400 border-emerald-500/30' },
     { title: 'Append Sheet Row', query: 'Append a row with name John and email john@example.com to Google Sheet', category: 'Productivity', color: 'from-emerald-500/20 to-lime-500/20 text-emerald-400 border-emerald-500/30' },
+    { title: 'Read Sheet Rows', query: 'Read data rows from my Google Sheet', category: 'Productivity', color: 'from-emerald-500/20 to-lime-500/20 text-emerald-400 border-emerald-500/30' },
   ],
   postgresql: [
     { title: 'Query Postgres Users', query: 'Execute SELECT count(*) FROM users in PostgreSQL database', category: 'Database', color: 'from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30' },
@@ -99,9 +105,14 @@ const CONNECTOR_SUGGESTIONS_BANK: Record<string, Array<{ title: string; query: s
   ],
   notion: [
     { title: 'Notion DB Search', query: 'Query pages from Notion workspace database', category: 'Productivity', color: 'from-slate-500/20 to-zinc-500/20 text-slate-300 border-slate-500/30' },
+    { title: 'Create Notion Page', query: 'Create a new page in Notion workspace titled Project Plan', category: 'Productivity', color: 'from-slate-500/20 to-zinc-500/20 text-slate-300 border-slate-500/30' },
   ],
   telegram: [
     { title: 'Telegram Notification', query: 'Send notification message via Telegram bot', category: 'Messaging', color: 'from-sky-500/20 to-blue-500/20 text-sky-400 border-sky-500/30' },
+  ],
+  whatsapp: [
+    { title: 'Send WhatsApp Message', query: 'Send WhatsApp message to +1234567890 saying Hello from AutoFlow', category: 'Messaging', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
+    { title: 'Read WhatsApp Chats', query: 'Read recent messages from WhatsApp chat inbox', category: 'Messaging', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
   ],
   'google-drive': [
     { title: 'Drive Storage Search', query: 'Search files and folders in Google Drive storage', category: 'Files', color: 'from-yellow-500/20 to-amber-500/20 text-yellow-400 border-yellow-500/30' },
@@ -115,52 +126,114 @@ const CONNECTOR_SUGGESTIONS_BANK: Record<string, Array<{ title: string; query: s
   stripe: [
     { title: 'List Stripe Payments', query: 'Fetch recent customer payments and charges from Stripe', category: 'Finance', color: 'from-purple-500/20 to-violet-500/20 text-purple-400 border-purple-500/30' },
   ],
+  hubspot: [
+    { title: 'Fetch HubSpot Contacts', query: 'Get recent contacts and deals from HubSpot CRM', category: 'CRM', color: 'from-orange-500/20 to-amber-500/20 text-orange-400 border-orange-500/30' },
+  ],
   'web-search': [
     { title: 'AI News Web Search', query: 'Search for today\'s AI news on the web', category: 'Search', color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30' },
   ],
 };
 
+const MULTI_APP_PAIR_BANK: Array<{
+  apps: string[];
+  title: string;
+  query: string;
+  category: string;
+  color: string;
+}> = [
+  {
+    apps: ['gmail', 'google-sheets'],
+    title: 'Sync Gmail to Google Sheets',
+    query: 'Read 5 recent emails from Gmail inbox and log their subject and senders to Google Sheets',
+    category: 'Cross-App Workflow',
+    color: 'from-purple-500/25 via-pink-500/20 to-rose-500/25 text-purple-300 border-purple-500/50 shadow-purple-500/10',
+  },
+  {
+    apps: ['gmail', 'google-sheets'],
+    title: 'Email Leads from Google Sheet',
+    query: 'Read rows from Google Sheet and send an email update via Gmail to each contact',
+    category: 'Cross-App Workflow',
+    color: 'from-purple-500/25 via-pink-500/20 to-rose-500/25 text-purple-300 border-purple-500/50 shadow-purple-500/10',
+  },
+  {
+    apps: ['mongodb', 'slack'],
+    title: 'Post DB Metrics to Slack',
+    query: 'How many users are in my MongoDB database? Send a summary report to general channel on Slack',
+    category: 'Cross-App Workflow',
+    color: 'from-emerald-500/25 via-purple-500/20 to-indigo-500/25 text-emerald-300 border-emerald-500/50 shadow-emerald-500/10',
+  },
+  {
+    apps: ['github', 'slack'],
+    title: 'GitHub PR Updates to Slack',
+    query: 'Fetch open pull requests from GitHub and post the update summary to Slack #dev channel',
+    category: 'Cross-App Workflow',
+    color: 'from-indigo-500/25 via-purple-500/20 to-cyan-500/25 text-indigo-300 border-indigo-500/50 shadow-indigo-500/10',
+  },
+  {
+    apps: ['gmail', 'slack'],
+    title: 'Forward Urgent Emails to Slack',
+    query: 'Read recent inbox messages from Gmail and forward important updates to Slack channel',
+    category: 'Cross-App Workflow',
+    color: 'from-rose-500/25 via-purple-500/20 to-orange-500/25 text-rose-300 border-rose-500/50 shadow-rose-500/10',
+  },
+  {
+    apps: ['mongodb', 'gmail'],
+    title: 'Email DB Audit Report',
+    query: 'Query user count and statistics from MongoDB database and email summary report via Gmail',
+    category: 'Cross-App Workflow',
+    color: 'from-emerald-500/25 via-rose-500/20 to-teal-500/25 text-emerald-300 border-emerald-500/50 shadow-emerald-500/10',
+  },
+  {
+    apps: ['postgresql', 'google-sheets'],
+    title: 'Export Postgres SQL to Sheets',
+    query: 'Execute SELECT count(*) FROM users in PostgreSQL database and append metrics to Google Sheet',
+    category: 'Cross-App Workflow',
+    color: 'from-blue-500/25 via-emerald-500/20 to-cyan-500/25 text-blue-300 border-blue-500/50 shadow-blue-500/10',
+  },
+  {
+    apps: ['whatsapp', 'slack'],
+    title: 'Sync WhatsApp to Slack',
+    query: 'Read recent incoming WhatsApp messages and post updates to Slack team channel',
+    category: 'Cross-App Workflow',
+    color: 'from-emerald-500/25 via-purple-500/20 to-teal-500/25 text-emerald-300 border-emerald-500/50 shadow-emerald-500/10',
+  },
+  {
+    apps: ['notion', 'slack'],
+    title: 'Notion Updates to Slack',
+    query: 'Fetch updated workspace pages in Notion and notify the team on Slack',
+    category: 'Cross-App Workflow',
+    color: 'from-slate-500/25 via-purple-500/20 to-indigo-500/25 text-slate-300 border-slate-500/50 shadow-slate-500/10',
+  },
+  {
+    apps: ['google-sheets', 'slack'],
+    title: 'Post Sheet Summary to Slack',
+    query: 'Read row metrics from Google Sheet and post a formatted summary table to Slack',
+    category: 'Cross-App Workflow',
+    color: 'from-emerald-500/25 via-purple-500/20 to-teal-500/25 text-emerald-300 border-emerald-500/50 shadow-emerald-500/10',
+  },
+  {
+    apps: ['github', 'gmail'],
+    title: 'Email GitHub Issue Report',
+    query: 'Fetch open repository issues from GitHub and send an issue digest email via Gmail',
+    category: 'Cross-App Workflow',
+    color: 'from-indigo-500/25 via-rose-500/20 to-purple-500/25 text-indigo-300 border-indigo-500/50 shadow-indigo-500/10',
+  },
+  {
+    apps: ['hubspot', 'google-sheets'],
+    title: 'Export CRM Leads to Sheets',
+    query: 'Fetch recent contacts from HubSpot CRM and export details to a new Google Sheet',
+    category: 'Cross-App Workflow',
+    color: 'from-orange-500/25 via-emerald-500/20 to-amber-500/25 text-orange-300 border-orange-500/50 shadow-orange-500/10',
+  },
+];
+
 function getDynamicSuggestions(connectedApps: ConnectedApp[]): DynamicSuggestion[] {
   const suggestions: DynamicSuggestion[] = [];
 
-  if (connectedApps.length > 0) {
-    connectedApps.forEach((app) => {
-      const cid = app.connectorId.toLowerCase().trim();
-      const bank = CONNECTOR_SUGGESTIONS_BANK[cid] || CONNECTOR_SUGGESTIONS_BANK[cid.replace(/-/g, '_')];
-      if (bank && bank.length > 0) {
-        bank.forEach((item) => {
-          suggestions.push({
-            ...item,
-            appName: app.name,
-          });
-        });
-      } else {
-        suggestions.push({
-          title: `${app.name} Query`,
-          query: `Execute actions and query data using my connected ${app.name}`,
-          category: 'Integration',
-          appName: app.name,
-          color: 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30',
-        });
-      }
-    });
-
-    let i = 0;
-    while (suggestions.length < 10 && connectedApps.length > 0) {
-      const app = connectedApps[i % connectedApps.length];
-      suggestions.push({
-        title: `${app.name} Health Check`,
-        query: `Verify connection status and list available actions for ${app.name}`,
-        category: 'Health Check',
-        appName: app.name,
-        color: 'from-purple-500/20 to-indigo-500/20 text-purple-400 border-purple-500/30',
-      });
-      i++;
-    }
-  } else {
+  if (connectedApps.length === 0) {
     suggestions.push({
       title: 'Connect Integrations',
-      query: 'Open Integrations SDK page to connect MongoDB, Gmail, Slack or GitHub',
+      query: 'Open Integrations page to connect MongoDB, Gmail, Slack or GitHub',
       category: 'Setup',
       appName: 'System',
       color: 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30',
@@ -172,9 +245,86 @@ function getDynamicSuggestions(connectedApps: ConnectedApp[]): DynamicSuggestion
       appName: 'Web Search',
       color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30',
     });
+    return suggestions;
   }
 
-  return suggestions.slice(0, 12);
+  const connectorIdsSet = new Set(connectedApps.map(a => a.connectorId.toLowerCase().trim().replace(/_/g, '-')));
+
+  // 1. Cross-App / Multi-App Suggestions
+  MULTI_APP_PAIR_BANK.forEach((pair) => {
+    const allMatch = pair.apps.every(appId => connectorIdsSet.has(appId));
+    if (allMatch) {
+      suggestions.push({
+        title: pair.title,
+        query: pair.query,
+        category: pair.category,
+        appName: 'Multi-App ⚡',
+        color: pair.color,
+        isMultiApp: true,
+      });
+    }
+  });
+
+  // Generic multi-app pairing if user has 2+ apps but no specific pair matched
+  if (connectedApps.length >= 2 && suggestions.filter(s => s.isMultiApp).length === 0) {
+    const app1 = connectedApps[0];
+    const app2 = connectedApps[1];
+    suggestions.push({
+      title: `${app1.name.split(' ')[0]} + ${app2.name.split(' ')[0]} Pipeline`,
+      query: `Fetch recent updates from ${app1.name} and summarize/forward them using ${app2.name}`,
+      category: 'Cross-App Workflow',
+      appName: 'Multi-App ⚡',
+      color: 'from-purple-500/25 via-indigo-500/20 to-pink-500/25 text-purple-300 border-purple-500/50 shadow-purple-500/10',
+      isMultiApp: true,
+    });
+  }
+
+  // 2. Single-App Suggestions for ALL connected apps
+  connectedApps.forEach((app) => {
+    const cid = app.connectorId.toLowerCase().trim().replace(/_/g, '-');
+    const bank = CONNECTOR_SUGGESTIONS_BANK[cid];
+    if (bank && bank.length > 0) {
+      bank.forEach((item) => {
+        suggestions.push({
+          ...item,
+          appName: app.name,
+        });
+      });
+    } else {
+      suggestions.push({
+        title: `${app.name} Actions`,
+        query: `Execute actions and query data using my connected ${app.name}`,
+        category: 'Integration',
+        appName: app.name,
+        color: 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30',
+      });
+    }
+  });
+
+  // 3. Web Search combo suggestions if connected to Sheets, Slack, or Gmail
+  if (connectorIdsSet.has('google-sheets')) {
+    suggestions.push({
+      title: 'AI News to Google Sheet',
+      query: 'Search for today\'s top AI news on the web and log article titles to Google Sheet',
+      category: 'Web + Apps',
+      appName: 'Multi-App ⚡',
+      color: 'from-cyan-500/25 via-emerald-500/20 to-blue-500/25 text-cyan-300 border-cyan-500/50',
+      isMultiApp: true,
+    });
+  }
+  if (connectorIdsSet.has('slack')) {
+    suggestions.push({
+      title: 'AI News to Slack',
+      query: 'Search for today\'s tech news on the web and post summary bullet points to Slack',
+      category: 'Web + Apps',
+      appName: 'Multi-App ⚡',
+      color: 'from-cyan-500/25 via-purple-500/20 to-blue-500/25 text-cyan-300 border-cyan-500/50',
+      isMultiApp: true,
+    });
+  }
+
+  // Purely dynamic, uncapped suggestions
+  return suggestions;
 }
 
 // ─── Markdown Renderer ─────────────────────────────────────────────────────────
@@ -517,6 +667,7 @@ export default function AgentChatPage() {
   const [confirmation, setConfirmation] = useState<{ message: string; confirmationId: string } | null>(null);
   const [saveWorkflowFor, setSaveWorkflowFor] = useState<string | null>(null);
   const [lastUserMessage, setLastUserMessage] = useState('');
+  const [selectedAppFilter, setSelectedAppFilter] = useState<string>('ALL');
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -979,55 +1130,128 @@ export default function AgentChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Dynamic Inspiration Cards (100% Derived From Connected Apps) ── */}
-        {messages.length === 1 && (
-          <div className="px-6 pb-4 max-w-5xl mx-auto w-full flex-shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Dynamic Suggestions (Based on Connected Apps):
-              </p>
-              <span className="text-[10px] text-emerald-400 font-mono font-medium">
-                {connectedApps.length} Connected App{connectedApps.length !== 1 ? 's' : ''} Active
-              </span>
-            </div>
+        {/* ── Dynamic Inspiration Cards (Purely Derived From Connected Apps, Uncapped) ── */}
+        {messages.length === 1 && (() => {
+          const multiAppSuggestionsCount = dynamicSuggestions.filter(s => s.isMultiApp).length;
+          const filteredSuggestions = dynamicSuggestions.filter(s => {
+            if (selectedAppFilter === 'ALL') return true;
+            if (selectedAppFilter === 'MULTI') return s.isMultiApp;
+            return s.appName.toLowerCase() === selectedAppFilter.toLowerCase();
+          });
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1 no-scrollbar">
-              {dynamicSuggestions.map((card, i) => (
-                <button
-                  key={i}
-                  onClick={() => sendMessage(card.query)}
-                  className={`text-left p-3 rounded-2xl border bg-gradient-to-br ${card.color} bg-slate-900/70 hover:bg-slate-800/90 transition-all group flex flex-col justify-between shadow-lg hover:-translate-y-0.5 border-slate-800`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-300 px-1.5 py-0.5 rounded bg-slate-800/80">
-                      {card.appName}
-                    </span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+          return (
+            <div className="px-6 pb-4 max-w-5xl mx-auto w-full flex-shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <p className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                    Dynamic Suggestions ({dynamicSuggestions.length} Connected Prompts):
+                  </p>
+                </div>
+
+                {/* App Filter Tabs */}
+                {connectedApps.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar max-w-full">
+                    <button
+                      onClick={() => setSelectedAppFilter('ALL')}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all flex-shrink-0 ${
+                        selectedAppFilter === 'ALL'
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      All ({dynamicSuggestions.length})
+                    </button>
+
+                    {multiAppSuggestionsCount > 0 && (
+                      <button
+                        onClick={() => setSelectedAppFilter('MULTI')}
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all flex items-center gap-1 flex-shrink-0 ${
+                          selectedAppFilter === 'MULTI'
+                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
+                            : 'bg-slate-900 border border-purple-500/40 text-purple-300 hover:text-purple-200'
+                        }`}
+                      >
+                        <Zap className="w-3 h-3 text-pink-400" /> Multi-App ({multiAppSuggestionsCount})
+                      </button>
+                    )}
+
+                    {connectedApps.map(app => {
+                      const count = dynamicSuggestions.filter(s => s.appName === app.name).length;
+                      if (count === 0) return null;
+                      const isSelected = selectedAppFilter === app.name;
+                      return (
+                        <button
+                          key={app._id}
+                          onClick={() => setSelectedAppFilter(app.name)}
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all flex-shrink-0 ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {app.name.split(' ')[0]} ({count})
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <span className="text-[11px] font-bold text-white block truncate">{card.title}</span>
-                    <span className="text-[10px] text-slate-300 line-clamp-2 mt-0.5 leading-relaxed">{card.query}</span>
-                  </div>
-                </button>
-              ))}
+                )}
+              </div>
+
+              {/* Grid of Dynamic Suggestions (Uncapped, Scrollable Container) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto p-1 pr-1.5 no-scrollbar">
+                {filteredSuggestions.map((card, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(card.query)}
+                    className={`text-left p-3 rounded-2xl border bg-gradient-to-br ${card.color} bg-slate-900/80 hover:bg-slate-800/90 transition-all group flex flex-col justify-between shadow-lg hover:-translate-y-0.5 relative overflow-hidden ${
+                      card.isMultiApp ? 'border-purple-500/50 shadow-purple-500/10 ring-1 ring-purple-500/20' : 'border-slate-800'
+                    }`}
+                  >
+                    {card.isMultiApp && (
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
+                    )}
+
+                    <div className="flex items-center justify-between mb-1.5 z-10">
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                        card.isMultiApp ? 'bg-purple-950/90 text-purple-300 border border-purple-500/40 font-mono' : 'bg-slate-800/80 text-indigo-300'
+                      }`}>
+                        {card.appName}
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+                    </div>
+
+                    <div className="z-10">
+                      <span className="text-[11px] font-bold text-white block truncate">{card.title}</span>
+                      <span className="text-[10px] text-slate-300 line-clamp-2 mt-0.5 leading-relaxed">{card.query}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── Floating Prompt Input Bar (Fixed Bottom Container) ── */}
         <div className="border-t border-slate-800/80 bg-[#080e18]/95 backdrop-blur-2xl px-4 sm:px-6 py-4 flex-shrink-0">
-          {/* Dynamic Quick Action Chips */}
+          {/* Dynamic Quick Action Chips (Uncapped, Horizontal Scroll) */}
           <div className="flex items-center gap-2 mb-2.5 overflow-x-auto no-scrollbar">
-            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider flex-shrink-0">Connected Apps Suggestions:</span>
-            {dynamicSuggestions.slice(0, 8).map((chip, idx) => (
+            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider flex-shrink-0">
+              Connected App Prompts ({dynamicSuggestions.length}):
+            </span>
+            {dynamicSuggestions.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => setInput(chip.query)}
-                className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-[11px] text-slate-300 hover:text-white transition-all flex-shrink-0 flex items-center gap-1.5 shadow-sm"
+                className={`px-2.5 py-1 rounded-full bg-slate-900 border text-[11px] transition-all flex-shrink-0 flex items-center gap-1.5 shadow-sm ${
+                  chip.isMultiApp
+                    ? 'border-purple-500/40 text-purple-300 hover:text-white hover:border-purple-400 bg-purple-950/20'
+                    : 'border-slate-800 text-slate-300 hover:text-white hover:border-indigo-500/40'
+                }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className={`w-1.5 h-1.5 rounded-full ${chip.isMultiApp ? 'bg-purple-400 animate-pulse' : 'bg-emerald-400'}`} />
                 <span className="font-semibold text-indigo-300">{chip.appName}:</span>
-                <span className="truncate max-w-[140px]">{chip.title}</span>
+                <span className="truncate max-w-[150px]">{chip.title}</span>
               </button>
             ))}
           </div>
