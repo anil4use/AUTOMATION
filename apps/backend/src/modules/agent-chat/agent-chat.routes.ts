@@ -14,6 +14,7 @@ router.post('/confirm', AgentChatController.postConfirmAction as any);
 // Conversation management
 router.get('/conversations', AgentChatController.getConversations as any);
 router.get('/conversations/:id', AgentChatController.getConversationById as any);
+router.patch('/conversations/:id/title', AgentChatController.updateConversationTitle as any);
 router.delete('/conversations/:id', AgentChatController.deleteConversation as any);
 
 // Save as workflow

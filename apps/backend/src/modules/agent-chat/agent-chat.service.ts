@@ -714,13 +714,89 @@ export class AgentChatService {
     else await r.del(lockKey);
   }
 
-  /** Resolve conversations list for user */
+  /** Generate clean AI-driven conversation titles */
+  static generateAiTitle(userMessage: string): string {
+    if (!userMessage || !userMessage.trim()) return 'New Agent Session';
+
+    let text = userMessage.trim().replace(/^["']|["']$/g, '');
+    const lower = text.toLowerCase();
+
+    if (lower.includes('mongodb') || lower.includes('mongo')) {
+      if (lower.includes('count') || lower.includes('how many')) return 'MongoDB User Count';
+      if (lower.includes('insert') || lower.includes('create')) return 'MongoDB Document Creation';
+      return 'MongoDB Database Query';
+    }
+    if (lower.includes('gmail') || lower.includes('email') || lower.includes('mail')) {
+      if (lower.includes('send')) return 'Gmail Email Dispatch';
+      if (lower.includes('read') || lower.includes('inbox') || lower.includes('sender')) return 'Gmail Inbox Lookup';
+      return 'Gmail Integration Task';
+    }
+    if (lower.includes('slack')) {
+      if (lower.includes('channel') || lower.includes('#')) return 'Slack Channel Post';
+      return 'Slack Team Notification';
+    }
+    if (lower.includes('github')) {
+      if (lower.includes('issue') || lower.includes('pr')) return 'GitHub Issues & PRs';
+      return 'GitHub Repository Insights';
+    }
+    if (lower.includes('sheet') || lower.includes('google sheets')) {
+      return 'Google Sheets Sync';
+    }
+    if (lower.includes('postgres') || lower.includes('sql')) {
+      return 'PostgreSQL Query Task';
+    }
+    if (lower.includes('whatsapp')) {
+      return 'WhatsApp Messaging Task';
+    }
+    if (lower.includes('web') || lower.includes('search') || lower.includes('news')) {
+      return 'Web Search & Intelligence';
+    }
+
+    const cleaned = text
+      .replace(/^(can you|please|i want to|help me|how to|send a|read|get|fetch|find|search|show me)\s+/i, '')
+      .replace(/[^\w\s-]/g, '')
+      .trim();
+
+    if (cleaned.length > 0) {
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      if (words.length > 0) {
+        const titleCase = words.slice(0, 5).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        return titleCase.slice(0, 45) || 'Agent Execution Task';
+      }
+    }
+
+    return 'New Agent Session';
+  }
+
+  /** Resolve conversations list for user with AI-formatted titles */
   static async getConversations(orgId: string, userId: string) {
-    return AgentConversationModel.find({ organizationId: orgId, userId }).select('-messages.stepsExecuted').sort({ updatedAt: -1 }).limit(50);
+    const convs = await AgentConversationModel.find({ organizationId: orgId, userId })
+      .select('-messages.stepsExecuted')
+      .sort({ updatedAt: -1 })
+      .limit(50);
+
+    return convs.map(c => {
+      const json = c.toObject();
+      if (!json.title || json.title.startsWith('"') || json.title.length > 50 || json.title === 'New Agent Chat' || json.title.startsWith('send a email')) {
+        const firstUserMsg = json.messages?.find((m: any) => m.role === 'user')?.content;
+        if (firstUserMsg) {
+          json.title = AgentChatService.generateAiTitle(firstUserMsg);
+        }
+      }
+      return json;
+    });
   }
 
   static async getConversation(conversationId: string, orgId: string) {
     return AgentConversationModel.findOne({ conversationId, organizationId: orgId });
+  }
+
+  static async updateConversationTitle(conversationId: string, title: string, orgId: string) {
+    return AgentConversationModel.findOneAndUpdate(
+      { conversationId, organizationId: orgId },
+      { title: title.trim().slice(0, 60) },
+      { new: true }
+    );
   }
 
   static async deleteConversation(conversationId: string, orgId: string) {
@@ -759,15 +835,20 @@ export class AgentChatService {
 
     // ── 1. Load / Create Conversation ───────────────────────────────────────
     let conversation = await AgentConversationModel.findOne({ conversationId, organizationId: orgId });
+    const aiTitle = AgentChatService.generateAiTitle(userMessage);
+
     if (!conversation) {
       conversation = await AgentConversationModel.create({
         conversationId,
         organizationId: orgId,
         userId,
-        title: userMessage.slice(0, 60) || 'New Agent Chat',
+        title: aiTitle,
         status: 'active',
         messages: [],
       });
+    } else if (!conversation.title || conversation.title === 'New Agent Chat' || conversation.title.startsWith('"') || conversation.title.length > 50 || conversation.title.startsWith('send a email')) {
+      conversation.title = aiTitle;
+      await conversation.save();
     }
 
     // ── 2. Append user message ───────────────────────────────────────────────

@@ -138,6 +138,18 @@ export class AgentChatController {
     }
   }
 
+  /** PATCH /api/v1/agent-chat/conversations/:id/title — Rename conversation title */
+  static async updateConversationTitle(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { title } = req.body;
+      if (!title || !title.trim()) return sendResponse(res, 400, false, null, 'Title is required');
+      const updated = await AgentChatService.updateConversationTitle(req.params.id, title, req.user!.organizationId);
+      return sendResponse(res, 200, true, updated, 'Conversation title updated');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   /** DELETE /api/v1/agent-chat/conversations/:id — Delete conversation */
   static async deleteConversation(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
