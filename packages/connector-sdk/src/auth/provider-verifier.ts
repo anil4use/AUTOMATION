@@ -103,6 +103,36 @@ export class ProviderVerifier {
         };
       }
 
+      case 'gmail':
+      case 'google-sheets':
+      case 'google-drive':
+      case 'google-calendar':
+      case 'google-docs': {
+        if (key.startsWith('default_access_token_')) {
+          throw new Error(
+            `Google OAuth access token missing for '${connectorId.toUpperCase()}'. Default placeholder token detected. Please connect your Google Account on the Connectors page to grant Google OAuth access.`
+          );
+        }
+
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${key}` },
+        });
+
+        if (!res.ok) {
+          throw new Error(
+            `Google OAuth Verification Failed for '${connectorId.toUpperCase()}' (${res.status}): Invalid or expired OAuth access token. Please re-authenticate your Google Account on the Connectors page.`
+          );
+        }
+
+        const user = await res.json();
+        return {
+          success: true,
+          accountName: `Google Account (${user.email || user.name || 'Verified'})`,
+          message: `Live Google OAuth Token Verified for ${user.email || 'Google Account'}!`,
+          details: { email: user.email, name: user.name },
+        };
+      }
+
       case 'groq': {
         if (!key.startsWith('gsk_')) {
           throw new Error(`Invalid Groq API Key format. Groq keys must start with 'gsk_'. Token provided belongs to another provider.`);

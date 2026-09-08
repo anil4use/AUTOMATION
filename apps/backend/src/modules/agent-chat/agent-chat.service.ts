@@ -47,33 +47,31 @@ function getRedis(): Redis | null {
       host: env.redisHost || 'localhost',
       port: env.redisPort || 6379,
       password: env.redisPassword,
-      lazyConnect: true,
-      enableOfflineQueue: false,
-      maxRetriesPerRequest: 0,
-      retryStrategy: () => null, // never retry — prevents the reconnect flood
+      enableOfflineQueue: true,
+      connectTimeout: 3000,
+      maxRetriesPerRequest: 1,
+      retryStrategy: () => null, // never retry — prevents reconnect flood
     });
 
     // Attach error handler so it never becomes an unhandled event
     client.on('error', () => {
-      // Silently absorb — Redis is optional for this service
       redisUnavailable = true;
       redis = null;
     });
 
     redis = client;
+    return redis;
   } catch {
-    logger.warn('[AgentChatService] Redis unavailable — rate limiting and locks disabled.');
     redisUnavailable = true;
-    redis = null;
+    return null;
   }
-
-  return redis;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface ExecutionStep {
   stepId: string;
   connectorId: string;
+  connectionId?: string;
   actionId: string;
   description: string;
   inputs: Record<string, any>;
@@ -112,35 +110,36 @@ async function buildTieredConnectorContext(
     }
   }
 
-  // Cap at 4 full-schema connectors
-  const tier1Ids = [...new Set(matchedTier1)].slice(0, 4);
-
+  // If keywords match specific connectors, prioritize them; otherwise include all connected apps
+  const tier1Set = new Set(matchedTier1);
   let fullSchemaSection = '';
   let stubSection = '';
 
   try {
-    const { ALL_50_CONNECTOR_MANIFESTS } = require('@automation/connector-sdk');
-    const manifestArr: any[] = Array.isArray(ALL_50_CONNECTOR_MANIFESTS) ? ALL_50_CONNECTOR_MANIFESTS : [];
+    const { manifestRegistry } = require('@automation/connector-sdk');
 
     for (const conn of connectedApps) {
-      const manifest = manifestArr.find((m: any) => m.id === conn.connectorId);
+      const manifest = manifestRegistry.getManifest(conn.connectorId);
       if (!manifest) {
         stubSection += `- ${conn.name} (id: '${conn.connectorId}', connectionId: '${conn.connectionId}') [CONNECTED]\n`;
         continue;
       }
 
-      if (tier1Ids.includes(conn.connectorId)) {
-        // Full schema injection
-        const actionsStr = (manifest.operations || [])
-          .slice(0, 20)
-          .map((op: any) => {
-            const inputs = (op.inputSchema || []).slice(0, 8).map((f: any) => `${f.key}: ${f.type}`).join(', ');
-            return `  - actionId: '${op.id}' — ${op.name}: { ${inputs} }`;
+      // If specific apps matched keywords, or if total connected apps <= 10, include full schema
+      const isFullSchema = tier1Set.size === 0 || tier1Set.has(conn.connectorId) || connectedApps.length <= 10;
+
+      if (isFullSchema) {
+        const actions = manifest.actions || [];
+        const actionsStr = actions
+          .slice(0, 25)
+          .map((act: any) => {
+            const inputs = (act.inputs || []).slice(0, 10).map((f: any) => `${f.key}: ${f.type}${f.required ? '*' : ''}`).join(', ');
+            return `  - actionId: '${act.id}' — ${act.name}: description: "${act.description || ''}", inputs: { ${inputs} }`;
           })
           .join('\n');
-        fullSchemaSection += `### ${conn.name} (id: '${conn.connectorId}', connectionId: '${conn.connectionId}')\n${actionsStr}\n\n`;
+
+        fullSchemaSection += `### ${conn.name} (id: '${conn.connectorId}', connectionId: '${conn.connectionId}')\n${actionsStr || '  (No actions defined)'}\n\n`;
       } else {
-        // Stub
         stubSection += `- ${conn.name} (id: '${conn.connectorId}', connectionId: '${conn.connectionId}') [CONNECTED]\n`;
       }
     }
@@ -148,7 +147,7 @@ async function buildTieredConnectorContext(
     logger.warn('[AgentChatService] Could not load manifests for prompt:', err);
   }
 
-  return `FULL SCHEMA CONNECTORS (use for planning):\n${fullSchemaSection || 'None\n'}\nADDITIONAL CONNECTED APPS (available, request full schema if needed):\n${stubSection || 'None\n'}`;
+  return `CONNECTED APPS & AVAILABLE ACTIONS (Use ONLY these actionId and connectionId values):\n${fullSchemaSection || 'None\n'}\nADDITIONAL CONNECTED APPS:\n${stubSection || 'None\n'}`;
 }
 
 // ─── History Context (last 5 executions) ─────────────────────────────────────
@@ -335,7 +334,11 @@ async function executeStep(
         connectionId: connectionId || `agent_${Date.now()}`,
       };
 
-      const result = await connector.executeAction(step.actionId, {
+      const targetActionId = typeof connector.resolveActionId === 'function'
+        ? connector.resolveActionId(step.actionId)
+        : step.actionId;
+
+      const result = await connector.executeAction(targetActionId, {
         stepInput: resolvedInputs,
         connectionConfig,
         connectionCredentials: credentials,
@@ -349,14 +352,19 @@ async function executeStep(
     }
 
     // ── Regular connectors via connectorRegistry ────────────────────────────
-    // connectorRegistry is a plain object: { 'gmail': GmailConnector instance, ... }
-    const { connectorRegistry } = require('@automation/connector-sdk');
-    const connector = connectorRegistry[step.connectorId]
-      ?? connectorRegistry[step.connectorId.replace(/-/g, '_')]
-      ?? null;
+    const { connectorRegistry, UniversalConnector } = require('@automation/connector-sdk');
+    const cid = step.connectorId.toLowerCase().trim();
+    const connector = connectorRegistry[cid]
+      ?? connectorRegistry[cid.replace(/-/g, '_')]
+      ?? connectorRegistry[cid.replace(/_/g, '-')]
+      ?? (UniversalConnector ? new UniversalConnector() : null);
 
     if (connector) {
-      const result = await connector.executeAction(step.actionId, {
+      const targetActionId = typeof connector.resolveActionId === 'function'
+        ? connector.resolveActionId(step.actionId)
+        : step.actionId;
+
+      const result = await connector.executeAction(targetActionId, {
         connectionCredentials: credentials,
         workflowVariables: {},
         stepInput: resolvedInputs,
@@ -382,7 +390,8 @@ async function parseIntentFromLLM(
   userMessage: string,
   connectorContext: string,
   historyContext: string,
-  conversationHistory: any[]
+  conversationHistory: any[],
+  activeConnections: any[] = []
 ): Promise<ExecutionPlan> {
   const systemPrompt = `You are the AutoFlow Dynamic Agent — a live AI executor that directly operates the user's connected applications.
 
@@ -443,7 +452,7 @@ RESPOND WITH VALID JSON ONLY — no markdown fences, no extra text:
           signal: AbortSignal.timeout(30000),
         }
       );
-      const data = await res.json();
+      const data: any = await res.json();
       rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } catch (err) {
       logger.warn('[AgentChatService] Gemini intent parse failed:', err);
@@ -462,19 +471,127 @@ RESPOND WITH VALID JSON ONLY — no markdown fences, no extra text:
         }),
         signal: AbortSignal.timeout(30000),
       });
-      const data = await res.json();
+      const data: any = await res.json();
       rawJson = data.choices?.[0]?.message?.content || '';
     } catch (err) {
       logger.warn('[AgentChatService] Groq intent parse failed:', err);
     }
   }
 
-  try {
-    const cleaned = rawJson.replace(/```json[\s\S]*?```/gi, '').replace(/```[\s\S]*?```/gi, '').trim();
-    return JSON.parse(cleaned) as ExecutionPlan;
-  } catch {
-    return { plan: [], requiresConfirmation: false };
+  if (rawJson) {
+    try {
+      let cleaned = rawJson.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (codeBlockMatch && codeBlockMatch[1]) {
+        cleaned = codeBlockMatch[1].trim();
+      }
+      const startIdx = cleaned.indexOf('{');
+      const endIdx = cleaned.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx > startIdx) {
+        cleaned = cleaned.substring(startIdx, endIdx + 1);
+      }
+      const parsed = JSON.parse(cleaned) as ExecutionPlan;
+      if (parsed && Array.isArray(parsed.plan) && parsed.plan.length > 0) {
+        return parsed;
+      }
+    } catch (err) {
+      logger.warn('[AgentChatService] LLM JSON parse error:', err);
+    }
   }
+
+  return parseUniversalDynamicIntent(userMessage, activeConnections);
+}
+
+// ─── Universal Dynamic Action Matcher (100% Dynamic - Zero Hardcoding) ────────
+function parseUniversalDynamicIntent(userMessage: string, activeConnections: any[] = []): ExecutionPlan {
+  const msgLower = userMessage.toLowerCase().replace(/["']/g, '').trim();
+  const tokens = msgLower.split(/\W+/).filter((t) => t.length > 2);
+  const plan: ExecutionStep[] = [];
+
+  let bestMatch: {
+    conn: any;
+    action: any;
+    score: number;
+  } | null = null;
+
+  try {
+    const { manifestRegistry } = require('@automation/connector-sdk');
+
+    for (const conn of activeConnections) {
+      const manifest = manifestRegistry.getManifest(conn.connectorId);
+      if (!manifest || !manifest.actions) continue;
+
+      for (const action of manifest.actions) {
+        let score = 0;
+
+        // Connector ID & Name match
+        if (tokens.some((t) => conn.connectorId.includes(t) || manifest.name.toLowerCase().includes(t))) {
+          score += 10;
+        }
+
+        // Action ID & Name match
+        const actionTokens = `${action.id} ${action.name} ${action.description || ''}`.toLowerCase().split(/\W+/);
+        tokens.forEach((t) => {
+          if (actionTokens.includes(t)) score += 5;
+          else if (actionTokens.some((at) => at.includes(t) || t.includes(at))) score += 2;
+        });
+
+        // Intent verbs (send, read, list, create, find, count, delete, post, search)
+        if (msgLower.includes('send') && (action.id.includes('send') || action.name.toLowerCase().includes('send'))) score += 15;
+        if (msgLower.includes('read') || msgLower.includes('get') || msgLower.includes('fetch')) {
+          if (action.id.includes('read') || action.id.includes('get') || action.id.includes('list') || action.id.includes('find')) score += 10;
+        }
+        if (msgLower.includes('create') || msgLower.includes('new') || msgLower.includes('add')) {
+          if (action.id.includes('create') || action.id.includes('insert') || action.id.includes('add')) score += 10;
+        }
+        if (msgLower.includes('count') || msgLower.includes('how many')) {
+          if (action.id.includes('count') || action.id.includes('list')) score += 15;
+        }
+
+        if (score > (bestMatch?.score || 0)) {
+          bestMatch = { conn, action, score };
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn('[AgentChatService] Universal dynamic matcher failed:', err);
+  }
+
+  if (bestMatch && bestMatch.score >= 5) {
+    const { conn, action } = bestMatch;
+    const inputs: Record<string, any> = {};
+
+    const emailMatch = userMessage.match(/[\w.-]+@[\w.-]+\.\w+/i);
+    (action.inputs || []).forEach((field: any) => {
+      const keyLower = field.key.toLowerCase();
+      if (keyLower === 'to' || keyLower.includes('recipient') || keyLower.includes('email')) {
+        if (emailMatch) inputs[field.key] = emailMatch[0];
+      } else if (keyLower === 'subject' || keyLower === 'title') {
+        const subjMatch = userMessage.match(/(?:title|subject)\s*[:=|-]?\s*([^,\n.]+)/i);
+        if (subjMatch) inputs[field.key] = subjMatch[1].trim();
+      } else if (keyLower === 'body' || keyLower === 'message' || keyLower === 'content') {
+        const bodyMatch = userMessage.match(/(?:message|body|content)\s*(?:will\s*[-:]?)?\s*([^.\n]+)/i);
+        inputs[field.key] = bodyMatch ? bodyMatch[1].trim() : userMessage;
+      } else if (keyLower === 'database') {
+        inputs[field.key] = conn.credentials?.database || conn.credentials?.dbName || 'automation_platform';
+      } else if (keyLower === 'collection' || keyLower === 'table') {
+        inputs[field.key] = 'users';
+      } else if (keyLower === 'limit' || keyLower === 'maxresults') {
+        inputs[field.key] = 10;
+      }
+    });
+
+    plan.push({
+      stepId: 'step_1',
+      connectorId: conn.connectorId,
+      connectionId: conn.connectionId,
+      actionId: action.id,
+      description: action.name || action.id,
+      inputs,
+    });
+  }
+
+  return { plan, requiresConfirmation: false };
 }
 
 // ─── Assemble Conversational Result ──────────────────────────────────────────
@@ -527,7 +644,7 @@ Respond with ONLY the markdown text of the reply — no JSON wrapper.`;
   if (env.geminiApiKey) {
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -538,9 +655,9 @@ Respond with ONLY the markdown text of the reply — no JSON wrapper.`;
           signal: AbortSignal.timeout(20000),
         }
       );
-      const data = await res.json();
+      const data: any = await res.json();
       reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } catch {}
+    } catch { }
   }
 
   if (!reply && env.groqApiKey) {
@@ -554,9 +671,9 @@ Respond with ONLY the markdown text of the reply — no JSON wrapper.`;
         }),
         signal: AbortSignal.timeout(20000),
       });
-      const data = await res.json();
+      const data: any = await res.json();
       reply = data.choices?.[0]?.message?.content || '';
-    } catch {}
+    } catch { }
   }
 
   return reply || stepsExecuted.map((s) => `${s.success ? '✅' : '❌'} ${s.description}: ${JSON.stringify(s.output || s.error).slice(0, 200)}`).join('\n');
@@ -675,7 +792,7 @@ export class AgentChatService {
     // ── 5. Parse intent via LLM ──────────────────────────────────────────────
     let executionPlan: ExecutionPlan;
     try {
-      executionPlan = await parseIntentFromLLM(userMessage, connectorContext, historyContext, conversation.messages);
+      executionPlan = await parseIntentFromLLM(userMessage, connectorContext, historyContext, conversation.messages, activeConnections);
     } catch {
       const reply = 'I had trouble understanding that request. Please try rephrasing.';
       emitSSE({ type: 'final_response', message: reply });

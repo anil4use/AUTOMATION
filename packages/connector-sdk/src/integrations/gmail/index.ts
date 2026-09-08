@@ -407,9 +407,14 @@ export class GmailConnector extends BaseConnector {
           return { success: true, data: { messageId: data.id, threadId: data.threadId } };
         }
 
+        case 'list_messages':
+        case 'list_emails':
+        case 'get_messages':
+        case 'search_emails':
         case 'read_emails': {
-          const max = inputs.maxResults || 5;
-          const { data: listData } = await api.get('/messages', { params: { q: inputs.query, maxResults: max } });
+          const max = inputs.maxResults || inputs.limit || 5;
+          const queryParam = inputs.query || inputs.q || inputs.searchQuery || undefined;
+          const { data: listData } = await api.get('/messages', { params: { q: queryParam, maxResults: max } });
           const messages = listData.messages || [];
 
           const detailed = await Promise.all(
@@ -422,17 +427,45 @@ export class GmailConnector extends BaseConnector {
                 threadId: detail.threadId,
                 subject: getHeader('Subject'),
                 from: getHeader('From'),
+                to: getHeader('To'),
                 snippet: detail.snippet,
                 date: getHeader('Date'),
               };
             })
           );
 
-          return { success: true, data: { count: detailed.length, emails: detailed } };
+          return { success: true, data: { count: detailed.length, emails: detailed, messages: detailed } };
         }
 
+        case 'extract_header':
+        case 'get_message':
+        case 'get_email_details':
         case 'get_email': {
-          const { data } = await api.get(`/messages/${inputs.messageId}`);
+          const msgId = inputs.messageId || inputs.id;
+          if (!msgId) {
+            // Fallback if no message ID passed — return the most recent email
+            const { data: recentList } = await api.get('/messages', { params: { maxResults: 1 } });
+            const firstMsgId = recentList.messages?.[0]?.id;
+            if (!firstMsgId) return { success: true, data: { count: 0, message: null } };
+            const { data } = await api.get(`/messages/${firstMsgId}`);
+            const headersArr = data.payload?.headers || [];
+            const getHeader = (n: string) => headersArr.find((h: any) => h.name.toLowerCase() === n.toLowerCase())?.value || '';
+            return {
+              success: true,
+              data: {
+                id: data.id,
+                threadId: data.threadId,
+                subject: getHeader('Subject'),
+                from: getHeader('From'),
+                to: getHeader('To'),
+                body: data.snippet,
+                snippet: data.snippet,
+                date: getHeader('Date'),
+              },
+            };
+          }
+
+          const { data } = await api.get(`/messages/${msgId}`);
           const headersArr = data.payload?.headers || [];
           const getHeader = (n: string) => headersArr.find((h: any) => h.name.toLowerCase() === n.toLowerCase())?.value || '';
           return {

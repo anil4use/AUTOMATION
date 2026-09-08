@@ -5,18 +5,57 @@ import { GoogleDriveConnector } from '../connectors/google-drive.connector';
 import { GoogleCalendarConnector } from '../connectors/google-calendar.connector';
 import { GoogleDocsConnector } from '../connectors/google-docs.connector';
 import { SlackConnector } from '../integrations/slack';
-import { NotionConnector } from '../connectors/notion.connector';
-import { StripeConnector } from '../connectors/stripe.connector';
-import { WhatsAppConnector } from '../connectors/whatsapp.connector';
+import { NotionConnector } from '../integrations/notion';
+import { StripeConnector } from '../integrations/stripe';
+import { WhatsAppConnector } from '../integrations/whatsapp';
 import { HttpRequestConnector } from '../connectors/http-request.connector';
 import { AINodeConnector } from '../integrations/ai-node';
 import { WebSearchConnector } from '../connectors/web-search.connector';
 import { AutoFlowScheduleConnector } from '../connectors/autoflow-schedule.connector';
 import { ConditionConnector } from '../connectors/condition.connector';
 import { AmazonFlipkartConnector } from '../connectors/amazon-flipkart.connector';
-import { TelegramConnector } from '../connectors/telegram.connector';
+import { TelegramConnector } from '../integrations/telegram';
 import { CommandRouterConnector } from '../connectors/command-router.connector';
 import { UniversalConnector } from '../connectors/universal.connector';
+import { GitHubConnector } from '../integrations/github';
+import { OpenAIConnector } from '../integrations/openai';
+import { AnthropicConnector } from '../integrations/anthropic';
+import { JiraConnector } from '../integrations/jira';
+import { HubSpotConnector } from '../integrations/hubspot';
+import { GoogleSearchConnector } from '../integrations/google-search';
+import { MsTeamsConnector } from '../integrations/ms-teams';
+import { MsOutlookConnector } from '../integrations/ms-outlook';
+import { MsExcelConnector } from '../integrations/ms-excel';
+import { DropboxConnector } from '../integrations/dropbox';
+import { ZoomConnector } from '../integrations/zoom';
+import { WooCommerceConnector } from '../integrations/woocommerce';
+import { PayPalConnector } from '../integrations/paypal';
+import { MailchimpConnector } from '../integrations/mailchimp';
+import { TrelloConnector } from '../integrations/trello';
+import { CalendlyConnector } from '../integrations/calendly';
+import { PipedriveConnector } from '../integrations/pipedrive';
+import { AsanaConnector } from '../integrations/asana';
+import { MondayConnector } from '../integrations/monday';
+import { InstagramConnector } from '../integrations/instagram';
+import { FacebookConnector } from '../integrations/facebook';
+import { MetaMessengerConnector } from '../integrations/meta-messenger';
+import { ActiveCampaignConnector } from '../integrations/activecampaign';
+import { GoogleGeminiConnector } from '../integrations/google-gemini';
+import { AIDocumentOCRConnector } from '../integrations/ai-document-ocr';
+import { GitLabConnector } from '../integrations/gitlab';
+import { LinearConnector } from '../integrations/linear';
+import { VercelConnector } from '../integrations/vercel';
+import { QuickBooksConnector } from '../integrations/quickbooks';
+import { DocuSignConnector } from '../integrations/docusign';
+import { WebhookTriggerConnector } from '../integrations/webhook-trigger';
+import { MongodbConnector } from '../integrations/mongodb';
+import { PostgresqlConnector } from '../integrations/postgresql';
+import { MysqlConnector } from '../integrations/mysql';
+import { SupabaseConnector } from '../integrations/supabase';
+import { RedisConnector } from '../integrations/redis';
+import { AmazonS3Connector } from '../integrations/amazon-s3';
+import { CloudflareR2Connector } from '../integrations/cloudflare-r2';
+import { DynamodbConnector } from '../integrations/dynamodb';
 import * as crypto from 'crypto';
 
 export const connectorRegistry: Record<string, any> = {
@@ -42,6 +81,47 @@ export const connectorRegistry: Record<string, any> = {
   'amazon-flipkart': new AmazonFlipkartConnector(),
   amazon: new AmazonFlipkartConnector(),
   flipkart: new AmazonFlipkartConnector(),
+  github: new GitHubConnector(),
+  openai: new OpenAIConnector(),
+  anthropic: new AnthropicConnector(),
+  jira: new JiraConnector(),
+  hubspot: new HubSpotConnector(),
+  'google-search': new GoogleSearchConnector(),
+  'ms-teams': new MsTeamsConnector(),
+  'ms-outlook': new MsOutlookConnector(),
+  'ms-excel': new MsExcelConnector(),
+  dropbox: new DropboxConnector(),
+  zoom: new ZoomConnector(),
+  woocommerce: new WooCommerceConnector(),
+  shopify: new WooCommerceConnector(),
+  paypal: new PayPalConnector(),
+  mailchimp: new MailchimpConnector(),
+  trello: new TrelloConnector(),
+  calendly: new CalendlyConnector(),
+  pipedrive: new PipedriveConnector(),
+  asana: new AsanaConnector(),
+  monday: new MondayConnector(),
+  instagram: new InstagramConnector(),
+  facebook: new FacebookConnector(),
+  'meta-messenger': new MetaMessengerConnector(),
+  activecampaign: new ActiveCampaignConnector(),
+  'google-gemini': new GoogleGeminiConnector(),
+  'ai-document-ocr': new AIDocumentOCRConnector(),
+  gitlab: new GitLabConnector(),
+  linear: new LinearConnector(),
+  vercel: new VercelConnector(),
+  quickbooks: new QuickBooksConnector(),
+  docusign: new DocuSignConnector(),
+  'webhook-trigger': new WebhookTriggerConnector(),
+  mongodb: new MongodbConnector(),
+  postgresql: new PostgresqlConnector(),
+  postgres: new PostgresqlConnector(),
+  mysql: new MysqlConnector(),
+  supabase: new SupabaseConnector(),
+  redis: new RedisConnector(),
+  'amazon-s3': new AmazonS3Connector(),
+  'cloudflare-r2': new CloudflareR2Connector(),
+  dynamodb: new DynamodbConnector(),
 };
 
 export class StepExecutor {

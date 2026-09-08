@@ -501,7 +501,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
   private static async callGeminiJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
     const promptText = systemPrompt || DYNAMIC_WORKFLOW_SYSTEM_PROMPT;
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -586,7 +586,7 @@ RULES FOR CANVAS MUTATION:
     if (env.geminiApiKey) {
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.geminiApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

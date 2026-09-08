@@ -60,8 +60,17 @@ export class AgentChatController {
       }
 
       res.end();
-    } catch (err) {
-      next(err);
+    } catch (err: any) {
+      if (res.headersSent) {
+        try {
+          res.write(`data: ${JSON.stringify({ type: 'final_response', message: `An unexpected execution error occurred: ${err?.message || 'Server error'}. Please try again.` })}\n\n`);
+          res.end();
+        } catch {
+          res.end();
+        }
+      } else {
+        next(err);
+      }
     }
   }
 
@@ -94,8 +103,17 @@ export class AgentChatController {
       }
 
       res.end();
-    } catch (err) {
-      next(err);
+    } catch (err: any) {
+      if (res.headersSent) {
+        try {
+          res.write(`data: ${JSON.stringify({ type: 'final_response', message: `An unexpected confirmation error occurred: ${err?.message || 'Server error'}.` })}\n\n`);
+          res.end();
+        } catch {
+          res.end();
+        }
+      } else {
+        next(err);
+      }
     }
   }
 

@@ -60,21 +60,27 @@ export class GitHubConnector extends BaseConnector {
       return { success: false, data: {}, error: 'GitHub Personal Access Token is required.' };
     }
 
+    const normalizedAction = actionId === 'list_repos' || actionId === 'get_repos' || actionId === 'list_repositories' || actionId === 'get_user_repos'
+      ? 'get_repositories'
+      : actionId === 'list_issues' || actionId === 'get_issues'
+      ? 'list_issues'
+      : actionId;
+
     try {
       let data: Record<string, any>;
 
-      if (REPO_ACTIONS.has(actionId)) {
-        data = await executeRepoAction(actionId, inputs, creds);
-      } else if (BRANCH_ACTIONS.has(actionId)) {
-        data = await executeBranchAction(actionId, inputs, creds);
-      } else if (FILE_ACTIONS.has(actionId)) {
-        data = await executeFileAction(actionId, inputs, creds);
-      } else if (COMMIT_ACTIONS.has(actionId)) {
-        data = await executeCommitAction(actionId, inputs, creds);
-      } else if (PR_ACTIONS.has(actionId)) {
-        data = await executePRAction(actionId, inputs, creds);
-      } else if (ISSUE_ACTIONS.has(actionId)) {
-        data = await executeIssueAction(actionId, inputs, creds);
+      if (REPO_ACTIONS.has(normalizedAction)) {
+        data = await executeRepoAction(normalizedAction, inputs, creds);
+      } else if (BRANCH_ACTIONS.has(normalizedAction)) {
+        data = await executeBranchAction(normalizedAction, inputs, creds);
+      } else if (FILE_ACTIONS.has(normalizedAction)) {
+        data = await executeFileAction(normalizedAction, inputs, creds);
+      } else if (COMMIT_ACTIONS.has(normalizedAction)) {
+        data = await executeCommitAction(normalizedAction, inputs, creds);
+      } else if (PR_ACTIONS.has(normalizedAction)) {
+        data = await executePRAction(normalizedAction, inputs, creds);
+      } else if (ISSUE_ACTIONS.has(normalizedAction)) {
+        data = await executeIssueAction(normalizedAction, inputs, creds);
       } else if (RELEASE_ACTIONS.has(actionId)) {
         data = await executeReleaseAction(actionId, inputs, creds);
       } else if (WORKFLOW_ACTIONS.has(actionId)) {

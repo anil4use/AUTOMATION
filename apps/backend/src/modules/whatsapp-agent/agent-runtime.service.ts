@@ -144,7 +144,7 @@ CONVERSATION RULES
     systemPrompt: string,
     messages: Array<{ role: 'user' | 'assistant'; content: string }>
   ): Promise<string> {
-    const models = ['gemini-3.6-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
     for (const model of models) {
       try {

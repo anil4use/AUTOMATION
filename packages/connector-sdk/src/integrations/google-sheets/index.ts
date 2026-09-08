@@ -357,6 +357,10 @@ export class GoogleSheetsConnector extends BaseConnector {
 
     try {
       switch (actionId) {
+        case 'add_row':
+        case 'insert_row':
+        case 'append_rows':
+        case 'batch_update_rows':
         case 'append_row': {
           const sheetName = inputs.sheetName || 'Sheet1';
           const values = typeof inputs.values === 'string'
@@ -399,6 +403,9 @@ export class GoogleSheetsConnector extends BaseConnector {
           return { success: true, data: { rowNumber: inputs.rowNumber, values } };
         }
 
+        case 'read_rows':
+        case 'read_sheet':
+        case 'get_rows':
         case 'get_all_rows': {
           const sheetName = inputs.sheetName || 'Sheet1';
           const { data } = await api.get(`/${inputs.spreadsheetId}/values/${encodeURIComponent(sheetName)}`);
