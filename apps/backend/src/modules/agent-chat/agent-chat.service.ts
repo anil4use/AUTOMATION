@@ -87,7 +87,11 @@ export interface ExecutionPlan {
 export interface SSEEvent {
   type: 'step_start' | 'step_complete' | 'step_error' | 'confirmation_required' | 'final_response' | 'rate_limited' | 'execution_in_progress';
   stepId?: string;
+  connectorId?: string;
+  actionId?: string;
   description?: string;
+  inputs?: any;
+  output?: any;
   preview?: any;
   error?: string;
   errorCode?: string;
@@ -351,9 +355,53 @@ export function hydrateActionInputs(
     text: () => inputs.text || inputs.message || inputs.body || `AutoFlow automated report for ${topic}`,
     channel: () => inputs.channel || '#general',
     limit: () => inputs.limit ? Number(inputs.limit) : 10,
-    rows: () => inputs.rows || (inputs.values ? [inputs.values] : [[topic, dateStr, 'Automated AI Entry']]),
-    values: () => inputs.values || [topic, dateStr, 'Automated AI Entry'],
+    rows: () => inputs.rows || inputs.values,
+    values: () => inputs.values || inputs.rows,
   };
+
+  // 1. Auto-discover spreadsheetId from context if missing or unresolved
+  if (!inputs.spreadsheetId || typeof inputs.spreadsheetId !== 'string' || inputs.spreadsheetId.startsWith('{{')) {
+    for (const [_, val] of context.entries()) {
+      if (val && typeof val === 'object') {
+        const foundId = val.spreadsheetId || val.id || val.data?.spreadsheetId;
+        if (foundId && typeof foundId === 'string' && !foundId.startsWith('{{')) {
+          inputs.spreadsheetId = foundId;
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Auto-discover or format values for Google Sheets logging if missing or placeholder
+  if (cid === 'google-sheets' && (aid.includes('append') || aid.includes('row'))) {
+    if (!inputs.sheetName) inputs.sheetName = 'Sheet1';
+
+    const item = context.get('item');
+    if (item && typeof item === 'object') {
+      const subject = item.subject || item.title || item.name || 'No Subject';
+      const sender = item.from || item.sender || item.to || item.author || 'Unknown';
+      inputs.values = [subject, sender, item.date || dateStr];
+    } else if (!inputs.values || (Array.isArray(inputs.values) && inputs.values.length === 0)) {
+      // Search context for previous Gmail or email outputs
+      let emailList: any[] = [];
+      for (const [_, val] of context.entries()) {
+        if (val) {
+          if (Array.isArray(val.emails)) emailList = val.emails;
+          else if (Array.isArray(val.messages)) emailList = val.messages;
+          else if (Array.isArray(val)) emailList = val;
+        }
+      }
+      if (emailList.length > 0) {
+        inputs.values = emailList.map((e: any) => [
+          e.subject || e.title || 'No Subject',
+          e.from || e.sender || e.to || 'Unknown Sender',
+          e.date || dateStr
+        ]);
+      } else {
+        inputs.values = [topic, dateStr, 'Automated AI Entry'];
+      }
+    }
+  }
 
   // If user provided a specific value, KEEP IT!
   // If user/LLM omitted a required or expected field, populate AI dynamic value:
@@ -406,7 +454,7 @@ async function executeStep(
   credentials: any,
   connectionId: string,
   userMessage?: string
-): Promise<{ success: boolean; output?: any; error?: string; errorCode?: string }> {
+): Promise<{ success: boolean; output?: any; error?: string; errorCode?: string; inputs?: Record<string, any> }> {
   try {
     const resolvedInputs = resolveVariables(step.inputs, context);
     const finalInputs = hydrateActionInputs(step, userMessage || '', context, credentials, resolvedInputs);
@@ -415,7 +463,7 @@ async function executeStep(
     if (DB_CONNECTOR_IDS.has(step.connectorId)) {
       const connector = getDbConnectorInstance(step.connectorId);
       if (!connector) {
-        return { success: false, error: `DB connector '${step.connectorId}' could not be loaded`, errorCode: 'CONNECTOR_NOT_FOUND' };
+        return { success: false, error: `DB connector '${step.connectorId}' could not be loaded`, errorCode: 'CONNECTOR_NOT_FOUND', inputs: finalInputs };
       }
 
       // Build connectionConfig from decrypted credentials stored in DB
@@ -446,9 +494,9 @@ async function executeStep(
       });
 
       if (result.success === false) {
-        return { success: false, error: result.error || 'DB operation failed', errorCode: 'DB_ERROR' };
+        return { success: false, error: result.error || 'DB operation failed', errorCode: 'DB_ERROR', inputs: finalInputs };
       }
-      return { success: true, output: result.data ?? result };
+      return { success: true, output: result.data ?? result, inputs: finalInputs };
     }
 
     // ── Regular connectors via connectorRegistry ────────────────────────────
@@ -469,13 +517,13 @@ async function executeStep(
         workflowVariables: {},
         stepInput: finalInputs,
       });
-      return { success: true, output: result.data ?? result };
+      return { success: result.success !== false, output: result.data ?? result, error: result.error, inputs: finalInputs };
     }
 
-    return { success: false, error: `No connector found for '${step.connectorId}'`, errorCode: 'CONNECTOR_NOT_FOUND' };
+    return { success: false, error: `No connector found for '${step.connectorId}'`, errorCode: 'CONNECTOR_NOT_FOUND', inputs: finalInputs };
   } catch (err: any) {
-    const errMsg = err?.message || 'Unknown error';
-    let errorCode = 'UNKNOWN_ERROR';
+    const errMsg = err?.message || 'Step execution failed';
+    let errorCode = 'EXECUTION_ERROR';
     if (errMsg.includes('ECONNREFUSED') || errMsg.includes('connect ECONNREFUSED')) errorCode = 'ECONNREFUSED';
     else if (errMsg.includes('timeout') || errMsg.includes('ETIMEDOUT')) errorCode = 'ETIMEDOUT';
     else if (errMsg.includes('auth') || errMsg.includes('password') || errMsg.includes('credentials') || errMsg.includes('401')) errorCode = 'AUTH_ERROR';
@@ -1030,7 +1078,13 @@ export class AgentChatService {
         break;
       }
 
-      emitSSE({ type: 'step_start', stepId: step.stepId, description: step.description });
+      emitSSE({
+        type: 'step_start',
+        stepId: step.stepId,
+        description: step.description,
+        connectorId: step.connectorId,
+        actionId: step.actionId,
+      });
 
       // Find credentials for this step
       const conn = activeConnections.find((c) => c.connectorId === step.connectorId || c.connectionId === (step as any).connectionId);
@@ -1042,6 +1096,7 @@ export class AgentChatService {
         const forEachArr = resolveVariables(forEachRef, context);
         const items = Array.isArray(forEachArr) ? forEachArr.slice(0, 500) : [forEachArr];
         const loopResults: any[] = [];
+        let lastInputs: any = undefined;
 
         for (const item of items) {
           if (Date.now() - startTime > EXECUTION_TIMEOUT_MS) break;
@@ -1049,23 +1104,76 @@ export class AgentChatService {
           const itemContext = new Map(context);
           itemContext.set('item', item);
           const loopResult = await executeStep(step, itemContext, credentials, conn?.connectionId || '', userMessage);
+          if (loopResult.inputs) lastInputs = loopResult.inputs;
           loopResults.push(loopResult.output || loopResult.error);
         }
 
         context.set(step.stepId, { output: loopResults });
-        stepsExecuted.push({ stepId: step.stepId, connectorId: step.connectorId, actionId: step.actionId, description: step.description, success: true, output: loopResults });
-        emitSSE({ type: 'step_complete', stepId: step.stepId, description: `${step.description} (${items.length} items processed)`, preview: loopResults.slice(0, 3) });
+        stepsExecuted.push({
+          stepId: step.stepId,
+          connectorId: step.connectorId,
+          actionId: step.actionId,
+          description: step.description,
+          success: true,
+          inputs: lastInputs,
+          output: loopResults,
+        });
+        emitSSE({
+          type: 'step_complete',
+          stepId: step.stepId,
+          description: `${step.description} (${items.length} items processed)`,
+          connectorId: step.connectorId,
+          actionId: step.actionId,
+          inputs: lastInputs,
+          output: loopResults,
+          preview: loopResults.slice(0, 3),
+        });
       } else {
         apiCallCount++;
         const result = await executeStep(step, context, credentials, conn?.connectionId || '', userMessage);
 
         if (result.success) {
           context.set(step.stepId, result.output);
-          stepsExecuted.push({ stepId: step.stepId, connectorId: step.connectorId, actionId: step.actionId, description: step.description, success: true, output: result.output });
-          emitSSE({ type: 'step_complete', stepId: step.stepId, description: step.description, preview: typeof result.output === 'object' ? Object.entries(result.output || {}).slice(0, 3) : result.output });
+          stepsExecuted.push({
+            stepId: step.stepId,
+            connectorId: step.connectorId,
+            actionId: step.actionId,
+            description: step.description,
+            success: true,
+            inputs: result.inputs,
+            output: result.output,
+          });
+          emitSSE({
+            type: 'step_complete',
+            stepId: step.stepId,
+            description: step.description,
+            connectorId: step.connectorId,
+            actionId: step.actionId,
+            inputs: result.inputs,
+            output: result.output,
+            preview: typeof result.output === 'object' ? Object.entries(result.output || {}).slice(0, 3) : result.output,
+          });
         } else {
-          stepsExecuted.push({ stepId: step.stepId, connectorId: step.connectorId, actionId: step.actionId, description: step.description, success: false, error: result.error, errorCode: result.errorCode });
-          emitSSE({ type: 'step_error', stepId: step.stepId, description: step.description, error: result.error, errorCode: result.errorCode });
+          stepsExecuted.push({
+            stepId: step.stepId,
+            connectorId: step.connectorId,
+            actionId: step.actionId,
+            description: step.description,
+            success: false,
+            inputs: result.inputs,
+            error: result.error,
+            errorCode: result.errorCode,
+          });
+          emitSSE({
+            type: 'step_error',
+            stepId: step.stepId,
+            description: step.description,
+            connectorId: step.connectorId,
+            actionId: step.actionId,
+            inputs: result.inputs,
+            error: result.error,
+            errorCode: result.errorCode,
+          });
           // Stop dependent steps — for simplicity in a linear plan we stop all
           break;
         }

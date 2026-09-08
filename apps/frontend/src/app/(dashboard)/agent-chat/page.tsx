@@ -14,7 +14,11 @@ import { apiClient } from '@/lib/api-client';
 interface SSEEvent {
   type: 'step_start' | 'step_complete' | 'step_error' | 'confirmation_required' | 'final_response' | 'rate_limited' | 'execution_in_progress';
   stepId?: string;
+  connectorId?: string;
+  actionId?: string;
   description?: string;
+  inputs?: any;
+  output?: any;
   preview?: any;
   error?: string;
   errorCode?: string;
@@ -25,8 +29,12 @@ interface SSEEvent {
 
 interface ExecutionStep {
   id: string;
+  connectorId?: string;
+  actionId?: string;
   status: 'running' | 'done' | 'error';
   description: string;
+  inputs?: any;
+  output?: any;
   preview?: any;
   error?: string;
   errorCode?: string;
@@ -435,9 +443,11 @@ function renderMarkdown(text: string): string {
     .replace(/\n/g, '<br/>');
 }
 
-// ─── Step Execution Pipeline Component ─────────────────────────────────────────
+// ─── Step Execution Pipeline & Real-Time Action Console ──────────────────────
 function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
+  const [activeConsoleTab, setActiveConsoleTab] = useState<Record<string, 'input' | 'output'>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!steps || steps.length === 0) return null;
 
@@ -446,38 +456,56 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
   const hasError = steps.some(s => s.status === 'error');
   const isRunning = steps.some(s => s.status === 'running');
 
+  const copyJson = (stepId: string, type: 'input' | 'output', data: any) => {
+    try {
+      const text = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data || '');
+      navigator.clipboard.writeText(text);
+      setCopiedKey(`${stepId}_${type}`);
+      toast.success(`Copied ${type === 'input' ? 'Request Input' : 'Response Output'} JSON`);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch {}
+  };
+
   return (
-    <div className="w-full bg-slate-900/80 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-md mb-2 transition-all">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800/60 mb-2.5">
+    <div className="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-xl backdrop-blur-md mb-2 transition-all">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 mb-2.5">
         <div className="flex items-center gap-2">
           <div className="relative">
             <Cpu className={`w-3.5 h-3.5 ${isRunning ? 'text-indigo-400 animate-pulse' : hasError ? 'text-rose-400' : 'text-emerald-400'}`} />
             {isRunning && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-ping" />}
           </div>
-          <span className="text-[11px] font-semibold text-slate-200 uppercase tracking-wider">
+          <span className="text-[11px] font-bold text-slate-200 uppercase tracking-wider">
             Execution Pipeline ({completed}/{total})
           </span>
         </div>
-        <div className="w-24 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div
-            className={`h-full transition-all duration-500 ${hasError ? 'bg-rose-500' : isRunning ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-emerald-500'}`}
-            style={{ width: `${(completed / total) * 100}%` }}
-          />
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-slate-400 font-mono">
+            {isRunning ? 'Executing steps...' : hasError ? 'Completed with errors' : 'All steps completed'}
+          </span>
+          <div className="w-24 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 ${hasError ? 'bg-rose-500' : isRunning ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-emerald-500'}`}
+              style={{ width: `${(completed / total) * 100}%` }}
+            />
+          </div>
         </div>
       </div>
 
       <div className="space-y-1.5">
         {steps.map((step, idx) => {
           const isExpanded = expandedStepId === step.id;
+          const currentTab = activeConsoleTab[step.id] || 'output';
+          const actionBadge = step.connectorId ? `${step.connectorId}${step.actionId ? `:${step.actionId}` : ''}` : '';
+
           return (
             <div
               key={step.id}
               className={`group flex flex-col rounded-lg text-xs border transition-all ${
                 step.status === 'running'
-                  ? 'bg-indigo-950/20 border-indigo-500/30 text-indigo-300'
+                  ? 'bg-indigo-950/20 border-indigo-500/40 text-indigo-300 shadow-md shadow-indigo-950/20'
                   : step.status === 'done'
-                  ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-300'
-                  : 'bg-rose-950/20 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
+                  : 'bg-rose-950/20 border-rose-500/40 text-rose-300'
               }`}
             >
               <div
@@ -485,7 +513,7 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
                 onClick={() => setExpandedStepId(isExpanded ? null : step.id)}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <span className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-mono font-bold text-slate-400 flex-shrink-0">
+                  <span className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-mono font-bold text-slate-300 flex-shrink-0">
                     {idx + 1}
                   </span>
 
@@ -493,39 +521,88 @@ function StepPipeline({ steps }: { steps: ExecutionStep[] }) {
                   {step.status === 'done' && <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
                   {step.status === 'error' && <XCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />}
 
-                  <span className="truncate text-[11px] font-medium text-slate-200">{step.description}</span>
+                  <span className="truncate text-[11px] font-medium text-slate-100">{step.description}</span>
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {step.preview && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 font-mono">
-                      JSON
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {actionBadge && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-800/60 text-indigo-300 font-mono">
+                      {actionBadge}
                     </span>
                   )}
-                  {isExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
+                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
                 </div>
               </div>
 
               {isExpanded && (
-                <div className="px-3 pb-2.5 pt-1 border-t border-slate-800/60 bg-slate-950/40 rounded-b-lg">
+                <div className="px-3 pb-3 pt-2 border-t border-slate-800/80 bg-slate-950/70 rounded-b-lg space-y-2">
                   {step.error && (
-                    <div className="text-rose-400 text-[11px] bg-rose-950/40 p-2 rounded border border-rose-900/50 mb-2 font-mono">
-                      {step.error} {step.errorCode && <span className="text-rose-300 font-bold">[{step.errorCode}]</span>}
+                    <div className="text-rose-400 text-[11px] bg-rose-950/60 p-2.5 rounded-lg border border-rose-800/60 font-mono">
+                      ❌ <strong>Error:</strong> {step.error} {step.errorCode && <span className="text-rose-300 font-bold">[{step.errorCode}]</span>}
                     </div>
                   )}
 
-                  {step.preview ? (
-                    <div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                        <span>Output Payload</span>
-                      </div>
-                      <pre className="p-2 rounded bg-slate-900 border border-slate-800 text-[10px] text-indigo-200 font-mono overflow-x-auto max-h-36 no-scrollbar">
-                        {typeof step.preview === 'object' ? JSON.stringify(step.preview, null, 2) : String(step.preview)}
-                      </pre>
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveConsoleTab(prev => ({ ...prev, [step.id]: 'input' })); }}
+                        className={`text-[10px] font-medium px-2 py-0.5 rounded transition-all ${
+                          currentTab === 'input'
+                            ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                            : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        📥 Request Inputs
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveConsoleTab(prev => ({ ...prev, [step.id]: 'output' })); }}
+                        className={`text-[10px] font-medium px-2 py-0.5 rounded transition-all ${
+                          currentTab === 'output'
+                            ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                            : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        📤 Response Output
+                      </button>
                     </div>
-                  ) : (
-                    <span className="text-[10px] text-slate-500 italic">No output payload generated</span>
-                  )}
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyJson(step.id, currentTab, currentTab === 'input' ? step.inputs : (step.output || step.preview));
+                      }}
+                      className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 px-2 py-0.5 rounded transition-all font-mono"
+                    >
+                      {copiedKey === `${step.id}_${currentTab}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedKey === `${step.id}_${currentTab}` ? 'Copied!' : 'Copy JSON'}</span>
+                    </button>
+                  </div>
+
+                  <div>
+                    {currentTab === 'input' ? (
+                      step.inputs ? (
+                        <pre className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] text-emerald-300 font-mono overflow-x-auto max-h-48 no-scrollbar">
+                          {JSON.stringify(step.inputs, null, 2)}
+                        </pre>
+                      ) : (
+                        <div className="p-2 text-[10px] text-slate-500 italic bg-slate-900/50 rounded border border-slate-800/50">
+                          No input parameters passed to this action.
+                        </div>
+                      )
+                    ) : (
+                      step.output || step.preview ? (
+                        <pre className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] text-indigo-300 font-mono overflow-x-auto max-h-48 no-scrollbar">
+                          {typeof (step.output || step.preview) === 'object'
+                            ? JSON.stringify(step.output || step.preview, null, 2)
+                            : String(step.output || step.preview)}
+                        </pre>
+                      ) : (
+                        <div className="p-2 text-[10px] text-slate-500 italic bg-slate-900/50 rounded border border-slate-800/50">
+                          No response payload returned.
+                        </div>
+                      )
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -942,8 +1019,11 @@ export default function AgentChatPage() {
                 ...m,
                 steps: [...(m.steps || []), {
                   id: event.stepId!,
+                  connectorId: event.connectorId,
+                  actionId: event.actionId,
                   status: 'running',
                   description: event.description || event.stepId!,
+                  inputs: event.inputs,
                 }],
               }
             : m
@@ -957,7 +1037,16 @@ export default function AgentChatPage() {
                 ...m,
                 steps: (m.steps || []).map(s =>
                   s.id === event.stepId
-                    ? { ...s, status: 'done', description: event.description || s.description, preview: event.preview }
+                    ? {
+                        ...s,
+                        status: 'done',
+                        connectorId: event.connectorId || s.connectorId,
+                        actionId: event.actionId || s.actionId,
+                        description: event.description || s.description,
+                        inputs: event.inputs || s.inputs,
+                        output: event.output || event.preview || s.output,
+                        preview: event.preview || s.preview,
+                      }
                     : s
                 ),
               }
@@ -972,7 +1061,16 @@ export default function AgentChatPage() {
                 ...m,
                 steps: (m.steps || []).map(s =>
                   s.id === event.stepId
-                    ? { ...s, status: 'error', error: event.error, errorCode: event.errorCode }
+                    ? {
+                        ...s,
+                        status: 'error',
+                        connectorId: event.connectorId || s.connectorId,
+                        actionId: event.actionId || s.actionId,
+                        description: event.description || s.description,
+                        inputs: event.inputs || s.inputs,
+                        error: event.error,
+                        errorCode: event.errorCode,
+                      }
                     : s
                 ),
               }

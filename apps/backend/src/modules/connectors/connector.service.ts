@@ -65,9 +65,45 @@ export class ConnectorService {
   }
 
   static async handleOAuthCallback(connectorId: string, code: string, orgId: string, userId: string) {
+    const { ConnectionModel } = require('@automation/database');
     const redirectUri = `${env.clientUrl}/connectors/callback`;
     const tokens = await OAuth2Strategy.exchangeCodeForTokens(connectorId, code, redirectUri);
-    const encryptedCredentials = encryptJson(tokens);
+
+    // Find existing connection for this connectorId if present
+    const existing = await ConnectionModel.findOne({ organizationId: orgId, connectorId });
+    let existingCreds: Record<string, any> = {};
+    if (existing && existing.encryptedCredentials) {
+      try { existingCreds = decryptJson(existing.encryptedCredentials); } catch {}
+    }
+
+    // Preserve existing refresh token if Google/provider didn't re-issue one on reconnect!
+    const refreshToken = tokens.refreshToken || existingCreds.refreshToken || existingCreds.refresh_token || existing?.refreshToken || '';
+    const expiresIn = tokens.expiresIn || 3600;
+    const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    const mergedCreds = {
+      ...existingCreds,
+      ...tokens,
+      accessToken: tokens.accessToken,
+      refreshToken,
+      refresh_token: refreshToken,
+      expiresAt: tokenExpiresAt.toISOString(),
+      tokenExpiresAt: tokenExpiresAt.toISOString(),
+    };
+
+    const encryptedCredentials = encryptJson(mergedCreds);
+
+    if (existing) {
+      existing.encryptedCredentials = encryptedCredentials;
+      existing.status = 'connected';
+      existing.expiresAt = tokenExpiresAt;
+      existing.tokenExpiresAt = tokenExpiresAt;
+      existing.refreshToken = refreshToken;
+      existing.lastRefreshedAt = new Date();
+      existing.lastRefreshError = undefined;
+      await existing.save();
+      return existing;
+    }
 
     return await ConnectorRepository.createConnection({
       organizationId: orgId,
@@ -77,6 +113,9 @@ export class ConnectorService {
       authType: 'oauth2',
       encryptedCredentials,
       status: 'connected',
+      expiresAt: tokenExpiresAt,
+      tokenExpiresAt,
+      refreshToken,
     });
   }
 

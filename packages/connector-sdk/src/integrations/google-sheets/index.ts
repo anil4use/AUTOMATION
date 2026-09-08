@@ -363,19 +363,55 @@ export class GoogleSheetsConnector extends BaseConnector {
         case 'batch_update_rows':
         case 'append_row': {
           const sheetName = inputs.sheetName || 'Sheet1';
-          const values = typeof inputs.values === 'string'
-            ? (inputs.values.startsWith('[') ? JSON.parse(inputs.values) : inputs.values.split(',').map(s => s.trim()))
-            : inputs.values;
+          let rawValues = inputs.values ?? inputs.rows ?? inputs.row ?? inputs.data ?? inputs.item;
+          let parsed: any = rawValues;
+
+          if (typeof rawValues === 'string') {
+            try {
+              if (rawValues.startsWith('[') || rawValues.startsWith('{')) {
+                parsed = JSON.parse(rawValues);
+              } else {
+                parsed = rawValues.split(',').map(s => s.trim());
+              }
+            } catch {
+              parsed = [rawValues];
+            }
+          }
+
+          // Convert single object to array of property values
+          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            parsed = Object.values(parsed);
+          }
+
+          // Convert array of objects to array of property value arrays
+          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null && !Array.isArray(parsed[0])) {
+            parsed = parsed.map((rowObj: any) => Object.values(rowObj));
+          }
+
+          // Construct clean 2D array for Google Sheets API
+          let rowPayload: any[][];
+          if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+            rowPayload = parsed;
+          } else if (Array.isArray(parsed)) {
+            rowPayload = [parsed];
+          } else if (parsed !== undefined && parsed !== null) {
+            rowPayload = [[parsed]];
+          } else {
+            rowPayload = [['No Data Provided', new Date().toISOString()]];
+          }
 
           const { data } = await api.post(`/${inputs.spreadsheetId}/values/${encodeURIComponent(sheetName)}:append`, {
-            values: [values],
+            values: rowPayload,
           }, { params: { valueInputOption: 'USER_ENTERED' } });
 
           return {
             success: true,
             data: {
+              spreadsheetId: inputs.spreadsheetId,
+              spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${inputs.spreadsheetId}/edit`,
               updatedRange: data.updates?.updatedRange,
-              updatedRows: data.updates?.updatedRows || 1,
+              updatedRows: data.updates?.updatedRows || rowPayload.length,
+              rowsAppended: rowPayload.length,
             },
           };
         }
