@@ -1,10 +1,11 @@
 import { ConnectorManifest } from '@automation/shared-types';
 
 export interface ExecutionContext {
-  connectionCredentials: Record<string, any>;
+  connectionCredentials?: Record<string, any>;
   connectionConfig?: Record<string, any>;
   stepInput: Record<string, any>;
-  workflowVariables: Record<string, any>;
+  workflowVariables?: Record<string, any>;
+  sessionId?: string;
 }
 
 export interface ConnectorExecutionOutput {

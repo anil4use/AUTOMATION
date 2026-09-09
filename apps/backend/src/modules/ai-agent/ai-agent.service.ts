@@ -35,17 +35,18 @@ SYSTEM GUARDRAILS & SECURITY RULES:
 
 Available Native AutoFlow Connectors & Supported Operations:
 1. 'autoflow-schedule' — Triggers: 'schedule_time' (config: { frequency: 'daily'|'hourly'|'interval', time: '09:00', intervalMinutes: number })
-2. 'web-search' — Actions: 'search_web' (config: { query: string, maxResults: number }), 'scrape_url' (config: { url: string })
-3. 'gmail' — Triggers: 'new_email' (config: { query: string }), Actions: 'send_email' (config: { to: string, subject: string, body: string }), 'read_emails' (config: { query: string, maxResults: number })
-4. 'google-sheets' — Triggers: 'new_row', Actions: 'append_row' (config: { spreadsheetId: string, worksheet: 'Sheet1', values: string }), 'create_spreadsheet' (config: { title: string })
-5. 'google-drive' — Actions: 'upload_file' (config: { fileName: string, content: string }), 'create_folder'
-6. 'google-calendar' — Actions: 'create_event' (config: { summary: string, description: string, startTime: string, endTime: string })
-7. 'google-docs' — Actions: 'create_document' (config: { title: string, initialText: string })
-8. 'slack' — Actions: 'send_message' (config: { channel: string, text: string })
-9. 'whatsapp' — Actions: 'send_message' (config: { recipient: string, message: string })
-10. 'notion' — Actions: 'create_page' (config: { databaseId: string, title: string })
-11. 'ai-agent' — Actions: 'process_text' (config: { prompt: string }, fieldMapping: { inputText: '{{node_X.output.topSnippet || node_X.output.results || node_X.output.emails || node_X.output}}' })
-12. 'http-request' — Actions: 'custom_api_call' (config: { method: 'POST'|'GET', url: string, body: string })
+2. 'web-search' — Actions: 'search_web' (config: { query: string, maxResults: number }), 'scrape_url' (config: { url: string }), 'search_and_read' (config: { query: string, maxResults: number })
+3. 'web-browser' — Actions: 'browser_navigate', 'browser_read_page', 'browser_screenshot', 'browser_click', 'browser_fill_form', 'browser_run_js', 'browser_search_web', 'browser_extract_content'
+4. 'gmail' — Triggers: 'new_email' (config: { query: string }), Actions: 'send_email' (config: { to: string, subject: string, body: string }), 'read_emails' (config: { query: string, maxResults: number })
+5. 'google-sheets' — Triggers: 'new_row', Actions: 'append_row' (config: { spreadsheetId: string, worksheet: 'Sheet1', values: string }), 'create_spreadsheet' (config: { title: string })
+6. 'google-drive' — Actions: 'upload_file' (config: { fileName: string, content: string }), 'create_folder'
+7. 'google-calendar' — Actions: 'create_event' (config: { summary: string, description: string, startTime: string, endTime: string })
+8. 'google-docs' — Actions: 'create_document' (config: { title: string, initialText: string })
+9. 'slack' — Actions: 'send_message' (config: { channel: string, text: string })
+10. 'whatsapp' — Actions: 'send_message' (config: { recipient: string, message: string })
+11. 'notion' — Actions: 'create_page' (config: { databaseId: string, title: string })
+12. 'ai-agent' — Actions: 'process_text' (config: { prompt: string }, fieldMapping: { inputText: '{{node_X.output.topSnippet || node_X.output.results || node_X.output.emails || node_X.output}}' })
+13. 'http-request' — Actions: 'custom_api_call' (config: { method: 'POST'|'GET', url: string, body: string })
 
 CRITICAL PIPELINE RULE:
 When the user asks to process/summarize data with AI and store or log the results (e.g. search web + analyze with AI + log to Google Sheets or Slack), YOU MUST ALWAYS INCLUDE ALL 4 PIPELINE STAGES IN THE 'nodes' ARRAY:

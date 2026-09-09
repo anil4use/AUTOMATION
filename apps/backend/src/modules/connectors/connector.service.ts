@@ -55,7 +55,69 @@ export class ConnectorService {
   }
 
   static async getUserConnections(orgId: string) {
-    return await ConnectorRepository.findByOrg(orgId);
+    const realConns = await ConnectorRepository.findByOrg(orgId);
+
+    const builtinSystemConns = [
+      {
+        _id: 'sys_web_search',
+        organizationId: orgId,
+        connectorId: 'web-search',
+        name: 'Web Search & Intelligence (Built-in)',
+        status: 'connected',
+        authType: 'none',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        _id: 'sys_web_browser',
+        organizationId: orgId,
+        connectorId: 'web-browser',
+        name: 'Web Browser & Playwright MCP (Built-in)',
+        status: 'connected',
+        authType: 'none',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        _id: 'sys_http_request',
+        organizationId: orgId,
+        connectorId: 'http-request',
+        name: 'HTTP Request Call (Built-in)',
+        status: 'connected',
+        authType: 'none',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        _id: 'sys_autoflow_schedule',
+        organizationId: orgId,
+        connectorId: 'autoflow-schedule',
+        name: 'AutoFlow Schedule Trigger (Built-in)',
+        status: 'connected',
+        authType: 'none',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        _id: 'sys_ai_agent',
+        organizationId: orgId,
+        connectorId: 'ai-agent',
+        name: 'AI Reasoning & Data Analyst (Built-in)',
+        status: 'connected',
+        authType: 'none',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const result = [...realConns];
+    builtinSystemConns.forEach((sys) => {
+      if (!result.some((c: any) => c.connectorId === sys.connectorId)) {
+        result.push(sys as any);
+      }
+    });
+
+    return result;
   }
 
   static getOAuthAuthorizeUrl(connectorId: string, orgId: string, userId: string) {
@@ -229,6 +291,41 @@ export class ConnectorService {
   }
 
   static async testConnection(connectorId: string, orgId: string, testInput?: any) {
+    if (['web-search', 'web-search-pro', 'web-browser', 'http-request', 'autoflow-schedule', 'autoflow-condition', 'ai-agent', 'ai-node'].includes(connectorId)) {
+      if (connectorId === 'web-search' || connectorId === 'web-search-pro') {
+        const query = testInput?.query || 'Latest AI automation trends';
+        const { WebSearchConnector } = require('@automation/connector-sdk');
+        const searchConn = new WebSearchConnector();
+        const res = await searchConn.executeAction('search_web', {
+          connectionCredentials: {},
+          workflowVariables: {},
+          stepInput: { query, maxResults: 5 },
+        });
+        return {
+          status: 'success',
+          action: 'search_web',
+          account: 'DuckDuckGo Engine (Built-in Zero Auth)',
+          output: res.data,
+          message: `Live Web Search & Instant Q&A Verified! Found ${res.data?.totalResults || res.data?.results?.length || 0} results for query "${query}".`,
+        };
+      }
+      if (connectorId === 'web-browser') {
+        const { BrowserToolService } = require('../services/browser-tool.service');
+        const result = await BrowserToolService.executeBrowserAction({
+          action: 'search_and_read',
+          url: 'https://duckduckgo.com',
+          query: testInput?.query || 'Playwright MCP verification',
+        });
+        return {
+          status: 'success',
+          action: 'browser_action',
+          account: 'Playwright MCP Chromium Engine (Built-in Zero Auth)',
+          output: result,
+          message: `Live Playwright MCP Browser Active & Verified! Title: "${result.title || 'Success'}".`,
+        };
+      }
+    }
+
     const conn = await ConnectorRepository.findByOrgAndConnector(orgId, connectorId);
     if (!conn) {
       throw new AppError(`No active connection found for '${connectorId}'. Please connect your account first.`, 404);

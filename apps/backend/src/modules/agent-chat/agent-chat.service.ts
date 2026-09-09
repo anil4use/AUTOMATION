@@ -30,7 +30,8 @@ const CONNECTOR_KEYWORD_ALIASES: Record<string, string[]> = {
   github: ['github', 'repo', 'repository', 'commit', 'branch', 'issue', 'pr'],
   telegram: ['telegram', 'bot', 'notify'],
   notion: ['notion', 'page', 'database'],
-  'web-search': ['search', 'google', 'web', 'scrape', 'internet', 'news'],
+  'web-search': ['search', 'google', 'web', 'scrape', 'internet', 'news', 'find', 'article', 'lookup', 'tech news', 'latest', 'headline', 'information', 'query', 'tell me about', 'what is', 'who is'],
+  'web-browser': ['browser', 'playwright', 'navigate', 'click', 'form', 'screenshot', 'page', 'url', 'website', 'open'],
   dynamodb: ['dynamodb', 'dynamo', 'aws', 'table'],
 };
 
@@ -437,14 +438,12 @@ export function hydrateActionInputs(
 function extractPromptTopic(userMessage: string): string {
   if (!userMessage) return 'AutoFlow Task';
   const clean = userMessage
-    .replace(/^(can you|please|i want to|help me|how to|send a|read|get|fetch|find|search|show me|create a|create|make a)\s+/i, '')
-    .replace(/[^\w\s-]/g, '')
+    .replace(/^(search\s+the\s+web\s+for|search\s+web\s+for|search\s+for|search|look\s+up|find\s+out\s+about|can\s+you|please|i\s+want\s+to|help\s+me|how\s+to|send\s+a|read|get|fetch|find|show\s+me|create\s+a|create|make\s+a)\s+/i, '')
     .trim();
-  const words = clean.split(/\s+/).filter(Boolean);
-  if (words.length > 0) {
-    return words.slice(0, 4).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  if (clean.length > 0) {
+    return clean;
   }
-  return 'AutoFlow Task';
+  return userMessage.trim() || 'AutoFlow Task';
 }
 
 // ─── Execute Single Step ──────────────────────────────────────────────────────
@@ -453,7 +452,8 @@ async function executeStep(
   context: Map<string, any>,
   credentials: any,
   connectionId: string,
-  userMessage?: string
+  userMessage?: string,
+  sessionId?: string
 ): Promise<{ success: boolean; output?: any; error?: string; errorCode?: string; inputs?: Record<string, any> }> {
   try {
     const resolvedInputs = resolveVariables(step.inputs, context);
@@ -491,7 +491,8 @@ async function executeStep(
         connectionConfig,
         connectionCredentials: credentials,
         workflowVariables: {},
-      });
+        sessionId,
+      } as any);
 
       if (result.success === false) {
         return { success: false, error: result.error || 'DB operation failed', errorCode: 'DB_ERROR', inputs: finalInputs };
@@ -534,7 +535,8 @@ async function executeStep(
         connectionCredentials: credentials,
         workflowVariables: {},
         stepInput: finalInputs,
-      });
+        sessionId,
+      } as any);
       return { success: result.success !== false, output: result.data ?? result, error: result.error, inputs: finalInputs };
     }
 
@@ -669,7 +671,7 @@ RESPOND WITH VALID JSON ONLY — no markdown fences, no extra text:
 }
 
 // ─── Universal Dynamic Action Matcher (100% Dynamic - Zero Hardcoding) ────────
-function parseUniversalDynamicIntent(userMessage: string, activeConnections: any[] = []): ExecutionPlan {
+export function parseUniversalDynamicIntent(userMessage: string, activeConnections: any[] = []): ExecutionPlan {
   const msgLower = userMessage.toLowerCase().replace(/["']/g, '').trim();
   const tokens = msgLower.split(/\W+/).filter((t) => t.length > 2);
   const plan: ExecutionStep[] = [];
@@ -713,6 +715,10 @@ function parseUniversalDynamicIntent(userMessage: string, activeConnections: any
         if (msgLower.includes('count') || msgLower.includes('how many')) {
           if (action.id.includes('count') || action.id.includes('list')) score += 15;
         }
+        if ((msgLower.includes('search') || msgLower.includes('news') || msgLower.includes('latest') || msgLower.includes('look up') || msgLower.includes('find out') || msgLower.includes('article') || msgLower.includes('web')) && (conn.connectorId === 'web-search' || conn.connectorId === 'web-browser')) {
+          if (action.id === 'search_web' || action.id === 'search_and_read') score += 35;
+          else score += 20;
+        }
 
         if (score > (bestMatch?.score || 0)) {
           bestMatch = { conn, action, score };
@@ -732,6 +738,14 @@ function parseUniversalDynamicIntent(userMessage: string, activeConnections: any
       const keyLower = field.key.toLowerCase();
       if (keyLower === 'to' || keyLower.includes('recipient') || keyLower.includes('email')) {
         if (emailMatch) inputs[field.key] = emailMatch[0];
+      } else if (keyLower === 'query' || keyLower === 'search' || keyLower === 'q') {
+        const queryClean = userMessage
+          .replace(/^(search\s+the\s+web\s+for|search\s+web\s+for|search\s+for|search|look\s+up|find\s+out\s+about|google|find)\s+/i, '')
+          .trim();
+        inputs[field.key] = queryClean || userMessage;
+      } else if (keyLower === 'url') {
+        const urlMatch = userMessage.match(/https?:\/\/[^\s]+/i);
+        if (urlMatch) inputs[field.key] = urlMatch[0];
       } else if (keyLower === 'subject' || keyLower === 'title') {
         const subjMatch = userMessage.match(/(?:title|subject)\s*[:=|-]?\s*([^,\n.]+)/i);
         if (subjMatch) inputs[field.key] = subjMatch[1].trim();
@@ -779,31 +793,51 @@ async function assembleConversationalResult(
       });
     }
 
-    const preview = JSON.stringify(output || s.error || {}).slice(0, 1000);
-    return `${s.stepId} (${s.connectorId}.${s.actionId}) — ${s.success ? 'SUCCESS' : 'FAILED'}: ${preview}`;
-  }).join('\n\n');
+    let formattedDetails = '';
+    if (typeof output === 'object' && output !== null) {
+      if (Array.isArray(output.results)) {
+        const items = output.results.map((r: any, i: number) => `Result #${i + 1}: ${r.title} | ${r.url}\nSnippet: ${r.snippet || r.content || 'N/A'}`).join('\n\n');
+        formattedDetails += `\nSearch Results:\n${items}\n`;
+      }
+      if (Array.isArray(output.pagesContent)) {
+        const pages = output.pagesContent.map((p: any) => `Page (${p.title} - ${p.url}):\n${(p.content || '').slice(0, 3000)}`).join('\n\n');
+        formattedDetails += `\nExtracted Page Contents:\n${pages}\n`;
+      }
+      if (output.extractedText || output.content) {
+        formattedDetails += `\nExtracted Content:\n${String(output.extractedText || output.content).slice(0, 4000)}\n`;
+      }
+      if (output.abstract || output.topSnippet) {
+        formattedDetails += `\nSummary Abstract:\n${output.abstract || output.topSnippet}\n`;
+      }
+    }
+
+    if (!formattedDetails) {
+      formattedDetails = JSON.stringify(output || s.error || {}).slice(0, 2000);
+    }
+
+    return `Step ${s.stepId} (${s.connectorId}.${s.actionId}) — ${s.success ? 'SUCCESS' : 'FAILED'}:\n${formattedDetails}`;
+  }).join('\n\n====================\n\n');
 
   const urlSection = discoveredUrls.length
     ? `\n\nCRITICAL RESOURCE LINKS GENERATED IN THIS EXECUTION (You MUST include these exact markdown links in your response):\n${discoveredUrls.join('\n')}\n`
     : '';
 
-  const prompt = `You are the AutoFlow Agent summarizing the results of operations you just performed.
+  const prompt = `You are the AutoFlow AI Agent directly serving the user.
 
-User asked: "${userMessage}"
+User Prompt / Query: "${userMessage}"
 
-Execution results:
+Execution Payload & Extracted Real-Time Web Data:
 ${resultsText}
 ${urlSection}
-Write a clear, concise, conversational Markdown response that:
-1. Summarizes what was done and what was found/created/modified.
-2. Presents data clearly — use tables, bullet lists, or inline values as appropriate.
-3. Include all resource URLs (e.g. Google Sheets, Google Docs, GitHub) as prominent clickable markdown links.
-4. If any step failed, explain what went wrong and how to fix it cleanly.
-5. Keep the response friendly, direct, and helpful.
-6. Do NOT include raw JSON dumps — only human-readable markdown summaries.
-7. For counts, totals, and key metrics — highlight them in **bold**.
 
-Respond with ONLY the markdown text of the reply — no JSON wrapper.`;
+INSTRUCTIONS FOR YOUR RESPONSE:
+1. Thoroughly answer the user's query using the real-time search snippets, page text, and data extracted above.
+2. If the user asked about a company, person, website, or topic (e.g. "Aripra tech" or "Who is X"), provide a full, detailed profile summarizing what they do, their products, team, location, and key highlights based on the extracted search snippets and page content.
+3. NEVER write generic phrases like "content is not displayed here" or "the operation simply read the page". Always synthesize and output the actual information found!
+4. Format all URLs as prominent, clickable Markdown links: [Title / Site Name](URL).
+5. Use clean GitHub-flavored Markdown formatting with headers (##), bold text, and bulleted lists.
+
+Respond with ONLY your comprehensive Markdown response — no JSON formatting:`;
 
   let reply = '';
 
@@ -975,12 +1009,28 @@ export class AgentChatService {
       organizationId: orgId,
       status: { $in: ['connected', 'active'] },
     });
-    return conns.map((c) => ({
+    const result = conns.map((c) => ({
       connectorId: c.connectorId,
       connectionId: String(c._id),
       name: c.name,
       credentials: (() => { try { return decryptJson(c.encryptedCredentials); } catch { return {}; } })(),
     }));
+
+    const builtinSystemApps = [
+      { connectorId: 'web-search', connectionId: 'sys_web_search', name: 'Web Search & Intelligence', credentials: {} },
+      { connectorId: 'web-browser', connectionId: 'sys_web_browser', name: 'Web Browser & Playwright MCP', credentials: {} },
+      { connectorId: 'http-request', connectionId: 'sys_http_request', name: 'HTTP Request Call', credentials: {} },
+      { connectorId: 'autoflow-schedule', connectionId: 'sys_autoflow_schedule', name: 'AutoFlow Schedule Trigger', credentials: {} },
+      { connectorId: 'ai-agent', connectionId: 'sys_ai_agent', name: 'AI Reasoning & Data Analyst', credentials: {} },
+    ];
+
+    builtinSystemApps.forEach((sys) => {
+      if (!result.some((c) => c.connectorId === sys.connectorId)) {
+        result.push(sys);
+      }
+    });
+
+    return result;
   }
 
   /**
@@ -1121,7 +1171,7 @@ export class AgentChatService {
           apiCallCount++;
           const itemContext = new Map(context);
           itemContext.set('item', item);
-          const loopResult = await executeStep(step, itemContext, credentials, conn?.connectionId || '', userMessage);
+          const loopResult = await executeStep(step, itemContext, credentials, conn?.connectionId || '', userMessage, conversationId);
           if (loopResult.inputs) lastInputs = loopResult.inputs;
           loopResults.push(loopResult.output || loopResult.error);
         }
@@ -1148,7 +1198,7 @@ export class AgentChatService {
         });
       } else {
         apiCallCount++;
-        const result = await executeStep(step, context, credentials, conn?.connectionId || '', userMessage);
+        const result = await executeStep(step, context, credentials, conn?.connectionId || '', userMessage, conversationId);
 
         if (result.success) {
           context.set(step.stepId, result.output);

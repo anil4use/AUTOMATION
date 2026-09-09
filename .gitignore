@@ -34,3 +34,5 @@ Thumbs.db
 # Temporary & Cache
 .cache/
 tmp/
+.playwright-mcp/
+*.tsbuildinfo

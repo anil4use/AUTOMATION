@@ -165,7 +165,7 @@ export function StepSetupDrawer({
       setActiveTab('setup');
     } else {
       setConnectionId('');
-      const systemApp = ['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request'].includes(newAppId);
+      const systemApp = ['autoflow-schedule', 'ai-agent', 'web-search', 'web-browser', 'autoflow-condition', 'http-request'].includes(newAppId);
       if (!systemApp && m?.authType !== 'none') {
         setActiveTab('account');
       }

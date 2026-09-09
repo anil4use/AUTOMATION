@@ -10,6 +10,8 @@ import { PollingSchedulerJob } from './jobs/polling-scheduler.job';
 import { WebhookRenewalDaemon } from './jobs/webhook-renewal.job';
 import { TelegramPollingDaemon } from './jobs/telegram-polling.job';
 
+import { browserToolService } from './services/browser-tool.service';
+
 async function bootstrap(retries = 3) {
   try {
     // 1. Connect to Database Infrastructure
@@ -45,6 +47,9 @@ async function bootstrap(retries = 3) {
     server.listen(env.port, () => {
       logger.info(`🚀 [Modular Backend] Server running on port ${env.port} [${env.nodeEnv}]`);
 
+      // Warm up Playwright MCP headless browser service (non-blocking)
+      browserToolService.warmup().catch((e) => logger.warn('[Server] Browser warmup notice:', e.message));
+
       // 5. Start Background Workflow Cron Scheduler Engine (polls active workflows every 10s)
       WorkflowSchedulerService.start(10000);
 
@@ -69,10 +74,11 @@ async function bootstrap(retries = 3) {
     });
 
     // Clean shutdown handlers
-    const shutdown = () => {
+    const shutdown = async () => {
       TelegramPollingDaemon.stop();
       OAuthRefreshDaemon.stop();
       WorkflowSchedulerService.stop();
+      await browserToolService.closeAllSessions().catch(() => {});
       server.close();
     };
 

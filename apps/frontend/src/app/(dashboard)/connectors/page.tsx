@@ -176,6 +176,7 @@ export default function ConnectorsPage() {
   // Interactive Test UI States
   const [aiTestPrompt, setAiTestPrompt] = useState('Explain AI automation in 1 sentence.');
   const [slackTestMessage, setSlackTestMessage] = useState('AutoFlow Connection Verified Live!');
+  const [webSearchTestQuery, setWebSearchTestQuery] = useState('Latest AI news & automation tech');
 
   const fetchConnectors = useCallback(async () => {
     try {
@@ -284,6 +285,27 @@ export default function ConnectorsPage() {
       return;
     }
 
+    if (connector.authType === 'none' || ['web-browser', 'web-search', 'http-request', 'autoflow-schedule'].includes(connector.id)) {
+      setConnectingConnectorId(connector.id);
+      try {
+        await apiClient.post('/v1/connectors/connections/api-key', {
+          connectorId: connector.id,
+          name: `${connector.name} (Built-in Zero Auth)`,
+          apiKey: `zero_auth_${connector.id}`,
+        });
+        toast.success(`${connector.name} Activated Live!`, {
+          description: 'Built-in System App is ready to use with zero credentials required.',
+        });
+        fetchConnections();
+      } catch (err: any) {
+        // Fallback to API Key modal if backend needs custom input
+        handleOpenApiKeyModal(connector);
+      } finally {
+        setConnectingConnectorId(null);
+      }
+      return;
+    }
+
     setConnectingConnectorId(connector.id);
     try {
       const res = await apiClient.get(`/v1/connectors/oauth/authorize/${connector.id}`);
@@ -336,6 +358,8 @@ export default function ConnectorsPage() {
       finalKey = `${zoomClientId}:${zoomClientSecret}:${zoomAccountId}`;
     } else if (apiKeyConnectorId === 'jira') {
       finalKey = `${jiraDomain}:${jiraEmail}:${jiraToken}`;
+    } else if ((apiKeyConnectorId === 'web-search' || apiKeyConnectorId === 'web-browser') && !finalKey) {
+      finalKey = apiKeyConnectorId === 'web-search' ? 'free_duckduckgo_zero_auth' : 'native_playwright_mcp_zero_auth';
     }
 
     if (!finalKey || finalKey.length < 3) {
@@ -449,6 +473,8 @@ export default function ConnectorsPage() {
       } else if (activeTestConnector.id === 'google-calendar' && testEventTitle.trim()) {
         payload.createTestEvent = true;
         payload.eventTitle = testEventTitle.trim();
+      } else if (['web-search', 'web-search-pro', 'web-browser'].includes(activeTestConnector.id)) {
+        payload.query = webSearchTestQuery.trim() || 'Latest AI news & automation tech';
       }
 
       const res = await apiClient.post(`/v1/connectors/test/${activeTestConnector.id}`, payload);
@@ -821,8 +847,9 @@ export default function ConnectorsPage() {
               const savedDbConnections = connections.filter(
                 (conn) => conn.connectorId === c.id || conn.dbType === c.id
               );
+              const isZeroAuth = c.authType === 'none' || ['web-search', 'web-search-pro', 'web-browser', 'http-request', 'autoflow-schedule', 'autoflow-condition', 'ai-agent', 'ai-node', 'webhooks'].includes(c.id);
               const activeConn = savedDbConnections[0] || connections.find((conn) => conn.connectorId === c.id);
-              const isAlreadyConnected = savedDbConnections.length > 0 || Boolean(activeConn);
+              const isAlreadyConnected = isZeroAuth || savedDbConnections.length > 0 || Boolean(activeConn);
               const isConnecting = connectingConnectorId === c.id;
 
               return (
@@ -853,7 +880,12 @@ export default function ConnectorsPage() {
                       </div>
 
                       {/* Connection Status Badge */}
-                      {isAlreadyConnected ? (
+                      {isZeroAuth ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
+                          <CheckCircle2 size={11} />
+                          <span>BUILT-IN ACTIVE</span>
+                        </span>
+                      ) : isAlreadyConnected ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
                           <CheckCircle2 size={11} />
                           <span>{isDb ? `${savedDbConnections.length} ACTIVE` : 'CONNECTED'}</span>
@@ -958,7 +990,16 @@ export default function ConnectorsPage() {
                       {isDb ? 'PROTOCOL: DATABASE DRIVER' : `AUTH: ${c.authType.toUpperCase()}`}
                     </span>
 
-                    {isDb ? (
+                    {isZeroAuth ? (
+                      <button
+                        onClick={() => handleOpenTestModal(c)}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                        title="Run Instant Live Test & Q&A"
+                      >
+                        <Play size={12} className="text-emerald-400" />
+                        <span>{['web-search', 'web-search-pro', 'web-browser'].includes(c.id) ? '⚡ Test Search & Q&A' : '⚡ Test Native App'}</span>
+                      </button>
+                    ) : isDb ? (
                       <button
                         onClick={() => handleOpenDatabaseModal(c.id)}
                         className="px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-600/30 transition-all flex items-center gap-1"
@@ -1461,6 +1502,21 @@ export default function ConnectorsPage() {
                 </div>
               )}
 
+              {['web-search', 'web-search-pro', 'web-browser'].includes(activeTestConnector.id) && (
+                <div>
+                  <label className="text-[11px] font-semibold text-textMuted block mb-1">
+                    Ask any question or search topic (DuckDuckGo Real-Time Engine)
+                  </label>
+                  <input
+                    type="text"
+                    value={webSearchTestQuery}
+                    onChange={(e) => setWebSearchTestQuery(e.target.value)}
+                    placeholder="e.g. What is AutoFlow AI Platform?"
+                    className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple font-medium"
+                  />
+                </div>
+              )}
+
               <div className="flex gap-2">
                 {activeTestConnector.id === 'gmail' && (
                   <button
@@ -1479,7 +1535,11 @@ export default function ConnectorsPage() {
                   className="flex-1 py-2 text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-lg hover:bg-emerald-500/30 transition-all flex items-center justify-center gap-1.5 font-semibold"
                 >
                   {isTestingAction ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-                  <span>Run API Ping Test</span>
+                  <span>
+                    {['web-search', 'web-search-pro', 'web-browser'].includes(activeTestConnector.id)
+                      ? '🔍 Run Search & Get Instant Answer'
+                      : 'Run API Ping Test'}
+                  </span>
                 </button>
               </div>
             </div>

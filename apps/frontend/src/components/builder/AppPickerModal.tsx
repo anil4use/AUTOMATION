@@ -45,6 +45,7 @@ export const availableApps: AppOption[] = [
   { id: 'huggingface', name: 'Hugging Face Inference', category: 'AI Native', type: 'action', icon: Cpu, operation: 'model_predict' },
 
   // Developer Tools & Universal Protocols
+  { id: 'web-browser', name: 'Web Browser Automation (Playwright)', category: 'Developer Tools', type: 'action', icon: Globe, operation: 'browser_navigate' },
   { id: 'web-search', name: 'Web Search & Scraper', category: 'Developer Tools', type: 'action', icon: Search, operation: 'search_web' },
   { id: 'http-request', name: 'HTTP Request Call', category: 'Developer Tools', type: 'action', icon: Globe, operation: 'custom_api_call' },
   { id: 'webhooks', name: 'Inbound Webhook', category: 'Developer Tools', type: 'trigger', icon: Code, operation: 'catch_hook' },

@@ -724,32 +724,6 @@ const _STATIC_MANIFESTS: ConnectorManifest[] = [
     ],
   },
   {
-    id: 'web-search',
-    name: 'AI Web Search Client',
-    description: 'Execute live web search queries and extract real-time intelligence.',
-    category: 'Developer Tools',
-    icon: '/icons/search.svg',
-    authType: 'api_key',
-    triggers: [],
-    actions: [
-      {
-        id: 'search_web',
-        name: 'Execute Live Web Search',
-        description: 'Runs web search query across search engines.',
-        type: 'action',
-        inputs: [
-          { key: 'query', label: 'Search Query Term', type: 'string', required: true },
-          { key: 'numResults', label: 'Max Search Results Count (Default: 5)', type: 'string', required: false },
-        ],
-        outputs: [
-          { key: 'query', label: 'Original Query', type: 'string', required: true },
-          { key: 'summaryResult', label: 'Synthesized Answer Summary', type: 'string', required: true },
-          { key: 'citations', label: 'Citations Array', type: 'json', required: true },
-        ],
-      },
-    ],
-  },
-  {
     id: 'http-request',
     name: 'HTTP Request Call',
     description: 'Send custom REST API GET, POST, PUT, or DELETE requests to any endpoint.',
@@ -803,6 +777,117 @@ const _STATIC_MANIFESTS: ConnectorManifest[] = [
       },
     ],
   },
+  {
+    id: 'web-browser',
+    name: 'Web Browser Automation (Playwright)',
+    description: 'Full-power browser automation engine powered by Microsoft Playwright MCP — Navigate pages, read content, capture screenshots, click elements, fill forms, and run JavaScript locally with zero API fees.',
+    category: 'Developer Tools',
+    icon: '/icons/browser.svg',
+    authType: 'none',
+    triggers: [],
+    actions: [
+      {
+        id: 'browser_navigate',
+        name: 'Navigate to URL',
+        description: 'Navigates the browser to any web URL.',
+        type: 'action',
+        inputs: [
+          { key: 'url', label: 'Target Web Page URL', type: 'string', required: true },
+          { key: 'timeout', label: 'Navigation Timeout (ms)', type: 'number', required: false },
+        ],
+        outputs: [
+          { key: 'success', label: 'Success', type: 'boolean', required: true },
+          { key: 'finalUrl', label: 'Final Page URL', type: 'string', required: true },
+          { key: 'pageTitle', label: 'Page Title', type: 'string', required: false },
+        ],
+      },
+      {
+        id: 'browser_read_page',
+        name: 'Read Page Content',
+        description: 'Extracts clean structured text and links from a website.',
+        type: 'action',
+        inputs: [
+          { key: 'url', label: 'Web Page URL (Optional if already navigated)', type: 'string', required: false },
+          { key: 'selector', label: 'Specific Element Selector (Optional)', type: 'string', required: false },
+        ],
+        outputs: [
+          { key: 'title', label: 'Page Title', type: 'string', required: true },
+          { key: 'content', label: 'Readable Page Text Content', type: 'string', required: true },
+          { key: 'links', label: 'Extracted Links Array', type: 'json', required: true },
+        ],
+      },
+      {
+        id: 'browser_take_screenshot',
+        name: 'Capture Page Screenshot',
+        description: 'Captures a webpage screenshot as JPEG base64 or LLM vision description.',
+        type: 'action',
+        inputs: [
+          { key: 'url', label: 'Web Page URL (Optional)', type: 'string', required: false },
+          { key: 'fullPage', label: 'Capture Full Scrollable Page', type: 'boolean', required: false },
+          { key: 'returnAs', label: 'Output Mode (base64 or description)', type: 'string', required: false },
+        ],
+        outputs: [
+          { key: 'imageBase64', label: 'JPEG Base64 Data', type: 'string', required: false },
+          { key: 'description', label: 'LLM Vision Text Description', type: 'string', required: false },
+          { key: 'width', label: 'Viewport Width', type: 'number', required: true },
+          { key: 'height', label: 'Viewport Height', type: 'number', required: true },
+        ],
+      },
+      {
+        id: 'browser_fill_form',
+        name: 'Fill Form & Submit',
+        description: 'Fills input fields and submits form on target webpage.',
+        type: 'action',
+        inputs: [
+          { key: 'url', label: 'Page URL (Optional)', type: 'string', required: false },
+          { key: 'fields', label: 'Form Fields Array ({ target, value })', type: 'json', required: true },
+          { key: 'submitElement', label: 'Submit Button Target', type: 'string', required: false },
+        ],
+        outputs: [
+          { key: 'success', label: 'Form Submitted', type: 'boolean', required: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'web-search',
+    name: 'Web Search & Scraper',
+    description: 'Perform real-time web searches using DuckDuckGo (free, zero API keys required), Google Custom Search API, or Tavily, with automatic page reading using Playwright.',
+    category: 'Developer Tools',
+    icon: '/icons/search.svg',
+    authType: 'none',
+    triggers: [],
+    actions: [
+      {
+        id: 'search_web',
+        name: 'Multi-Provider Web Search',
+        description: 'Searches the web using DuckDuckGo, Google, or Tavily.',
+        type: 'action',
+        inputs: [
+          { key: 'query', label: 'Search Query Keywords', type: 'string', required: true },
+          { key: 'maxResults', label: 'Max Results Limit (Default 10)', type: 'number', required: false },
+        ],
+        outputs: [
+          { key: 'results', label: 'Results Array', type: 'json', required: true },
+          { key: 'totalResults', label: 'Total Results Count', type: 'number', required: true },
+        ],
+      },
+      {
+        id: 'search_and_read',
+        name: 'Search & Read Top Pages',
+        description: 'Searches the web and automatically reads the full text of top result pages using Playwright.',
+        type: 'action',
+        inputs: [
+          { key: 'query', label: 'Search Query', type: 'string', required: true },
+          { key: 'maxResults', label: 'Number of Pages to Read (Default 3)', type: 'number', required: false },
+        ],
+        outputs: [
+          { key: 'topResult', label: 'Top Result Object', type: 'json', required: true },
+          { key: 'pageContent', label: 'Scraped Page Text Content', type: 'string', required: true },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getManifestById(connectorId: string): ConnectorManifest | undefined {
@@ -836,6 +921,8 @@ export function getActionOrTriggerSchema(connectorId: string, operationId: strin
 // Used by exportForAI() to match user prompt keywords to connector IDs
 
 const CONNECTOR_PROMPT_ALIASES: Record<string, string[]> = {
+  'web-browser':      ['browser', 'playwright', 'headless browser', 'click element', 'screenshot', 'fill form', 'browser navigate'],
+  'web-search':       ['web search', 'search web', 'duckduckgo', 'tavily', 'scrape url', 'google search'],
   'openai':          ['gpt', 'chatgpt', 'openai', 'gpt-4', 'gpt4', 'gpt 4', 'ai text'],
   'anthropic':       ['claude', 'anthropic', 'sonnet', 'haiku', 'opus'],
   'google-sheets':   ['sheets', 'spreadsheet', 'google sheets', 'worksheet'],

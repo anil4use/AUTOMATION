@@ -99,6 +99,8 @@ export class GoogleDriveConnector extends BaseConnector {
     if (actionId === 'upload_file') {
       const fileName = context.stepInput.fileName || context.stepInput.name || context.stepInput.title || 'AutoFlow_Export.txt';
       const content = context.stepInput.content || '';
+      const mimeType = context.stepInput.mimeType || 'text/plain';
+      const folderId = context.stepInput.folderId;
 
       const metadata: any = { name: fileName, mimeType };
       if (folderId) metadata.parents = [folderId];

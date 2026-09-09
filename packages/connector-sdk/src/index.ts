@@ -48,6 +48,8 @@ export * from './integrations/vercel';
 export * from './integrations/quickbooks';
 export * from './integrations/docusign';
 export * from './integrations/webhook-trigger';
+export * from './integrations/web-browser';
+export * from './integrations/web-search';
 
 // Utility & auxiliary connectors
 export * from './connectors/autoflow-schedule.connector';
@@ -55,7 +57,6 @@ export * from './connectors/google-calendar.connector';
 export * from './connectors/google-docs.connector';
 export * from './connectors/command-router.connector';
 export * from './connectors/http-request.connector';
-export * from './connectors/web-search.connector';
 export * from './connectors/condition.connector';
 export * from './connectors/amazon-flipkart.connector';
 export * from './connectors/universal.connector';

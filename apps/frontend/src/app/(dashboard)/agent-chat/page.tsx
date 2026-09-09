@@ -74,6 +74,15 @@ interface DynamicSuggestion {
 
 // ─── Dynamic Prompt Suggestions Generator (Purely Connected Apps) ─────────────
 const CONNECTOR_SUGGESTIONS_BANK: Record<string, Array<{ title: string; query: string; category: string; color: string }>> = {
+  'web-browser': [
+    { title: 'Navigate & Read Page', query: 'Go to https://example.com and tell me what is on the page', category: 'Browser Automation', color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30' },
+    { title: 'Webpage Screenshot', query: 'Take a screenshot of https://example.com', category: 'Browser Automation', color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30' },
+    { title: 'Fill & Submit Form', query: 'Go to https://httpbin.org/forms/post and fill Customer name with Alex', category: 'Browser Automation', color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30' },
+  ],
+  'web-search': [
+    { title: 'Search & Summarize', query: 'Search the web for latest AI news and read top pages', category: 'Web Search', color: 'from-blue-500/20 to-indigo-500/20 text-blue-400 border-blue-500/30' },
+    { title: 'Instant Web Search', query: 'Search the web for Node.js documentation', category: 'Web Search', color: 'from-blue-500/20 to-indigo-500/20 text-blue-400 border-blue-500/30' },
+  ],
   mongodb: [
     { title: 'Count Mongo Users', query: 'How many users are in my MongoDB database?', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
     { title: 'Query Collection', query: 'Find recent user documents in MongoDB collection users', category: 'Database', color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30' },
@@ -136,9 +145,6 @@ const CONNECTOR_SUGGESTIONS_BANK: Record<string, Array<{ title: string; query: s
   ],
   hubspot: [
     { title: 'Fetch HubSpot Contacts', query: 'Get recent contacts and deals from HubSpot CRM', category: 'CRM', color: 'from-orange-500/20 to-amber-500/20 text-orange-400 border-orange-500/30' },
-  ],
-  'web-search': [
-    { title: 'AI News Web Search', query: 'Search for today\'s AI news on the web', category: 'Search', color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30' },
   ],
 };
 
