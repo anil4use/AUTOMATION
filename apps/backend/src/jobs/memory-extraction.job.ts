@@ -57,11 +57,14 @@ export function startMemoryExtractionWorker(): Worker {
       return { extracted: extracted.length, facts: extracted };
     },
     {
-      connection: {
-        host: env.redisHost,
-        port: env.redisPort,
-        password: env.redisPassword,
-      },
+      connection: env.redisUrl
+        ? { url: env.redisUrl, keepAlive: 10000 }
+        : {
+            host: env.redisHost,
+            port: env.redisPort,
+            password: env.redisPassword || undefined,
+            keepAlive: 10000,
+          },
       concurrency: 5, // Process up to 5 extraction jobs in parallel
     }
   );
@@ -76,11 +79,14 @@ export function startMemoryExtractionWorker(): Worker {
   });
 
   worker.on('error', (err: any) => {
+    const msg = err?.message || (typeof err === 'string' ? err : '');
+    // Ignore transient cloud socket idle resets
+    if (err?.code === 'ECONNRESET' || msg.includes('ECONNRESET')) return;
+
     const now = Date.now();
     // Throttle error logging to once every 30 seconds if Redis is not running locally
     if (now - lastErrorLog > 30000) {
       lastErrorLog = now;
-      const msg = err?.message || (typeof err === 'string' ? err : 'Redis offline or unreachable');
       logger.warn(`[MemoryExtractionWorker] Redis connection status: ${msg}. (Note: Start Redis if async background queues are required)`);
     }
   });

@@ -8,11 +8,14 @@ async function startWorker() {
     await connectDatabase(workerConfig.mongoUri);
 
     const worker = new Worker('workflow-execution-queue', processWorkflowJob, {
-      connection: {
-        host: workerConfig.redisHost,
-        port: workerConfig.redisPort,
-        password: workerConfig.redisPassword,
-      },
+      connection: workerConfig.redisUrl
+        ? { url: workerConfig.redisUrl, keepAlive: 10000 }
+        : {
+            host: workerConfig.redisHost,
+            port: workerConfig.redisPort,
+            password: workerConfig.redisPassword || undefined,
+            keepAlive: 10000,
+          },
       concurrency: workerConfig.concurrency,
     });
 
@@ -26,6 +29,11 @@ async function startWorker() {
 
     worker.on('failed', (job, err) => {
       console.error(`[Worker Engine] Job ${job?.id} failed with error:`, err);
+    });
+
+    worker.on('error', (err: any) => {
+      if (err?.code === 'ECONNRESET' || err?.message?.includes('ECONNRESET')) return;
+      console.error('[Worker Engine Error]:', err);
     });
   } catch (err) {
     console.error('Failed to start BullMQ worker:', err);

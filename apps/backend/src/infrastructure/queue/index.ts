@@ -3,11 +3,14 @@ import { env } from '../../config/env';
 import { APP_CONSTANTS } from '../../config/constants';
 import { logger } from '../../config/logger';
 
-const redisConnection = {
-  host: env.redisHost,
-  port: env.redisPort,
-  password: env.redisPassword,
-};
+const redisConnection = env.redisUrl
+  ? { url: env.redisUrl, keepAlive: 10000 }
+  : {
+      host: env.redisHost,
+      port: env.redisPort,
+      password: env.redisPassword || undefined,
+      keepAlive: 10000,
+    };
 
 // ── Workflow Execution Queue ─────────────────────────────────────────────────
 
