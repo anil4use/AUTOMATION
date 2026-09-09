@@ -76,10 +76,25 @@ export class ConnectorService {
       try { existingCreds = decryptJson(existing.encryptedCredentials); } catch {}
     }
 
-    // Preserve existing refresh token if Google/provider didn't re-issue one on reconnect!
-    const refreshToken = tokens.refreshToken || existingCreds.refreshToken || existingCreds.refresh_token || existing?.refreshToken || '';
+    const isGoogle = connectorId.startsWith('google') || connectorId === 'gmail';
+    const existingEmail = existing?.accountEmail || existingCreds?.accountEmail || existingCreds?.userEmail;
+    const incomingEmail = tokens.accountEmail || tokens.userEmail;
+
+    let refreshToken = tokens.refreshToken;
+
+    if (!refreshToken) {
+      if (isGoogle && existingEmail && incomingEmail && existingEmail.toLowerCase() !== incomingEmail.toLowerCase()) {
+        throw new AppError(
+          `This appears to be a different Google account (${incomingEmail}) than your previously connected account (${existingEmail}). Please disconnect your existing connection first.`,
+          400
+        );
+      }
+      refreshToken = existingCreds.refreshToken || existingCreds.refresh_token || existing?.refreshToken || '';
+    }
+
     const expiresIn = tokens.expiresIn || 3600;
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+    const accountEmail = incomingEmail || existingEmail || '';
 
     const mergedCreds = {
       ...existingCreds,
@@ -87,11 +102,57 @@ export class ConnectorService {
       accessToken: tokens.accessToken,
       refreshToken,
       refresh_token: refreshToken,
+      accountEmail,
+      userEmail: accountEmail,
       expiresAt: tokenExpiresAt.toISOString(),
       tokenExpiresAt: tokenExpiresAt.toISOString(),
     };
 
     const encryptedCredentials = encryptJson(mergedCreds);
+
+    if (isGoogle) {
+      const GOOGLE_CONNECTORS = ['gmail', 'google-sheets', 'google-drive', 'google-docs', 'google-calendar'];
+      let targetConnection: any = null;
+
+      for (const gCid of GOOGLE_CONNECTORS) {
+        const gConn = await ConnectionModel.findOne({ organizationId: orgId, connectorId: gCid });
+        const gCreds = {
+          ...mergedCreds,
+          userEmail: accountEmail,
+          accountEmail,
+        };
+        const gEncrypted = encryptJson(gCreds);
+
+        if (gConn) {
+          gConn.encryptedCredentials = gEncrypted;
+          gConn.status = 'connected';
+          gConn.expiresAt = tokenExpiresAt;
+          gConn.tokenExpiresAt = tokenExpiresAt;
+          gConn.refreshToken = refreshToken;
+          gConn.accountEmail = accountEmail;
+          gConn.lastRefreshedAt = new Date();
+          gConn.lastRefreshError = undefined;
+          await gConn.save();
+          if (gCid === connectorId) targetConnection = gConn;
+        } else {
+          const newConn = await ConnectionModel.create({
+            organizationId: orgId,
+            userId,
+            connectorId: gCid,
+            name: `${gCid.toUpperCase()} Account (${accountEmail || new Date().toLocaleDateString()})`,
+            authType: 'oauth2',
+            encryptedCredentials: gEncrypted,
+            status: 'connected',
+            expiresAt: tokenExpiresAt,
+            tokenExpiresAt,
+            refreshToken,
+            accountEmail,
+          });
+          if (gCid === connectorId) targetConnection = newConn;
+        }
+      }
+      return targetConnection;
+    }
 
     if (existing) {
       existing.encryptedCredentials = encryptedCredentials;
@@ -99,6 +160,7 @@ export class ConnectorService {
       existing.expiresAt = tokenExpiresAt;
       existing.tokenExpiresAt = tokenExpiresAt;
       existing.refreshToken = refreshToken;
+      existing.accountEmail = accountEmail;
       existing.lastRefreshedAt = new Date();
       existing.lastRefreshError = undefined;
       await existing.save();
@@ -116,6 +178,7 @@ export class ConnectorService {
       expiresAt: tokenExpiresAt,
       tokenExpiresAt,
       refreshToken,
+      accountEmail,
     });
   }
 
@@ -172,6 +235,13 @@ export class ConnectorService {
     }
 
     const credentials = decryptJson(conn.encryptedCredentials);
+    const isGoogle = connectorId.startsWith('google') || connectorId === 'gmail';
+    if (isGoogle && conn._id) {
+      const { getValidGoogleAccessToken } = require('./google-oauth-token.service');
+      const validToken = await getValidGoogleAccessToken(conn._id.toString(), connectorId);
+      credentials.accessToken = validToken;
+      credentials.access_token = validToken;
+    }
 
     if (connectorId === 'gmail') {
       const connector = new GmailConnector();

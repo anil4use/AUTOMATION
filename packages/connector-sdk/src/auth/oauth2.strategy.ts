@@ -6,41 +6,55 @@ export interface OAuth2AuthConfig {
   scopes: string[];
 }
 
+const FULL_GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/documents',
+  'openid',
+  'email',
+  'profile',
+];
+
 const OAUTH_PROVIDERS: Record<string, OAuth2AuthConfig> = {
   gmail: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send'],
+    scopes: FULL_GOOGLE_SCOPES,
   },
   'google-sheets': {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: FULL_GOOGLE_SCOPES,
   },
   'google-drive': {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+    scopes: FULL_GOOGLE_SCOPES,
   },
   'google-calendar': {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/calendar'],
+    scopes: FULL_GOOGLE_SCOPES,
   },
   'google-docs': {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    scopes: ['https://www.googleapis.com/auth/documents'],
+    scopes: FULL_GOOGLE_SCOPES,
   },
   'google-analytics': {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -180,12 +194,34 @@ export class OAuth2Strategy {
         });
         const data = await response.json();
         if (data.access_token) {
+          let accountEmail = '';
+          if (connectorId.startsWith('google') || connectorId === 'gmail') {
+            try {
+              if (data.id_token) {
+                const parts = data.id_token.split('.');
+                if (parts.length === 3) {
+                  const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+                  if (payload.email) accountEmail = payload.email;
+                }
+              }
+              if (!accountEmail) {
+                const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                  headers: { Authorization: `Bearer ${data.access_token}` },
+                });
+                const userData = await userRes.json();
+                if (userData.email) accountEmail = userData.email;
+              }
+            } catch (e) {}
+          }
+
           return {
             accessToken: data.access_token,
             refreshToken: data.refresh_token || '',
             expiresIn: data.expires_in || 3600,
             tokenType: data.token_type || 'Bearer',
             scope: data.scope || config.scopes.join(' '),
+            accountEmail,
+            userEmail: accountEmail,
             obtainedAt: new Date().toISOString(),
           };
         }

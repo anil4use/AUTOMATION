@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
+dotenv.config({ path: path.resolve(process.cwd(), '../backend/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '../../apps/backend/.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../backend/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 dotenv.config();
 

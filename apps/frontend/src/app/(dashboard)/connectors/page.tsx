@@ -12,6 +12,7 @@ import { apiClient } from '@/lib/api-client';
 import { signInWithGoogleFirebase } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { DatabaseConnectModal, ENVIRONMENT_COLORS } from '@/components/connectors/DatabaseConnectModal';
+import { getSocketClient } from '@/lib/socket-client';
 
 export interface ConnectionAccount {
   _id: string;
@@ -202,7 +203,28 @@ export default function ConnectorsPage() {
   useEffect(() => {
     fetchConnectors();
     fetchConnections();
-  }, [fetchConnectors, fetchConnections]);
+
+    try {
+      const socket = getSocketClient();
+      if (user?.organizationId) {
+        socket.emit('join_org', user.organizationId);
+      }
+      const handleAuthExpired = (data: any) => {
+        toast.error('Google Authorization Expired', {
+          description: data.message || 'Authorization required for Google connector.',
+          action: {
+            label: 'Re-authenticate',
+            onClick: () => setIsGmailModalOpen(true),
+          },
+        });
+        fetchConnections();
+      };
+      socket.on('connection:auth_expired', handleAuthExpired);
+      return () => {
+        socket.off('connection:auth_expired', handleAuthExpired);
+      };
+    } catch (e) {}
+  }, [fetchConnectors, fetchConnections, user?.organizationId]);
 
   const isDatabaseConnector = (connector: AvailableConnector) => {
     return connector.category === 'Databases' || DATABASE_CONNECTOR_IDS.includes(connector.id);
@@ -663,6 +685,29 @@ export default function ConnectorsPage() {
         </div>
       </div>
 
+      {/* Google Re-Authorization Warning Banner */}
+      {connections.some(c => (c.connectorId.startsWith('google') || c.connectorId === 'gmail') && (c.status === 'expired' || (c.status as any) === 'pending_auth')) && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="text-amber-400 shrink-0" size={20} />
+            <div>
+              <div className="font-bold text-sm text-white">⚠️ Google Authorization Required</div>
+              <div className="text-xs text-amber-200/80">
+                Your Google Workspace connection (Gmail, Google Sheets, Google Drive, Calendar, Docs) has expired or lacks offline API permissions. Re-authenticate once to grant full permissions across all 5 Google apps.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsGmailModalOpen(true)}
+            disabled={savingGmail}
+            className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-glow"
+          >
+            {savingGmail ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            <span>Re-authorize Google Apps</span>
+          </button>
+        </div>
+      )}
+
       {/* Hero Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-purple-900/20 to-bgSecondary border-purple-500/30">
@@ -1027,10 +1072,22 @@ export default function ConnectorsPage() {
                         <td className="p-3.5 font-mono text-xs text-accentPurple">{conn.connectorId}</td>
                         <td className="p-3.5 text-xs text-textMuted font-mono uppercase">{conn.authType}</td>
                         <td className="p-3.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
-                            <CheckCircle2 size={11} />
-                            <span>CONNECTED</span>
-                          </span>
+                          {conn.status === 'expired' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-[10px] font-bold text-red-400">
+                              <AlertTriangle size={11} />
+                              <span>EXPIRED</span>
+                            </span>
+                          ) : (conn.status as any) === 'pending_auth' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-[10px] font-bold text-amber-300">
+                              <AlertCircle size={11} />
+                              <span>PENDING AUTH</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
+                              <CheckCircle2 size={11} />
+                              <span>CONNECTED</span>
+                            </span>
+                          )}
                         </td>
                         <td className="p-3.5 text-xs text-textMuted">
                           {new Date(conn.createdAt).toLocaleDateString()}

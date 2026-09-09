@@ -128,6 +128,14 @@ export class OAuthRefreshDaemon {
             conn.status = 'expired';
             conn.lastRefreshError = 'No valid refresh token available. User must reconnect.';
             await conn.save();
+
+            const { emitAuthExpired } = require('../services/socket.service');
+            emitAuthExpired(conn.organizationId?.toString() || '', {
+              connectionId: conn._id,
+              connectorId: conn.connectorId,
+              accountEmail: conn.accountEmail,
+              message: 'Google authorization required. Please re-authenticate your connection.',
+            });
             continue;
           }
 
@@ -160,6 +168,16 @@ export class OAuthRefreshDaemon {
           conn.status = isExpired ? 'expired' : 'refresh_failed';
           conn.lastRefreshError = err.message || 'Token refresh failed';
           await conn.save();
+
+          if (isExpired) {
+            const { emitAuthExpired } = require('../services/socket.service');
+            emitAuthExpired(conn.organizationId?.toString() || '', {
+              connectionId: conn._id,
+              connectorId: conn.connectorId,
+              accountEmail: conn.accountEmail,
+              message: 'Google connection authorization was revoked or expired. Please re-authenticate.',
+            });
+          }
         }
       }
     } catch (err: any) {

@@ -27,10 +27,12 @@ export class AuthService {
       ];
 
       for (const conn of defaultConnectors) {
+        const hasRealToken = Boolean(accessToken && !accessToken.startsWith('default_access_token_'));
         const encryptedCredentials = encryptJson({
-          accessToken: accessToken || `default_access_token_${conn.connectorId}`,
+          accessToken: hasRealToken ? accessToken : '',
           userEmail: email,
           accountOwner: email,
+          accountEmail: email,
           connectedAt: new Date().toISOString(),
         });
 
@@ -43,12 +45,14 @@ export class AuthService {
             name: conn.name,
             authType: conn.authType,
             encryptedCredentials,
-            status: 'connected',
+            status: hasRealToken ? 'connected' : 'pending_auth',
+            accountEmail: email,
           });
-        } else if (accessToken && (!existingConn.encryptedCredentials || existingConn.encryptedCredentials.includes('default_access_token'))) {
+        } else if (hasRealToken && (!existingConn.encryptedCredentials || existingConn.encryptedCredentials.includes('default_access_token'))) {
           // Upgrade existing default connection with real OAuth access token
           existingConn.encryptedCredentials = encryptedCredentials;
           existingConn.status = 'connected';
+          existingConn.accountEmail = email;
           await existingConn.save();
         }
       }

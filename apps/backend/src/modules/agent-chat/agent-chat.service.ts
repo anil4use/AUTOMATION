@@ -501,7 +501,25 @@ async function executeStep(
 
     // ── Regular connectors via connectorRegistry ────────────────────────────
     const { connectorRegistry, UniversalConnector } = require('@automation/connector-sdk');
+    const { getValidGoogleAccessToken } = require('../connectors/google-oauth-token.service');
     const cid = step.connectorId.toLowerCase().trim();
+
+    const isGoogle = cid.startsWith('google') || cid === 'gmail';
+    if (isGoogle && connectionId) {
+      try {
+        const freshToken = await getValidGoogleAccessToken(connectionId, cid);
+        credentials.accessToken = freshToken;
+        credentials.access_token = freshToken;
+      } catch (tokenErr: any) {
+        return {
+          success: false,
+          error: tokenErr.message || 'Your Google connection has expired. Please re-authenticate.',
+          errorCode: tokenErr.code || 'GOOGLE_AUTH_EXPIRED',
+          inputs: finalInputs,
+        };
+      }
+    }
+
     const connector = connectorRegistry[cid]
       ?? connectorRegistry[cid.replace(/-/g, '_')]
       ?? connectorRegistry[cid.replace(/_/g, '-')]

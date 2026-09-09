@@ -2,7 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
-import { getRedisSubscriber } from '../infrastructure/redis';
+import { getRedisSubscriber, getRedisPublisher } from '../infrastructure/redis';
 
 let io: SocketIOServer | null = null;
 
@@ -40,7 +40,11 @@ export function initSocketServer(server: HttpServer): SocketIOServer {
         try {
           const payload = JSON.parse(message);
           if (payload.orgId) {
-            io.to(`org_${payload.orgId}`).emit('execution_update', payload);
+            if (payload.event === 'connection:auth_expired') {
+              io.to(`org_${payload.orgId}`).emit('connection:auth_expired', payload.payload || payload);
+            } else {
+              io.to(`org_${payload.orgId}`).emit('execution_update', payload);
+            }
           }
         } catch (e) {
           logger.error('[Socket.io] Error parsing pubsub message:', e);
@@ -59,3 +63,16 @@ export function emitExecutionUpdate(orgId: string, payload: any) {
     io.to(`org_${orgId}`).emit('execution_update', payload);
   }
 }
+
+export function emitAuthExpired(orgId: string, payload: any) {
+  if (!orgId) return;
+  try {
+    const pub = getRedisPublisher();
+    pub.publish('execution_events', JSON.stringify({ event: 'connection:auth_expired', orgId, payload }));
+  } catch (e) {
+    if (io) {
+      io.to(`org_${orgId}`).emit('connection:auth_expired', payload);
+    }
+  }
+}
+
