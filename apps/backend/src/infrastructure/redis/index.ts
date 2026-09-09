@@ -7,12 +7,14 @@ let redisSubscriber: Redis | null = null;
 
 export function getRedisPublisher(): Redis {
   if (!redisPublisher) {
-    redisPublisher = new Redis({
-      host: env.redisHost,
-      port: env.redisPort,
-      password: env.redisPassword,
-      maxRetriesPerRequest: null,
-    });
+    redisPublisher = env.redisUrl
+      ? new Redis(env.redisUrl, { maxRetriesPerRequest: null })
+      : new Redis({
+          host: env.redisHost,
+          port: env.redisPort,
+          password: env.redisPassword || undefined,
+          maxRetriesPerRequest: null,
+        });
     redisPublisher.on('connect', () => logger.info('[Redis] Publisher connected'));
     redisPublisher.on('error', (err) => logger.error('[Redis Publisher Error]:', err));
   }
@@ -21,12 +23,14 @@ export function getRedisPublisher(): Redis {
 
 export function getRedisSubscriber(): Redis {
   if (!redisSubscriber) {
-    redisSubscriber = new Redis({
-      host: env.redisHost,
-      port: env.redisPort,
-      password: env.redisPassword,
-      maxRetriesPerRequest: null,
-    });
+    redisSubscriber = env.redisUrl
+      ? new Redis(env.redisUrl, { maxRetriesPerRequest: null })
+      : new Redis({
+          host: env.redisHost,
+          port: env.redisPort,
+          password: env.redisPassword || undefined,
+          maxRetriesPerRequest: null,
+        });
     redisSubscriber.on('connect', () => logger.info('[Redis] Subscriber connected'));
     redisSubscriber.on('error', (err) => logger.error('[Redis Subscriber Error]:', err));
   }
