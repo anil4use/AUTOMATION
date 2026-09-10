@@ -227,15 +227,7 @@ export class RedisConnector extends BaseConnector {
         }
       }
 
-      // Fallback mocks
-      if (actionId === 'get') {
-        return { success: true, data: { value: 'sample_value', exists: true } };
-      }
-      if (actionId === 'set' || actionId === 'flush_db') {
-        return { success: true, data: { success: true } };
-      }
-
-      return { success: true, data: { success: true, action: actionId } };
+      return { success: false, data: {}, error: 'Redis host or connection string is required.' };
     } catch (err: any) {
       return { success: false, data: {}, error: err?.message || String(err) };
     }

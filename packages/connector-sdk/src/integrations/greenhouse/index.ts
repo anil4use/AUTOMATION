@@ -18,82 +18,71 @@ export class GreenhouseConnector extends BaseConnector {
     try {
       if (targetAction === 'list_jobs') {
         const status = inputs.status || 'open';
-        if (apiKey) {
-          try {
-            const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
-            const res = await fetch(`https://harvest.greenhouse.io/v1/jobs?status=${status}`, {
-              headers: { Authorization: authHeader },
-            });
-            if (res.ok) {
-              const data: any = await res.json();
-              return { success: true, data: { jobs: data || [], count: (data || []).length } };
-            }
-          } catch { }
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Greenhouse Harvest API key is required to list jobs.' };
         }
-
-        const mockJobs = [
-          {
-            id: 4001,
-            name: 'Senior Frontend Engineer',
-            requisition_id: 'REQ-101',
-            status: 'open',
-            notes: 'Expansion position for AutoFlow product UI',
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 4002,
-            name: 'Backend Systems Architect',
-            requisition_id: 'REQ-102',
-            status: 'open',
-            notes: 'High-throughput Node.js microservices',
-            created_at: new Date().toISOString(),
-          },
-        ];
-
-        return { success: true, data: { jobs: mockJobs, count: mockJobs.length } };
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const res = await fetch(`https://harvest.greenhouse.io/v1/jobs?status=${status}`, {
+          headers: { Authorization: authHeader },
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data: { jobs: data || [], count: (data || []).length } };
+        }
+        const errText = await res.text();
+        return { success: false, data: {}, error: `Greenhouse API error (${res.status}): ${errText}` };
       }
 
       if (targetAction === 'get_candidate') {
-        const candidateId = Number(inputs.candidateId) || 500123;
-        return {
-          success: true,
-          data: {
-            candidateId,
-            firstName: inputs.firstName || 'Michael',
-            lastName: inputs.lastName || 'Scott',
-            emails: [{ value: 'michael.scott@example.com', type: 'work' }],
-            company: 'Dunder Mifflin Paper Co.',
-            title: 'Regional Manager & Engineer',
-          },
-        };
+        const candidateId = inputs.candidateId;
+        if (!candidateId) {
+          return { success: false, data: {}, error: 'candidateId is required for get_candidate.' };
+        }
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Greenhouse Harvest API key is required to fetch candidate.' };
+        }
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const res = await fetch(`https://harvest.greenhouse.io/v1/candidates/${candidateId}`, {
+          headers: { Authorization: authHeader },
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data };
+        }
+        return { success: false, data: {}, error: `Greenhouse API candidate fetch failed (${res.status})` };
       }
 
       if (targetAction === 'add_candidate_note') {
-        const candidateId = Number(inputs.candidateId) || 500123;
-        const note = inputs.note || 'Strong candidate with extensive TypeScript and distributed system background.';
-        return {
-          success: true,
-          data: {
-            noteId: Date.now(),
-            candidateId,
-            createdAt: new Date().toISOString(),
-            content: note,
-          },
-        };
+        const candidateId = inputs.candidateId;
+        const note = inputs.note;
+        if (!candidateId || !note) {
+          return { success: false, data: {}, error: 'candidateId and note content are required.' };
+        }
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Greenhouse Harvest API key is required to add candidate note.' };
+        }
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const res = await fetch(`https://harvest.greenhouse.io/v1/candidates/${candidateId}/activity_feed/notes`, {
+          method: 'POST',
+          headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body: note }),
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data };
+        }
+        return { success: false, data: {}, error: `Greenhouse API add note failed (${res.status})` };
       }
 
       if (targetAction === 'advance_candidate_stage') {
-        const applicationId = Number(inputs.applicationId) || 9001;
-        const stageId = Number(inputs.stageId) || 3;
-        return {
-          success: true,
-          data: {
-            applicationId,
-            stageId,
-            currentStage: 'Technical Interview Round 2',
-            status: 'advanced',
-          },
-        };
+        const applicationId = inputs.applicationId;
+        if (!applicationId) {
+          return { success: false, data: {}, error: 'applicationId is required to advance candidate stage.' };
+        }
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Greenhouse Harvest API key is required.' };
+        }
+        return { success: false, data: {}, error: 'Greenhouse advance stage requires valid Harvest API credentials and stage configuration.' };
       }
 
       return { success: false, data: {}, error: `Unknown Greenhouse action: ${actionId}` };

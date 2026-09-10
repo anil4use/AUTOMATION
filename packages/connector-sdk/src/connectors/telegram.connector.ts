@@ -104,46 +104,40 @@ export class TelegramConnector extends BaseConnector {
       text = '🤖 AutoFlow workflow step executed successfully!';
     }
 
-    // Live Telegram API call if botToken is available, else mock response for test runs
-    if (botToken && botToken !== 'mock_token') {
-      try {
-        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-        const payload: any = {
-          chat_id: chatId,
-          text,
-          parse_mode: parseMode,
-        };
-        if (replyTo) payload.reply_to_message_id = replyTo;
-
-        const res = await axios.post(url, payload, { timeout: 10000 });
-        if (res.data && res.data.ok) {
-          const msg = res.data.result;
-          return {
-            success: true,
-            data: {
-              message_id: msg.message_id,
-              chat_id: msg.chat.id,
-              status: 'sent',
-              sent_at: new Date(msg.date * 1000).toISOString(),
-            },
-          };
-        }
-      } catch (err: any) {
-        const errorMsg = err.response?.data?.description || err.message || 'Telegram API request failed';
-        console.warn(`[TelegramConnector] API call failed: ${errorMsg}. Falling back to simulated output.`);
-      }
+    if (!botToken) {
+      return {
+        success: false,
+        error: 'Telegram Bot Token is required to send messages.',
+        data: {},
+      };
     }
 
-    // Simulated clean output fallback
-    return {
-      success: true,
-      data: {
-        message_id: Math.floor(Math.random() * 100000) + 1,
+    try {
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const payload: any = {
         chat_id: chatId,
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-        simulated: !botToken,
-      },
-    };
+        text,
+        parse_mode: parseMode,
+      };
+      if (replyTo) payload.reply_to_message_id = replyTo;
+
+      const res = await axios.post(url, payload, { timeout: 10000 });
+      if (res.data && res.data.ok) {
+        const msg = res.data.result;
+        return {
+          success: true,
+          data: {
+            message_id: msg.message_id,
+            chat_id: msg.chat.id,
+            status: 'sent',
+            sent_at: new Date(msg.date * 1000).toISOString(),
+          },
+        };
+      }
+      return { success: false, error: res.data?.description || 'Telegram API request failed.', data: {} };
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.description || err.message || 'Telegram API request failed';
+      return { success: false, error: `Telegram API call error: ${errorMsg}`, data: {} };
+    }
   }
 }

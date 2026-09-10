@@ -20,86 +20,86 @@ export class LeverConnector extends BaseConnector {
         const postingId = inputs.postingId;
         const limit = inputs.limit ? Number(inputs.limit) : 10;
 
-        if (apiKey) {
-          try {
-            const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
-            const queryUrl = postingId ? `https://api.lever.co/v1/opportunities?posting_id=${postingId}` : 'https://api.lever.co/v1/opportunities';
-            const res = await fetch(queryUrl, { headers: { Authorization: authHeader } });
-            if (res.ok) {
-              const data: any = await res.json();
-              return { success: true, data: { opportunities: data.data || [], total: (data.data || []).length } };
-            }
-          } catch { }
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Lever API key is required to list opportunities.' };
         }
 
-        const mockOpps = [
-          {
-            id: `opp_${Date.now()}_1`,
-            name: 'Jordan Belfort',
-            contact: 'jordan@example.com',
-            headline: 'Senior Sales Engineer & Automation Spec',
-            stage: 'lead-new',
-            origin: 'agency',
-            createdAt: Date.now(),
-          },
-          {
-            id: `opp_${Date.now()}_2`,
-            name: 'Elena Rostova',
-            contact: 'elena@example.com',
-            headline: 'Full Stack Engineer (Node.js & React)',
-            stage: 'phone-screen',
-            origin: 'applicant',
-            createdAt: Date.now(),
-          },
-        ].slice(0, limit);
-
-        return { success: true, data: { opportunities: mockOpps, total: mockOpps.length } };
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const queryUrl = postingId ? `https://api.lever.co/v1/opportunities?posting_id=${postingId}` : `https://api.lever.co/v1/opportunities?limit=${limit}`;
+        const res = await fetch(queryUrl, { headers: { Authorization: authHeader } });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data: { opportunities: data.data || [], total: (data.data || []).length } };
+        }
+        const errText = await res.text();
+        return { success: false, data: {}, error: `Lever API error (${res.status}): ${errText}` };
       }
 
       if (targetAction === 'create_opportunity') {
-        const name = inputs.name || 'David Martinez';
-        const email = inputs.email || 'david.martinez@example.com';
-        const oppId = `lever_opp_${Date.now()}`;
-
-        return {
-          success: true,
-          data: {
-            opportunityId: oppId,
-            name,
-            email,
-            headline: inputs.headline || 'Senior Software Engineer',
-            stage: 'lead-new',
-            createdAt: new Date().toISOString(),
-          },
-        };
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Lever API key is required to create an opportunity.' };
+        }
+        const name = inputs.name;
+        const email = inputs.email;
+        if (!name || !email) {
+          return { success: false, data: {}, error: 'name and email are required fields for create_opportunity.' };
+        }
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const res = await fetch('https://api.lever.co/v1/opportunities', {
+          method: 'POST',
+          headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, emails: [email], headline: inputs.headline }),
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data: data.data };
+        }
+        const errText = await res.text();
+        return { success: false, data: {}, error: `Lever API error (${res.status}): ${errText}` };
       }
 
       if (targetAction === 'update_opportunity_stage') {
-        const opportunityId = inputs.opportunityId || `opp_${Date.now()}`;
-        const stageId = inputs.stageId || 'onsite-interview';
-
-        return {
-          success: true,
-          data: {
-            opportunityId: String(opportunityId),
-            newStage: stageId,
-            updatedAt: new Date().toISOString(),
-          },
-        };
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Lever API key is required to update stage.' };
+        }
+        const opportunityId = inputs.opportunityId;
+        const stageId = inputs.stageId;
+        if (!opportunityId || !stageId) {
+          return { success: false, data: {}, error: 'opportunityId and stageId are required.' };
+        }
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const res = await fetch(`https://api.lever.co/v1/opportunities/${opportunityId}/stage`, {
+          method: 'PUT',
+          headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stage: stageId }),
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data: data.data };
+        }
+        return { success: false, data: {}, error: `Lever API update stage failed (${res.status})` };
       }
 
       if (targetAction === 'archive_opportunity') {
-        const opportunityId = inputs.opportunityId || `opp_${Date.now()}`;
-        const reasonId = inputs.reasonId || 'hired';
-
-        return {
-          success: true,
-          data: {
-            opportunityId: String(opportunityId),
-            archivedAt: new Date().toISOString(),
-            reason: reasonId,
-          },
-        };
+        if (!apiKey) {
+          return { success: false, data: {}, error: 'Lever API key is required to archive opportunity.' };
+        }
+        const opportunityId = inputs.opportunityId;
+        const reasonId = inputs.reasonId;
+        if (!opportunityId || !reasonId) {
+          return { success: false, data: {}, error: 'opportunityId and reasonId are required.' };
+        }
+        const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+        const res = await fetch(`https://api.lever.co/v1/opportunities/${opportunityId}/archived`, {
+          method: 'PUT',
+          headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reasonId }),
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          return { success: true, data: data.data };
+        }
+        return { success: false, data: {}, error: `Lever API archive failed (${res.status})` };
       }
 
       return { success: false, data: {}, error: `Unknown Lever action: ${actionId}` };

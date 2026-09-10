@@ -48,7 +48,7 @@ export async function getValidGoogleAccessToken(
   // Check if current token is valid and dummy check
   const isDummyToken = !currentAccessToken || currentAccessToken.startsWith('default_access_token_') || currentAccessToken.includes('dummy');
 
-  if (!isDummyToken && tokenExpiresAt > now + bufferMs) {
+  if (!isDummyToken && (tokenExpiresAt > now + bufferMs || !rawExpiresAt)) {
     return currentAccessToken;
   }
 

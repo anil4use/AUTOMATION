@@ -84,32 +84,7 @@ export async function executeBrowserSearchJobs(
     if (browser) await browser.close().catch(() => {});
   }
 
-  // Graceful fallback response when Playwright is unavailable
-  return {
-    success: true,
-    jobs: [
-      {
-        jobKey: `ind_${Date.now()}_1`,
-        jobTitle: query,
-        company: 'Nexus Tech Global',
-        location: location,
-        snippet: `Seeking ${query} for distributed infrastructure and web services.`,
-        jobUrl: `https://www.indeed.com/viewjob?jk=ind_${Date.now()}_1`,
-        date: new Date().toISOString().split('T')[0],
-      },
-      {
-        jobKey: `ind_${Date.now()}_2`,
-        jobTitle: `Senior ${query}`,
-        company: 'Quantum Dynamics',
-        location: location,
-        snippet: `High-growth startup looking for Senior ${query} with strong node/ts skills.`,
-        jobUrl: `https://www.indeed.com/viewjob?jk=ind_${Date.now()}_2`,
-        date: new Date().toISOString().split('T')[0],
-      },
-    ].slice(0, maxResults),
-    totalResults: 1,
-    source: 'browser_session_simulated',
-  };
+  throw new Error(`Indeed Browser Scraping failed or no jobs found. Please verify session cookies or search query.`);
 }
 
 /**

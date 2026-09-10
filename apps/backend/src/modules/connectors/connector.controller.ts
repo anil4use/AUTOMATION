@@ -25,8 +25,12 @@ export class ConnectorController {
   static async authorizeOAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { connectorId } = req.params;
-      const orgId = req.user?.organizationId || (req.query.orgId as string) || 'org_demo_123';
-      const userId = req.user?.userId || (req.query.userId as string) || 'user_demo_123';
+      const orgId = req.user?.organizationId || (req.query.orgId as string);
+      const userId = req.user?.userId || (req.query.userId as string);
+
+      if (!orgId || !userId) {
+        return sendResponse(res, 401, false, null, 'User authentication required for OAuth authorization.');
+      }
 
       const url = ConnectorService.getOAuthAuthorizeUrl(connectorId, orgId, userId);
       const isPlaceholder = !url || url.includes('autoflow_') || url.includes('YOUR_') || url.includes('placeholder');
@@ -80,8 +84,12 @@ export class ConnectorController {
       const code = (req.query.code as string) || req.body?.code;
       const rawState = (req.query.state as string) || req.body?.state;
 
-      let orgId = req.user?.organizationId || 'org_demo_123';
-      let userId = req.user?.userId || 'user_demo_123';
+      if (!code) {
+        return sendResponse(res, 400, false, null, 'OAuth authorization code is required.');
+      }
+
+      let orgId = req.user?.organizationId;
+      let userId = req.user?.userId;
 
       if (rawState) {
         try {
@@ -91,9 +99,13 @@ export class ConnectorController {
         } catch { }
       }
 
+      if (!orgId || !userId) {
+        return sendResponse(res, 401, false, null, 'User session or orgId required for OAuth callback.');
+      }
+
       const connection = await ConnectorService.handleOAuthCallback(
         connectorId,
-        code || `mock_code_${Date.now()}`,
+        code,
         orgId,
         userId
       );
@@ -207,8 +219,11 @@ export class ConnectorController {
 
   static async installAll(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
+      if (!req.user?.organizationId) {
+        return sendResponse(res, 401, false, null, 'User organization authentication required.');
+      }
       const data = await ConnectorService.cleanAutoSeededConnections(
-        req.user?.organizationId || 'org_demo_123'
+        req.user.organizationId
       );
       return sendResponse(res, 200, true, data, 'Cleaned up mock connections in database');
     } catch (err) {

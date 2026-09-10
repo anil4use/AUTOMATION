@@ -19,72 +19,61 @@ export async function executePublisherApiAction(
     const location = inputs.location || 'Remote';
     const limit = inputs.maxResults ? Number(inputs.maxResults) : 10;
 
-    if (publisherId) {
-      try {
-        const res = await fetch(
-          `https://api.indeed.com/ads/apisearch?publisher=${publisherId}&q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}&limit=${limit}&v=2&format=json`
-        );
-        if (res.ok) {
-          const data: any = await res.json();
-          return {
-            success: true,
-            jobs: data.results || [],
-            totalResults: data.totalResults || 0,
-            source: 'publisher_api',
-          };
-        }
-      } catch {}
+    if (!publisherId) {
+      return {
+        success: false,
+        error: 'Indeed Publisher ID / API Key is required for Publisher API search.',
+      };
     }
 
-    return {
-      success: true,
-      jobs: [
-        {
-          jobKey: `pub_${Date.now()}_1`,
-          jobTitle: query,
-          company: 'TechCorp Publisher Partner',
-          location: location,
-          snippet: `Public API search result for ${query}.`,
-          jobUrl: `https://www.indeed.com/viewjob?jk=pub_${Date.now()}_1`,
-          date: new Date().toISOString().split('T')[0],
-        },
-      ].slice(0, limit),
-      totalResults: 1,
-      source: 'publisher_api_simulated',
-    };
+    try {
+      const res = await fetch(
+        `https://api.indeed.com/ads/apisearch?publisher=${publisherId}&q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}&limit=${limit}&v=2&format=json`
+      );
+      if (res.ok) {
+        const data: any = await res.json();
+        return {
+          success: true,
+          jobs: data.results || [],
+          totalResults: data.totalResults || 0,
+          source: 'publisher_api',
+        };
+      }
+      return { success: false, error: `Indeed Publisher API returned status ${res.status}` };
+    } catch (err: any) {
+      return { success: false, error: `Indeed Publisher API request failed: ${err?.message}` };
+    }
   }
 
   if (actionId === 'get_job_details') {
-    const jobKey = inputs.jobKey || 'pub_sample_key';
-    return {
-      success: true,
-      jobKey: String(jobKey),
-      title: inputs.title || 'Senior Software Developer',
-      company: 'TechCorp Publisher Partner',
-      location: inputs.location || 'Remote',
-      salary: '$110,000 - $150,000 / year',
-      description: 'API fetched details for target Indeed job position.',
-      postedAt: new Date().toISOString(),
-      jobUrl: `https://www.indeed.com/viewjob?jk=${jobKey}`,
-      source: 'publisher_api',
-    };
+    const jobKey = inputs.jobKey;
+    if (!jobKey) {
+      return { success: false, error: 'jobKey parameter is required for get_job_details.' };
+    }
+    if (!publisherId) {
+      return { success: false, error: 'Indeed Publisher ID / API Key is required for job details.' };
+    }
+    try {
+      const res = await fetch(`https://api.indeed.com/ads/apigetjobs?publisher=${publisherId}&jobkeys=${encodeURIComponent(jobKey)}&v=2&format=json`);
+      if (res.ok) {
+        const data: any = await res.json();
+        return { success: true, job: data.results?.[0] || null, source: 'publisher_api' };
+      }
+      return { success: false, error: `Indeed API fetch error ${res.status}` };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to fetch job details from Indeed API.' };
+    }
   }
 
   if (actionId === 'get_company_jobs') {
-    const company = inputs.companyName || 'Target Company';
-    return {
-      success: true,
-      jobs: [
-        {
-          jobKey: `cmp_${Date.now()}_1`,
-          jobTitle: 'Backend Engineer',
-          company: company,
-          location: inputs.location || 'Remote',
-          jobUrl: `https://www.indeed.com/viewjob?jk=cmp_${Date.now()}_1`,
-        },
-      ],
-      source: 'publisher_api',
-    };
+    const company = inputs.companyName;
+    if (!company) {
+      return { success: false, error: 'companyName parameter is required for get_company_jobs.' };
+    }
+    if (!publisherId) {
+      return { success: false, error: 'Indeed Publisher ID / API Key is required.' };
+    }
+    return executePublisherApiAction('search_jobs', { query: company, location: inputs.location }, config);
   }
 
   return {

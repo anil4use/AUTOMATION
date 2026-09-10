@@ -52,31 +52,26 @@ export class VectorRagConnector extends BaseConnector {
 
   async executeAction(actionId: string, context: ExecutionContext): Promise<ConnectorExecutionOutput> {
     const inputs = context.stepInput || {};
+    const creds = context.connectionCredentials || {};
+    const apiKey = (creds.apiKey || creds.api_key) as string;
+
+    if (!apiKey) {
+      return { success: false, data: {}, error: 'Vector database API Key or credentials required.' };
+    }
 
     if (actionId === 'store_embeddings') {
       return {
-        success: true,
-        data: {
-          vectorId: `vec_${Date.now()}`,
-          chunkCount: 3,
-        },
+        success: false,
+        data: {},
+        error: 'Vector DB live embedding storage requires configured vector store client.',
       };
     }
 
     if (actionId === 'semantic_search') {
-      const topK = Number(inputs.topK || 3);
-      const matches = Array.from({ length: topK }, (_, i) => ({
-        id: `doc_match_${i + 1}`,
-        score: (0.95 - i * 0.05).toFixed(2),
-        content: `Sample vector context snippet ${i + 1} matching query: '${inputs.query}'`,
-      }));
-
       return {
-        success: true,
-        data: {
-          matches,
-          contextText: matches.map((m) => m.content).join('\n---\n'),
-        },
+        success: false,
+        data: {},
+        error: 'Vector DB semantic search requires active vector store provider connection.',
       };
     }
 

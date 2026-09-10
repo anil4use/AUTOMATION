@@ -61,31 +61,7 @@ export async function executeBrowserSearchJobs(inputs: Record<string, any>, sess
     console.warn('[LinkedInBrowser] Scraping fallback activated:', err?.message);
   }
 
-  // Fallback structured data
-  const mockJobs = [
-    {
-      jobId: `ln_job_${Date.now()}_1`,
-      title: `${keywords}`,
-      company: 'Global Cloud Systems',
-      location,
-      url: `https://www.linkedin.com/jobs/view/${Date.now()}01`,
-      postedAt: new Date().toISOString().split('T')[0],
-      salary: '$135,000 - $170,000 / year',
-      description: `Playwright Session Captured: Hiring ${keywords} with experience in cloud microservices.`,
-    },
-    {
-      jobId: `ln_job_${Date.now()}_2`,
-      title: `Senior ${keywords}`,
-      company: 'Apex Automation Corp',
-      location,
-      url: `https://www.linkedin.com/jobs/view/${Date.now()}02`,
-      postedAt: new Date().toISOString().split('T')[0],
-      salary: '$150,000 - $195,000 / year',
-      description: `Playwright Session Captured: Senior ${keywords} to lead technical architecture.`,
-    },
-  ].slice(0, limit);
-
-  return { jobs: mockJobs, totalCount: mockJobs.length };
+  throw new Error(`LinkedIn Browser Scraping failed or no jobs found. Please check your active browser session cookie (li_at).`);
 }
 
 export async function executeBrowserGetProfile(inputs: Record<string, any>, session: { cookies?: any[]; userAgent?: string }): Promise<Record<string, any>> {

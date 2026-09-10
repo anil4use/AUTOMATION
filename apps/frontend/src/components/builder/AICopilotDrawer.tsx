@@ -36,7 +36,7 @@ export function AICopilotDrawer({
   ]);
   const [suggestions, setSuggestions] = useState<{ label: string; prompt: string }[]>([
     { label: '💬 Create Telegram Bot Automation', prompt: 'Create a Telegram bot trigger that routes intent using AI and sends a chat reply' },
-    { label: '📊 Change Sheet to "Anil_dev"', prompt: 'Change Google Sheet name to Anil_dev' },
+    { label: '📊 Change Sheet to "Sheet1"', prompt: 'Change Google Sheet name to Sheet1' },
     { label: '🔍 Search "React developer jobs"', prompt: 'Set Web Search query to React developer jobs' },
     { label: '🤖 Insert AI Intent Router Step', prompt: 'Insert an AI Command Router step after trigger' },
     { label: '⏱️ Change Schedule to Hourly', prompt: 'Change schedule frequency to hourly every 1 hour' },

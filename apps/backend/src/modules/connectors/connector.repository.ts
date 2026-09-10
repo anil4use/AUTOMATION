@@ -18,7 +18,7 @@ export class ConnectorRepository {
   }
 
   static async findByOrgAndConnector(orgId: string, connectorId: string) {
-    return await ConnectionModel.findOne({ organizationId: orgId, connectorId, status: { $in: ['connected', 'active'] } }).sort({ updatedAt: -1 });
+    return await ConnectionModel.findOne({ organizationId: orgId, connectorId }).sort({ updatedAt: -1 });
   }
 
   static async deleteConnection(id: string, orgId: string) {

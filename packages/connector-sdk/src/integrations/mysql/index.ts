@@ -33,19 +33,12 @@ export class MysqlConnector extends BaseConnector {
   manifest = mysqlManifest;
 
   async executeAction(actionId: string, context: ExecutionContext): Promise<ConnectorExecutionOutput> {
-    const inputs = context.stepInput || {};
-
-    if (actionId === 'execute_query') {
-      return {
-        success: true,
-        data: {
-          rows: [{ id: 101, title: 'Sample MySQL Row' }],
-          affectedRows: 1,
-        },
-      };
+    const connectionConfig = context.connectionConfig || {};
+    if (!connectionConfig.host && !connectionConfig.connectionString) {
+      return { success: false, data: {}, error: 'MySQL host or connection string is required.' };
     }
 
-    return { success: false, data: {}, error: `Unsupported MySQL action: ${actionId}` };
+    return { success: false, data: {}, error: `Unsupported or unconfigured MySQL action: ${actionId}` };
   }
 }
 manifestRegistry.register(mysqlManifest);

@@ -320,35 +320,7 @@ export class MongodbConnector extends BaseConnector {
         return { success: true, data: { success: true, action: actionId } };
       }
 
-      // Mock fallback for unit test runners
-      if (actionId === 'find_documents') {
-        return {
-          success: true,
-          data: {
-            documents: [{ _id: '60d5ec49f1b2c80015f8e4a1', collection: stepInputs.collection, status: 'active' }],
-            count: 1,
-            truncated: false,
-          },
-        };
-      }
-
-      if (actionId === 'insert_one') {
-        return {
-          success: true,
-          data: {
-            insertedId: `60d5ec49f1b2c80015f8e4a${Date.now().toString().slice(-2)}`,
-          },
-        };
-      }
-
-      if (actionId === 'list_collections') {
-        return {
-          success: true,
-          data: { collections: ['users', 'logs', 'sessions'] },
-        };
-      }
-
-      return { success: true, data: { success: true, action: actionId } };
+      return { success: false, data: {}, error: 'MongoDB host or connection string is required.' };
     } catch (err: any) {
       return { success: false, data: {}, error: err?.message || String(err) };
     }

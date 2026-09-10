@@ -26,6 +26,8 @@ export class AuthService {
         { connectorId: 'slack', name: `Slack Workspace (${email})`, authType: 'oauth2' },
       ];
 
+      const defaultExpiresAt = new Date(Date.now() + 3600 * 1000);
+
       for (const conn of defaultConnectors) {
         const hasRealToken = Boolean(accessToken && !accessToken.startsWith('default_access_token_'));
         const encryptedCredentials = encryptJson({
@@ -33,6 +35,8 @@ export class AuthService {
           userEmail: email,
           accountOwner: email,
           accountEmail: email,
+          tokenExpiresAt: hasRealToken ? defaultExpiresAt.toISOString() : undefined,
+          expiresAt: hasRealToken ? defaultExpiresAt.toISOString() : undefined,
           connectedAt: new Date().toISOString(),
         });
 
@@ -47,12 +51,17 @@ export class AuthService {
             encryptedCredentials,
             status: hasRealToken ? 'connected' : 'pending_auth',
             accountEmail: email,
+            tokenExpiresAt: hasRealToken ? defaultExpiresAt : undefined,
+            expiresAt: hasRealToken ? defaultExpiresAt : undefined,
           });
-        } else if (hasRealToken && (!existingConn.encryptedCredentials || existingConn.encryptedCredentials.includes('default_access_token'))) {
-          // Upgrade existing default connection with real OAuth access token
+        } else if (hasRealToken) {
+          // Upgrade existing default connection with real OAuth access token and expiration
           existingConn.encryptedCredentials = encryptedCredentials;
           existingConn.status = 'connected';
           existingConn.accountEmail = email;
+          existingConn.tokenExpiresAt = defaultExpiresAt;
+          existingConn.expiresAt = defaultExpiresAt;
+          existingConn.lastRefreshError = undefined;
           await existingConn.save();
         }
       }
@@ -93,8 +102,8 @@ export class AuthService {
    * Exchanges Google OAuth authorization code for Google user profile
    */
   static async handleGoogleCodeExchange(code: string) {
-    let email = 'anil4use@gmail.com';
-    let name = 'Anil Kumar';
+    let email = 'user@autoflow.io';
+    let name = 'Workspace User';
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;

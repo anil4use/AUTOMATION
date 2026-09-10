@@ -22,47 +22,49 @@ export async function executeApiAction(
 
   if (actionId === 'create_post') {
     const text = inputs.text || inputs.message || 'Updated status via AutoFlow';
-    if (creds.accessToken) {
-      try {
-        const res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${creds.accessToken}`,
-            'Content-Type': 'application/json',
-            'X-Restli-Protocol-Version': '2.0.0',
-          },
-          body: JSON.stringify({
-            author: 'urn:li:person:self',
-            lifecycleState: 'PUBLISHED',
-            specificContent: {
-              'com.linkedin.ugc.ShareContent': {
-                shareCommentary: { text },
-                shareMediaCategory: inputs.imageUrl ? 'IMAGE' : 'NONE',
-              },
-            },
-            visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
-          }),
-        });
-        if (res.ok) {
-          const data: any = await res.json();
-          const id = data.id || `share_${Date.now()}`;
-          return { success: true, postId: id, postUrl: `https://www.linkedin.com/feed/update/${id}` };
-        }
-      } catch { }
+    if (!creds.accessToken) {
+      return { success: false, error: 'LinkedIn Access Token required to post updates.' };
     }
-
-    const mockId = `urn:li:share:${Date.now()}`;
-    return { success: true, postId: mockId, postUrl: `https://www.linkedin.com/feed/update/${mockId}` };
+    const res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${creds.accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+      body: JSON.stringify({
+        author: 'urn:li:person:self',
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: { text },
+            shareMediaCategory: inputs.imageUrl ? 'IMAGE' : 'NONE',
+          },
+        },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, error: `LinkedIn post creation failed: ${errText}` };
+    }
+    const data: any = await res.json();
+    const id = data.id;
+    return { success: true, postId: id, postUrl: `https://www.linkedin.com/feed/update/${id}` };
   }
 
   if (actionId === 'get_feed') {
-    return {
-      success: true,
-      posts: [
-        { author: 'Tech Insider', text: 'Top 10 Cloud Automation trends in 2026', likes: 142, comments: 28, postedAt: new Date().toISOString() },
-      ],
-      count: 1,
-    };
+    if (!creds.accessToken) {
+      return { success: false, error: 'LinkedIn Access Token required to fetch feed.' };
+    }
+    const res = await fetch('https://api.linkedin.com/v2/me', {
+      headers: { Authorization: `Bearer ${creds.accessToken}` },
+    });
+    if (!res.ok) {
+      return { success: false, error: 'Failed to fetch feed from LinkedIn API.' };
+    }
+    const data: any = await res.json();
+    return { success: true, data };
   }
 
   return {

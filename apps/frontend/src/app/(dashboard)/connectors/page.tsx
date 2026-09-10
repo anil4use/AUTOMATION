@@ -1254,7 +1254,7 @@ export default function ConnectorsPage() {
                     type="email"
                     value={gmailEmail}
                     onChange={(e) => setGmailEmail(e.target.value)}
-                    placeholder="anil4code@gmail.com"
+                    placeholder="user@example.com"
                     className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
                     required
                   />
@@ -1478,7 +1478,7 @@ export default function ConnectorsPage() {
                     type="email"
                     value={testRecipientEmail}
                     onChange={(e) => setTestRecipientEmail(e.target.value)}
-                    placeholder="anil4code@gmail.com"
+                    placeholder="user@example.com"
                     className="w-full px-3 py-2 bg-bgPrimary border border-borderColor rounded-lg text-xs text-white outline-none focus:border-accentPurple"
                   />
                 </div>

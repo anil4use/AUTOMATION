@@ -194,13 +194,20 @@ export class OAuth2Strategy {
     const clientId = this.getClientId(connectorId);
 
     if (config && clientId) {
-      const params = new URLSearchParams({
+      const paramsObj: Record<string, string> = {
         client_id: clientId,
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: config.scopes.join(' '),
         state,
-      });
+      };
+
+      if (connectorId.startsWith('google') || connectorId === 'gmail' || connectorId === 'bigquery') {
+        paramsObj.access_type = 'offline';
+        paramsObj.prompt = 'consent';
+      }
+
+      const params = new URLSearchParams(paramsObj);
       return `${config.authorizeUrl}?${params.toString()}`;
     }
 
@@ -220,64 +227,59 @@ export class OAuth2Strategy {
     const clientId = this.getClientId(connectorId);
     const clientSecret = this.getClientSecret(connectorId);
 
-    if (config && clientId && clientSecret) {
-      try {
-        const response = await fetch(config.tokenUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: clientId,
-            client_secret: clientSecret,
-            grant_type: 'authorization_code',
-            code,
-            redirect_uri: redirectUri,
-          }).toString(),
-        });
-        const data: any = await response.json();
-        if (data.access_token) {
-          let accountEmail = '';
-          if (connectorId.startsWith('google') || connectorId === 'gmail') {
-            try {
-              if (data.id_token) {
-                const parts = data.id_token.split('.');
-                if (parts.length === 3) {
-                  const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
-                  if (payload.email) accountEmail = payload.email;
-                }
-              }
-              if (!accountEmail) {
-                const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                  headers: { Authorization: `Bearer ${data.access_token}` },
-                });
-                const userData: any = await userRes.json();
-                if (userData.email) accountEmail = userData.email;
-              }
-            } catch (e) {}
-          }
-
-          return {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token || '',
-            expiresIn: data.expires_in || 3600,
-            tokenType: data.token_type || 'Bearer',
-            scope: data.scope || config.scopes.join(' '),
-            accountEmail,
-            userEmail: accountEmail,
-            obtainedAt: new Date().toISOString(),
-          };
-        }
-      } catch (err) {
-        console.warn(`OAuth token exchange fallback for ${connectorId}:`, err);
-      }
+    if (!clientId || !clientSecret) {
+      throw new Error(`OAuth Client ID and Client Secret are required for ${connectorId}. Please check your environment configuration.`);
     }
 
-    return {
-      accessToken: `access_token_${connectorId}_${Date.now()}`,
-      refreshToken: `refresh_token_${connectorId}_${Date.now()}`,
-      expiresIn: 3600,
-      tokenType: 'Bearer',
-      scope: OAUTH_PROVIDERS[connectorId]?.scopes.join(' ') || 'default',
-      obtainedAt: new Date().toISOString(),
-    };
+    if (config) {
+      const response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: redirectUri,
+        }).toString(),
+      });
+      const data: any = await response.json();
+      if (!response.ok || !data.access_token) {
+        throw new Error(`OAuth token exchange failed for ${connectorId}: ${data.error_description || data.error || response.statusText}`);
+      }
+
+      let accountEmail = '';
+      if (connectorId.startsWith('google') || connectorId === 'gmail') {
+        try {
+          if (data.id_token) {
+            const parts = data.id_token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+              if (payload.email) accountEmail = payload.email;
+            }
+          }
+          if (!accountEmail) {
+            const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+              headers: { Authorization: `Bearer ${data.access_token}` },
+            });
+            const userData: any = await userRes.json();
+            if (userData.email) accountEmail = userData.email;
+          }
+        } catch (e) {}
+      }
+
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || '',
+        expiresIn: data.expires_in || 3600,
+        tokenType: data.token_type || 'Bearer',
+        scope: data.scope || config.scopes.join(' '),
+        accountEmail,
+        userEmail: accountEmail,
+        obtainedAt: new Date().toISOString(),
+      };
+    }
+
+    throw new Error(`Unsupported OAuth provider: ${connectorId}`);
   }
 }

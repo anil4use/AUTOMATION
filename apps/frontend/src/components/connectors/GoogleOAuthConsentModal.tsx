@@ -4,6 +4,8 @@ import { ShieldCheck, Check, Lock, ExternalLink, ArrowRight, UserCheck, Key, Set
 import Link from 'next/link';
 import { toast } from 'sonner';
 
+import { useUserRole } from '@/context/UserRoleContext';
+
 interface GoogleOAuthConsentModalProps {
   isOpen: boolean;
   connectorName: string;
@@ -19,8 +21,13 @@ export function GoogleOAuthConsentModal({
   onClose,
   onSuccess,
 }: GoogleOAuthConsentModalProps) {
+  const { user } = useUserRole();
+  const activeEmail = user?.email || 'user@autoflow.io';
+  const activeName = user?.name || activeEmail.split('@')[0];
+  const avatarInitials = activeName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'US';
+
   const [step, setStep] = useState<'choose_account' | 'permissions'>('choose_account');
-  const [selectedEmail, setSelectedEmail] = useState<string>('anil.anuragee@aripratech.com');
+  const [selectedEmail, setSelectedEmail] = useState<string>(activeEmail);
   const [customEmail, setCustomEmail] = useState<string>('');
   const [isUseCustom, setIsUseCustom] = useState<boolean>(false);
   const [isAuthorizing, setIsAuthorizing] = useState<boolean>(false);
@@ -39,8 +46,7 @@ export function GoogleOAuthConsentModal({
   if (!isOpen) return null;
 
   const accounts = [
-    { email: 'anil.anuragee@aripratech.com', name: 'Anil Anuragee (Work)', avatar: 'AA' },
-    { email: 'anil.anuragee@gmail.com', name: 'Anil Personal (Gmail)', avatar: 'AP' },
+    { email: activeEmail, name: `${activeName} (Active Session)`, avatar: avatarInitials },
   ];
 
   const handleSelectAccount = (email: string) => {

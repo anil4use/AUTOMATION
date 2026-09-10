@@ -729,7 +729,7 @@ RULES FOR CANVAS MUTATION:
     } else if (lower.includes('sheet') || lower.includes('google')) {
       // Sheet name update request
       const match = userPrompt.match(/(?:to|name|as|the)\s+["']?([A-Za-z0-9_\-\.]{2,60})["']?/i);
-      const newSheetName = match ? match[1].trim() : 'Anil_dev';
+      const newSheetName = match ? match[1].trim() : 'Production_Sheet';
 
       nodes = nodes.map((n) => {
         const cid = (n.connectorId || '').toLowerCase();
@@ -828,13 +828,13 @@ RULES FOR CANVAS MUTATION:
     const currentSheetName = sheetsNode?.config?.spreadsheetId || 'React_Jobs';
 
     if (hasSheets) {
-      if (currentSheetName === 'Anil_dev') {
+      if (currentSheetName === 'Production_Sheet') {
         aiSuggestions.push({ label: '📊 Change Sheet to "React_Jobs_Digest"', prompt: 'Change Google Sheet name to React_Jobs_Digest' });
       } else {
-        aiSuggestions.push({ label: '📊 Change Sheet to "Anil_dev"', prompt: 'Change Google Sheet name to Anil_dev' });
+        aiSuggestions.push({ label: '📊 Change Sheet to "Production_Sheet"', prompt: 'Change Google Sheet name to Production_Sheet' });
       }
     } else {
-      aiSuggestions.push({ label: '📊 Add Google Sheets Step ("Anil_dev")', prompt: 'Add Google Sheets step for spreadsheet Anil_dev' });
+      aiSuggestions.push({ label: '📊 Add Google Sheets Step ("Production_Sheet")', prompt: 'Add Google Sheets step for spreadsheet Production_Sheet' });
     }
 
     if (hasSearch) {

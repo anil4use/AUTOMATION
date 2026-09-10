@@ -249,36 +249,7 @@ export class PostgresqlConnector extends BaseConnector {
         }
       }
 
-      // Mock fallback for test runners
-      if (actionId === 'execute_query') {
-        return {
-          success: true,
-          data: {
-            rows: [{ id: 1, name: 'Sample Record', status: 'active', updated_at: new Date().toISOString() }],
-            rowCount: 1,
-            truncated: false,
-          },
-        };
-      }
-
-      if (actionId === 'insert_row') {
-        return {
-          success: true,
-          data: {
-            insertedId: `pg_row_${Date.now()}`,
-            success: true,
-          },
-        };
-      }
-
-      if (actionId === 'list_tables') {
-        return {
-          success: true,
-          data: { tables: ['users', 'orders', 'products'] },
-        };
-      }
-
-      return { success: true, data: { success: true, action: actionId } };
+      return { success: false, data: {}, error: 'PostgreSQL host or connection string is required.' };
     } catch (err: any) {
       return { success: false, data: {}, error: err?.message || String(err) };
     }

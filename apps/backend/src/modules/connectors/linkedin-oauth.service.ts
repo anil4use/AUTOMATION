@@ -8,8 +8,8 @@ export async function refreshLinkedInAccessToken(refreshToken: string): Promise<
       body: new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
-        client_id: process.env.LINKEDIN_CLIENT_ID || 'mock_linkedin_client_id',
-        client_secret: process.env.LINKEDIN_CLIENT_SECRET || 'mock_linkedin_client_secret',
+        client_id: process.env.LINKEDIN_CLIENT_ID || '',
+        client_secret: process.env.LINKEDIN_CLIENT_SECRET || '',
       }),
     });
 
@@ -21,11 +21,8 @@ export async function refreshLinkedInAccessToken(refreshToken: string): Promise<
       };
     }
   } catch (err: any) {
-    logger.warn('[LinkedInOAuthService] Refresh failed, using cached session:', err?.message);
+    logger.error('[LinkedInOAuthService] Refresh failed:', err?.message);
   }
 
-  return {
-    accessToken: refreshToken,
-    expiresAt: Date.now() + 5184000 * 1000,
-  };
+  throw new Error('Failed to refresh LinkedIn OAuth access token. Please re-authenticate your LinkedIn account.');
 }
