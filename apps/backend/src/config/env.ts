@@ -25,6 +25,7 @@ export const env = {
   port: parseInt(process.env.PORT || '5000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
+  apiUrl: process.env.API_URL || 'http://localhost:5000/api',
 
   // JWT — required in production
   jwtSecret: requireEnv('JWT_SECRET', isProduction ? undefined : 'dev_secret_jwt_key_CHANGE_IN_PROD_123'),

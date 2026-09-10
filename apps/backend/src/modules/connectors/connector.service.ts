@@ -121,14 +121,18 @@ export class ConnectorService {
   }
 
   static getOAuthAuthorizeUrl(connectorId: string, orgId: string, userId: string) {
-    const redirectUri = `${env.clientUrl}/connectors/callback`;
+    const rawApiUrl = env.apiUrl || 'http://localhost:5000/api';
+    const cleanApiUrl = rawApiUrl.replace(/\/api\/?$/, '');
+    const redirectUri = `${cleanApiUrl}/api/v1/connectors/oauth/callback/${connectorId}`;
     const state = Buffer.from(JSON.stringify({ connectorId, orgId, userId })).toString('base64');
     return OAuth2Strategy.getAuthorizationUrl(connectorId, redirectUri, state);
   }
 
   static async handleOAuthCallback(connectorId: string, code: string, orgId: string, userId: string) {
     const { ConnectionModel } = require('@automation/database');
-    const redirectUri = `${env.clientUrl}/connectors/callback`;
+    const rawApiUrl = env.apiUrl || 'http://localhost:5000/api';
+    const cleanApiUrl = rawApiUrl.replace(/\/api\/?$/, '');
+    const redirectUri = `${cleanApiUrl}/api/v1/connectors/oauth/callback/${connectorId}`;
     const tokens = await OAuth2Strategy.exchangeCodeForTokens(connectorId, code, redirectUri);
 
     // Find existing connection for this connectorId if present

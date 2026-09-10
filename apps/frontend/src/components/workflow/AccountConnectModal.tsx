@@ -2,7 +2,9 @@
 import React, { useState } from 'react';
 import { X, Key, ShieldCheck, ExternalLink, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import { getCookie } from '@/context/UserRoleContext';
 import { getManifestById } from '@/lib/connector-manifests';
+import { MultiAuthModal } from '@/components/connectors/MultiAuthModal';
 
 interface AccountConnectModalProps {
   connectorId: string;
@@ -10,8 +12,16 @@ interface AccountConnectModalProps {
   onClose: () => void;
 }
 
+const MULTI_AUTH_CONNECTORS = ['linkedin', 'indeed', 'greenhouse', 'lever', 'ziprecruiter', 'glassdoor'];
+
 export function AccountConnectModal({ connectorId, onSuccess, onClose }: AccountConnectModalProps) {
   const manifest = getManifestById(connectorId);
+  const isMultiAuth = MULTI_AUTH_CONNECTORS.includes(connectorId) || manifest?.category === 'Jobs & Recruitment';
+
+  if (isMultiAuth) {
+    return <MultiAuthModal connectorId={connectorId} onSuccess={onSuccess} onClose={onClose} />;
+  }
+
   const isApiKey = manifest?.authType === 'api_key';
 
   const [accountName, setAccountName] = useState(`${manifest?.name || connectorId} Account`);
@@ -46,8 +56,10 @@ export function AccountConnectModal({ connectorId, onSuccess, onClose }: Account
     setSubmitting(true);
     setError('');
 
-    // Open popup window for OAuth 2.0 flow
-    const authUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/v1/connectors/oauth/authorize/${connectorId}`;
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || getCookie('token') || '') : '';
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+    const authUrl = `${apiBase}/api/v1/connectors/oauth/authorize/${connectorId}?redirect=true${tokenParam}`;
     const popup = window.open(authUrl, 'OAuthAuthorize', 'width=600,height=700');
 
     // Poll popup window closure
@@ -170,3 +182,4 @@ export function AccountConnectModal({ connectorId, onSuccess, onClose }: Account
     </div>
   );
 }
+

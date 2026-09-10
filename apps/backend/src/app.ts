@@ -14,6 +14,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import whatsappAgentRoutes from './modules/whatsapp-agent/whatsapp-agent.routes';
 import webhookGatewayRoutes from './modules/webhooks/webhook-gateway.routes';
 import agentChatRoutes from './modules/agent-chat/agent-chat.routes';
+import browserSessionRoutes from './modules/connectors/browser-session.routes';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
@@ -42,6 +43,7 @@ export function createApp() {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/workflows', workflowRoutes);
+  app.use('/api/v1/connectors/browser-session', browserSessionRoutes);
   app.use('/api/v1/connectors', connectorRoutes);
   app.use('/api/v1/ai-agent', aiAgentRoutes);
   app.use('/api/v1/executions', executionRoutes);

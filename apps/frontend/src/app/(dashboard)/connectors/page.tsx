@@ -12,6 +12,7 @@ import { apiClient } from '@/lib/api-client';
 import { signInWithGoogleFirebase } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { DatabaseConnectModal, ENVIRONMENT_COLORS } from '@/components/connectors/DatabaseConnectModal';
+import { MultiAuthModal } from '@/components/connectors/MultiAuthModal';
 import { getSocketClient } from '@/lib/socket-client';
 
 export interface ConnectionAccount {
@@ -125,6 +126,10 @@ export default function ConnectorsPage() {
   const [apiKeyName, setApiKeyName] = useState('');
   const [apiKeyValue, setApiKeyValue] = useState('');
   const [savingKey, setSavingKey] = useState(false);
+
+  // Multi-Auth Modal State (LinkedIn, Indeed, Greenhouse, Lever)
+  const [isMultiAuthModalOpen, setIsMultiAuthModalOpen] = useState(false);
+  const [multiAuthConnectorId, setMultiAuthConnectorId] = useState('');
 
   // Gmail Custom Setup Modal (Google OAuth or App Password)
   const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
@@ -276,6 +281,22 @@ export default function ConnectorsPage() {
       );
     } finally {
       setRetestingConnectionId(null);
+    }
+  };
+  const MULTI_AUTH_CONNECTORS = ['linkedin', 'indeed', 'greenhouse', 'lever', 'ziprecruiter', 'glassdoor'];
+
+  const handleInitiateConnect = (connector: AvailableConnector) => {
+    const isMultiAuth = MULTI_AUTH_CONNECTORS.includes(connector.id) || connector.category === 'Jobs & Recruitment';
+    if (isMultiAuth) {
+      setMultiAuthConnectorId(connector.id);
+      setIsMultiAuthModalOpen(true);
+      return;
+    }
+
+    if (connector.authType === 'oauth2') {
+      handleConnectOAuth(connector);
+    } else {
+      handleOpenApiKeyModal(connector);
     }
   };
 
@@ -1019,7 +1040,7 @@ export default function ConnectorsPage() {
                         </button>
 
                         <button
-                          onClick={() => c.authType === 'oauth2' ? handleConnectOAuth(c) : handleOpenApiKeyModal(c)}
+                          onClick={() => handleInitiateConnect(c)}
                           className="px-2 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-semibold hover:bg-purple-500/30 transition-all flex items-center gap-1"
                           title="Re-authenticate Account"
                         >
@@ -1039,7 +1060,7 @@ export default function ConnectorsPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => c.authType === 'oauth2' ? handleConnectOAuth(c) : handleOpenApiKeyModal(c)}
+                        onClick={() => handleInitiateConnect(c)}
                         disabled={isConnecting}
                         className="px-3 py-1.5 rounded-lg bg-accentPurple/20 border border-accentPurple/40 text-accentPurple text-xs font-semibold hover:bg-accentPurple/30 transition-all flex items-center gap-1 disabled:opacity-50"
                       >
@@ -1145,7 +1166,7 @@ export default function ConnectorsPage() {
                                   <span>Test API</span>
                                 </button>
                                 <button
-                                  onClick={() => catalogItem.authType === 'oauth2' ? handleConnectOAuth(catalogItem) : handleOpenApiKeyModal(catalogItem)}
+                                  onClick={() => catalogItem ? handleInitiateConnect(catalogItem) : undefined}
                                   className="px-2.5 py-1 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold hover:bg-purple-500/25 transition-all flex items-center gap-1"
                                 >
                                   <RefreshCw size={11} />
@@ -1591,6 +1612,18 @@ export default function ConnectorsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Multi-Auth Modal (LinkedIn, Indeed, Greenhouse, Lever) */}
+      {isMultiAuthModalOpen && (
+        <MultiAuthModal
+          connectorId={multiAuthConnectorId}
+          onSuccess={() => {
+            fetchConnections();
+            toast.success('Account Connected Successfully!');
+          }}
+          onClose={() => setIsMultiAuthModalOpen(false)}
+        />
       )}
     </div>
   );

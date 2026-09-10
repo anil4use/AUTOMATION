@@ -104,3 +104,5 @@ export class GreenhouseConnector extends BaseConnector {
 }
 
 export * from './manifest';
+export * from './webhook';
+export * from './choices';

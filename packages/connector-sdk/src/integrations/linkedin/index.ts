@@ -2,14 +2,12 @@ import { BaseConnector } from '../../core/base-connector';
 import { ExecutionContext, ConnectorExecutionOutput } from '../../core/types';
 import { linkedinManifest } from './manifest';
 import {
-  executeSearchJobs,
-  executeGetJobDetails,
-  executePostJob,
-  executePostCompanyUpdate,
-  executePostUserShare,
-  executeSearchCompanies,
-  executeGetUserProfile,
-} from './actions';
+  executeBrowserSearchJobs,
+  executeBrowserGetProfile,
+  executeBrowserApplyJob,
+  executeBrowserPostFeed,
+} from './browser';
+import { executeApiAction } from './api';
 
 export class LinkedInConnector extends BaseConnector {
   manifest = linkedinManifest;
@@ -19,53 +17,43 @@ export class LinkedInConnector extends BaseConnector {
     context: ExecutionContext
   ): Promise<ConnectorExecutionOutput> {
     const inputs = context.stepInput || {};
-    const credentials = context.connectionCredentials || {};
-    const creds = {
-      accessToken: (credentials.accessToken || credentials.access_token) as string,
-    };
-
+    const creds = context.connectionCredentials || {};
+    const authMethod = creds.authMethod || (creds.cookies ? 'browser_session' : 'access_token');
     const targetAction = this.resolveActionId(actionId);
 
     try {
       let data: Record<string, any>;
 
-      switch (targetAction) {
-        case 'search_jobs':
-          data = await executeSearchJobs(inputs, creds);
-          break;
-        case 'get_job_details':
-          data = await executeGetJobDetails(inputs, creds);
-          break;
-        case 'post_job':
-          data = await executePostJob(inputs, creds);
-          break;
-        case 'post_company_update':
-          data = await executePostCompanyUpdate(inputs, creds);
-          break;
-        case 'post_user_share':
-          data = await executePostUserShare(inputs, creds);
-          break;
-        case 'search_companies':
-          data = await executeSearchCompanies(inputs, creds);
-          break;
-        case 'get_user_profile':
-          data = await executeGetUserProfile(inputs, creds);
-          break;
-        default:
-          return {
-            success: false,
-            data: {},
-            error: `Unknown LinkedIn action: '${actionId}'`,
-          };
+      if (authMethod === 'browser_session') {
+        switch (targetAction) {
+          case 'search_jobs':
+            data = await executeBrowserSearchJobs(inputs, { cookies: creds.cookies, userAgent: creds.userAgent });
+            break;
+          case 'get_profile':
+          case 'search_people':
+            data = await executeBrowserGetProfile(inputs, { cookies: creds.cookies, userAgent: creds.userAgent });
+            break;
+          case 'apply_to_job':
+            data = await executeBrowserApplyJob(inputs);
+            break;
+          case 'create_post':
+            data = await executeBrowserPostFeed(inputs);
+            break;
+          default:
+            data = await executeBrowserSearchJobs(inputs, { cookies: creds.cookies });
+            break;
+        }
+      } else {
+        data = await executeApiAction(targetAction, inputs, { accessToken: creds.accessToken, partnerApiKey: creds.partnerApiKey });
+      }
+
+      if (data.success === false) {
+        return { success: false, data: {}, error: data.error || 'LinkedIn execution failed' };
       }
 
       return { success: true, data };
     } catch (err: any) {
-      return {
-        success: false,
-        data: {},
-        error: err?.message || 'LinkedIn connector API error',
-      };
+      return { success: false, data: {}, error: err?.message || 'LinkedIn connector error' };
     }
   }
 }

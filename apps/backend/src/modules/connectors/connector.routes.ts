@@ -8,7 +8,15 @@ import { createApiKeyConnectionSchema, oauthCallbackSchema } from './connector.v
 
 const router = Router();
 
+// Public OAuth callback (accessed by external OAuth provider redirect in popup)
+router.get('/oauth/callback/:connectorId', ConnectorController.handleOAuthCallback as any);
+router.post('/oauth/callback/:connectorId', ConnectorController.handleOAuthCallback as any);
+
+// Protected connector endpoints
 router.use(authMiddleware as any);
+
+// OAuth authorize endpoint
+router.get('/oauth/authorize/:connectorId', ConnectorController.authorizeOAuth as any);
 
 // Registry endpoints (Phase 2)
 router.get('/registry/search', ConnectorRegistryController.searchConnectors as any);
@@ -20,8 +28,6 @@ router.get('/registry/:connectorId/actions/:actionId', ConnectorRegistryControll
 
 router.get('/available', ConnectorController.listAvailable as any);
 router.get('/connections', ConnectorController.listUserConnections as any);
-router.get('/oauth/authorize/:connectorId', ConnectorController.authorizeOAuth as any);
-router.post('/oauth/callback/:connectorId', validationMiddleware(oauthCallbackSchema), ConnectorController.handleOAuthCallback as any);
 router.post('/connections/api-key', validationMiddleware(createApiKeyConnectionSchema), ConnectorController.createApiKeyConnection as any);
 router.post('/install-all', ConnectorController.installAll as any);
 router.delete('/connections/:id', ConnectorController.deleteConnection as any);

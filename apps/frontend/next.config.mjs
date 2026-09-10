@@ -1,12 +1,19 @@
+import webpack from 'webpack';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@automation/shared-types'],
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Mark Node-only packages as external so they are never bundled for the browser
+      // Mark Node-only packages as external / fallback false so they are never bundled for the browser
       config.resolve.fallback = {
         ...config.resolve.fallback,
+        module: false,
+        playwright: false,
+        'playwright-core': false,
+        process: false,
+        'node:process': false,
         fs: false,
         net: false,
         tls: false,
@@ -32,8 +39,10 @@ const nextConfig = {
         'ssh2': false,
       };
 
-      // Externalize heavy Node-only DB/cache driver packages
+      // Externalize heavy Node-only DB/cache/automation packages
       const nodeOnlyPackages = [
+        'playwright',
+        'playwright-core',
         'ioredis',
         'mongodb',
         'mongoose',
@@ -63,22 +72,16 @@ const nextConfig = {
       ];
     }
 
-    // Handle node: URI scheme for both server and client
-    config.module = config.module || {};
-    config.module.rules = config.module.rules || [];
-    config.module.rules.push({
-      test: /node_modules\/(ioredis|mongodb|pg|mysql2|mssql|tedious)\/.*\.js$/,
-      use: 'null-loader',
-      issuer: {
-        // Only apply null-loader when imported from browser-side code
-        not: /[\\/]server[\\/]/,
-      },
-    });
+    // Fix node: scheme (e.g. node:process, node:fs, node:crypto) for Webpack 5
+    config.plugins = config.plugins || [];
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        resource.request = resource.request.replace(/^node:/, '');
+      })
+    );
 
     return config;
   },
 };
 
 export default nextConfig;
-
-

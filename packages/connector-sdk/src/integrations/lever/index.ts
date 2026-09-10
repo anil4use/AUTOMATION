@@ -110,3 +110,5 @@ export class LeverConnector extends BaseConnector {
 }
 
 export * from './manifest';
+export * from './webhook';
+export * from './choices';

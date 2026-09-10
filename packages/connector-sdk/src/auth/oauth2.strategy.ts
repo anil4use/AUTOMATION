@@ -21,6 +21,20 @@ const FULL_GOOGLE_SCOPES = [
 ];
 
 const OAUTH_PROVIDERS: Record<string, OAuth2AuthConfig> = {
+  linkedin: {
+    clientId: process.env.LINKEDIN_CLIENT_ID || 'autoflow_linkedin_app',
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+    authorizeUrl: 'https://www.linkedin.com/oauth/v2/authorization',
+    tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
+    scopes: ['openid', 'profile', 'email'],
+  },
+  indeed: {
+    clientId: process.env.INDEED_CLIENT_ID || 'autoflow_indeed_app',
+    clientSecret: process.env.INDEED_CLIENT_SECRET || '',
+    authorizeUrl: 'https://secure.indeed.com/oauth/v2/authorize',
+    tokenUrl: 'https://secure.indeed.com/oauth/v2/tokens',
+    scopes: ['employer.job.read', 'employer.job.write'],
+  },
   gmail: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -157,36 +171,63 @@ const OAUTH_PROVIDERS: Record<string, OAuth2AuthConfig> = {
 };
 
 export class OAuth2Strategy {
+  static getClientId(connectorId: string): string {
+    const envKey = `${connectorId.toUpperCase().replace(/-/g, '_')}_CLIENT_ID`;
+    if (process.env[envKey]) return process.env[envKey]!;
+    if (connectorId === 'gmail' || connectorId.startsWith('google')) return process.env.GOOGLE_CLIENT_ID || '';
+    if (connectorId === 'outlook' || connectorId === 'ms-teams') return process.env.MICROSOFT_CLIENT_ID || '';
+    const config = OAUTH_PROVIDERS[connectorId];
+    return (config && config.clientId && !config.clientId.startsWith('autoflow_')) ? config.clientId : (process.env.LINKEDIN_CLIENT_ID || config?.clientId || '');
+  }
+
+  static getClientSecret(connectorId: string): string {
+    const envKey = `${connectorId.toUpperCase().replace(/-/g, '_')}_CLIENT_SECRET`;
+    if (process.env[envKey]) return process.env[envKey]!;
+    if (connectorId === 'gmail' || connectorId.startsWith('google')) return process.env.GOOGLE_CLIENT_SECRET || '';
+    if (connectorId === 'outlook' || connectorId === 'ms-teams') return process.env.MICROSOFT_CLIENT_SECRET || '';
+    const config = OAUTH_PROVIDERS[connectorId];
+    return (config && config.clientSecret) ? config.clientSecret : (process.env.LINKEDIN_CLIENT_SECRET || '');
+  }
+
   static getAuthorizationUrl(connectorId: string, redirectUri: string, state: string): string {
     const config = OAUTH_PROVIDERS[connectorId];
+    const clientId = this.getClientId(connectorId);
 
-    if (config && config.clientId) {
+    if (config && clientId) {
       const params = new URLSearchParams({
-        client_id: config.clientId,
+        client_id: clientId,
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: config.scopes.join(' '),
         state,
-        access_type: 'offline',
-        prompt: 'consent',
       });
       return `${config.authorizeUrl}?${params.toString()}`;
     }
 
-    return '';
+    // Default fallback authorization URL generator
+    const fallbackBase = connectorId === 'linkedin' ? 'https://www.linkedin.com/oauth/v2/authorization' : `https://auth.${connectorId}.com/oauth/authorize`;
+    const params = new URLSearchParams({
+      client_id: clientId || `autoflow_${connectorId}_app`,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      state,
+    });
+    return `${fallbackBase}?${params.toString()}`;
   }
 
   static async exchangeCodeForTokens(connectorId: string, code: string, redirectUri: string): Promise<Record<string, any>> {
     const config = OAUTH_PROVIDERS[connectorId];
+    const clientId = this.getClientId(connectorId);
+    const clientSecret = this.getClientSecret(connectorId);
 
-    if (config && config.clientId && config.clientSecret) {
+    if (config && clientId && clientSecret) {
       try {
         const response = await fetch(config.tokenUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            client_id: config.clientId,
-            client_secret: config.clientSecret,
+            client_id: clientId,
+            client_secret: clientSecret,
             grant_type: 'authorization_code',
             code,
             redirect_uri: redirectUri,
