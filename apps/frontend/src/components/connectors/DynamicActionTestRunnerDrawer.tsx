@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { X, Play, Loader2, CheckCircle2, AlertTriangle, Code, Clock, Copy, Check, ChevronDown, Layers, Terminal, Zap } from 'lucide-react';
+import { X, Play, Loader2, CheckCircle2, AlertTriangle, Code, Clock, Copy, Check, ChevronDown, Layers, Terminal, Zap, Sparkles } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { getConnectorBrandSpec } from '@/lib/connector-brand-utils';
 
 interface DynamicActionTestRunnerDrawerProps {
   connectorId: string;
@@ -102,22 +103,28 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
     const tag = `{{step_1.output.${keyPath}}}`;
     navigator.clipboard.writeText(tag);
     setCopiedKey(keyPath);
-    toast.success(`Copied Variable Tag`, { description: tag });
+    toast.success(`Copied Dynamic Tag`, { description: tag });
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
   if (!isOpen) return null;
 
+  const brand = getConnectorBrandSpec(connectorId);
+  const BrandIcon = brand.icon;
+
   const schemaProperties = selectedAction?.inputSchema?.properties || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="w-full max-w-2xl bg-slate-950 border-l border-white/10 h-full flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
+      <div className="w-full max-w-2xl bg-slate-950/95 border-l border-white/10 h-full flex flex-col shadow-2xl overflow-hidden relative">
+        {/* Ambient Glow background */}
+        <div className="absolute top-0 right-0 w-96 h-32 bg-emerald-500/10 blur-3xl pointer-events-none" />
+
         {/* Header */}
-        <div className="p-8 border-b border-white/[0.08] bg-slate-900/50 backdrop-blur-xl flex items-center justify-between">
+        <div className="p-7 border-b border-white/[0.08] bg-slate-900/60 backdrop-blur-xl flex items-center justify-between relative z-10">
           <div className="flex items-center gap-4">
-            <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/20 to-slate-900 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-extrabold text-2xl shadow-lg shadow-emerald-500/10">
-              <Terminal className="w-6 h-6" />
+            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${brand.bgGlow} border ${brand.borderGlow} flex items-center justify-center ${brand.textColor} shadow-lg shadow-black/40`}>
+              <BrandIcon size={24} />
             </div>
             <div>
               <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
@@ -126,19 +133,22 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                   TEST RUNNER
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 mt-1 font-normal">
+              <p className="text-xs text-slate-400 mt-0.5 font-medium">
                 Execute actions with optional inputs &amp; inspect dynamic output payload
               </p>
             </div>
           </div>
 
-          <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/10">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 transition-all"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-7 text-slate-300">
+        <div className="flex-1 overflow-y-auto p-7 space-y-7 text-slate-300 relative z-10">
           {loading ? (
             <div className="py-24 flex flex-col items-center justify-center gap-3 text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
@@ -146,27 +156,58 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
             </div>
           ) : (
             <>
-              {/* Select Action Dropdown */}
+              {/* Operation Selection */}
               <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-emerald-400" />
-                  <span>Select Operation ({actions.length} available)</span>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-400" />
+                    <span>Select Operation ({actions.length} Available)</span>
+                  </span>
                 </label>
-                <div className="relative">
-                  <select
-                    value={selectedActionId}
-                    onChange={(e) => handleActionChange(e.target.value)}
-                    className="w-full p-4 bg-slate-900 border border-white/10 rounded-2xl text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 appearance-none cursor-pointer pr-10 shadow-sm"
-                  >
-                    {actions.map((act) => (
-                      <option key={act.actionId} value={act.actionId} className="bg-slate-900 text-white">
-                        {act.name} ({act.actionId})
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-4.5 pointer-events-none" />
-                </div>
-                {selectedAction?.description && (
+
+                {actions.length <= 4 && actions.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {actions.map((act) => {
+                      const isSelected = act.actionId === selectedActionId;
+                      return (
+                        <button
+                          key={act.actionId}
+                          onClick={() => handleActionChange(act.actionId)}
+                          className={`p-3.5 rounded-2xl text-left transition-all border ${
+                            isSelected
+                              ? 'bg-emerald-500/10 border-emerald-500/40 text-white shadow-lg shadow-emerald-500/5'
+                              : 'bg-slate-900/60 border-white/[0.08] text-slate-400 hover:text-white hover:bg-slate-900/90'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-xs tracking-tight text-white">{act.name}</span>
+                            <code className="text-[10px] font-mono text-emerald-400">{act.actionId}</code>
+                          </div>
+                          {act.description && (
+                            <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{act.description}</p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={selectedActionId}
+                      onChange={(e) => handleActionChange(e.target.value)}
+                      className="w-full p-4 bg-slate-900 border border-white/10 rounded-2xl text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 appearance-none cursor-pointer pr-10 shadow-sm"
+                    >
+                      {actions.map((act) => (
+                        <option key={act.actionId} value={act.actionId} className="bg-slate-900 text-white">
+                          {act.name} ({act.actionId})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-4.5 pointer-events-none" />
+                  </div>
+                )}
+
+                {selectedAction?.description && actions.length > 4 && (
                   <p className="text-xs text-slate-400 leading-relaxed pl-1 font-normal">
                     {selectedAction.description}
                   </p>
@@ -180,13 +221,15 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                     <Code className="w-4 h-4 text-emerald-400" />
                     <span>Payload Arguments</span>
                   </h3>
-                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-bold">
                     OPTIONAL FOR TESTING
                   </span>
                 </div>
 
                 {Object.keys(schemaProperties).length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-3 text-center">No arguments required for this action.</p>
+                  <div className="py-4 text-center text-xs text-slate-400 italic bg-slate-950/50 rounded-xl border border-white/[0.04]">
+                    No arguments required for this action operation.
+                  </div>
                 ) : (
                   <div className="space-y-3.5 pt-1">
                     {Object.entries(schemaProperties).map(([propKey, propMeta]: [string, any]) => (
@@ -195,13 +238,13 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                           <label className="font-semibold text-slate-200">
                             {propMeta.title || propKey} <code className="text-[11px] text-slate-400 font-mono">({propKey})</code>
                           </label>
-                          <span className="text-[10px] text-slate-400 font-mono">{propMeta.type || 'string'}</span>
+                          <span className="text-[10px] text-slate-400 font-mono uppercase">{propMeta.type || 'string'}</span>
                         </div>
                         {propMeta.enum ? (
                           <select
                             value={inputValues[propKey] || ''}
                             onChange={(e) => handleInputChange(propKey, e.target.value)}
-                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500"
+                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500 outline-none"
                           >
                             <option value="">-- Select {propKey} --</option>
                             {propMeta.enum.map((opt: string) => (
@@ -210,13 +253,13 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                               </option>
                             ))}
                           </select>
-                        ) : propMeta.type === 'string' && propMeta.title?.toLowerCase().includes('body') ? (
+                        ) : propMeta.type === 'string' && (propMeta.title?.toLowerCase().includes('body') || propMeta.title?.toLowerCase().includes('payload')) ? (
                           <textarea
                             rows={3}
                             value={inputValues[propKey] || ''}
                             onChange={(e) => handleInputChange(propKey, e.target.value)}
                             placeholder={propMeta.description || `Enter ${propKey}...`}
-                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500"
+                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         ) : (
                           <input
@@ -224,7 +267,7 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                             value={inputValues[propKey] || ''}
                             onChange={(e) => handleInputChange(propKey, e.target.value)}
                             placeholder={propMeta.description || `Enter ${propKey}...`}
-                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500"
+                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         )}
                       </div>
@@ -236,12 +279,12 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                   <button
                     onClick={handleRunTest}
                     disabled={testing}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 border border-emerald-400/20"
                   >
                     {testing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        <span>Executing Live Action...</span>
+                        <span>Executing Live Action Test...</span>
                       </>
                     ) : (
                       <>

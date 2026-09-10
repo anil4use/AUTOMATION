@@ -17,6 +17,7 @@ import { ConnectorSetupGuideDrawer } from '@/components/connectors/ConnectorSetu
 import { DynamicActionTestRunnerDrawer } from '@/components/connectors/DynamicActionTestRunnerDrawer';
 import { BookOpen, Terminal } from 'lucide-react';
 import { getSocketClient } from '@/lib/socket-client';
+import { getConnectorBrandSpec } from '@/lib/connector-brand-utils';
 
 export interface ConnectionAccount {
   _id: string;
@@ -875,19 +876,22 @@ export default function ConnectorsPage() {
 
             {/* Category Pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {categoriesList.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                    selectedCategory === cat
-                      ? 'bg-white/15 border border-white/30 text-white shadow-sm'
-                      : 'bg-white/5 border border-transparent text-textMuted hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {categoriesList.map((cat) => {
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20 border border-indigo-400/30'
+                        : 'bg-white/[0.04] border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -903,10 +907,13 @@ export default function ConnectorsPage() {
               const isAlreadyConnected = isZeroAuth || savedDbConnections.length > 0 || Boolean(activeConn);
               const isConnecting = connectingConnectorId === c.id;
 
+              const brand = getConnectorBrandSpec(c.id, c.category);
+              const BrandIcon = brand.icon;
+
               return (
                 <div
                   key={c.id}
-                  className={`p-6 rounded-2xl backdrop-blur-xl border transition-all duration-300 shadow-xl flex flex-col justify-between group ${
+                  className={`p-6 rounded-2xl backdrop-blur-xl border transition-all duration-300 shadow-xl flex flex-col justify-between group hover:-translate-y-1 ${
                     isAlreadyConnected
                       ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-950/20 via-slate-900/50 to-slate-950/80 shadow-emerald-950/20'
                       : 'border-white/[0.08] bg-slate-900/40 hover:border-indigo-500/40 hover:bg-slate-900/70 hover:shadow-indigo-500/10'
@@ -915,34 +922,28 @@ export default function ConnectorsPage() {
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-black text-xl transition-transform group-hover:scale-105 ${
-                          isDb
-                            ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
-                            : isAlreadyConnected
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                            : 'bg-white/[0.04] border-white/10 text-indigo-400'
-                        }`}>
-                          {isDb ? <Database size={22} /> : c.name[0]?.toUpperCase() || <Cpu size={22} />}
+                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${brand.bgGlow} border ${brand.borderGlow} flex items-center justify-center ${brand.textColor} shadow-lg transition-transform group-hover:scale-110 shrink-0`}>
+                          <BrandIcon size={24} />
                         </div>
                         <div>
                           <h3 className="text-base font-extrabold text-white tracking-tight group-hover:text-indigo-300 transition-colors">{c.name}</h3>
-                          <span className="text-xs font-medium text-slate-400">{c.category || 'General'}</span>
+                          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{c.category || 'General'}</span>
                         </div>
                       </div>
 
                       {/* Connection Status Badge */}
                       {isZeroAuth ? (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 flex items-center gap-1 shrink-0">
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1 shrink-0">
                           <CheckCircle2 size={12} />
                           <span>ACTIVE</span>
                         </span>
                       ) : isAlreadyConnected ? (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 flex items-center gap-1 shrink-0">
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1 shrink-0">
                           <CheckCircle2 size={12} />
                           <span>CONNECTED</span>
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-mono text-slate-400 shrink-0">
+                        <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-mono font-medium text-slate-500 shrink-0 uppercase">
                           NOT CONNECTED
                         </span>
                       )}
@@ -977,7 +978,7 @@ export default function ConnectorsPage() {
                     {isDb ? (
                       <button
                         onClick={() => handleOpenDatabaseModal(c.id)}
-                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1"
+                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1 border border-indigo-400/20 transform hover:-translate-y-0.5"
                       >
                         <Plus size={13} />
                         <span>Connect</span>
@@ -985,7 +986,7 @@ export default function ConnectorsPage() {
                     ) : isAlreadyConnected ? (
                       <button
                         onClick={() => handleInitiateConnect(c)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1"
+                        className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1 hover:text-white"
                       >
                         <RefreshCw size={12} />
                         <span>Re-auth</span>
@@ -994,7 +995,7 @@ export default function ConnectorsPage() {
                       <button
                         onClick={() => handleInitiateConnect(c)}
                         disabled={isConnecting}
-                        className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1 transform hover:-translate-y-0.5 disabled:opacity-50"
+                        className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 border border-indigo-400/20 disabled:opacity-50"
                       >
                         {isConnecting ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />}
                         <span>+ Connect</span>
