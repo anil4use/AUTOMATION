@@ -394,6 +394,7 @@ export class ConnectorSeederService {
   private static buildUiSchemaFromAction(inputSchema: any, act: any, manifestId: string): Record<string, any> {
     const properties = inputSchema?.properties || {};
     const uiSchema: Record<string, any> = {};
+    const isDbConnector = ['postgresql', 'mysql', 'mongodb', 'supabase', 'redis', 'dynamodb', 'airtable'].some(db => manifestId.toLowerCase().includes(db));
 
     Object.entries(properties).forEach(([key, meta]: [string, any]) => {
       const k = key.toLowerCase();
@@ -415,37 +416,43 @@ export class ConnectorSeederService {
         widget = 'select';
         defaultTestValue = meta.enum[0];
       }
-      // 3. Textarea Multi-line
+      // 3. Search Queries & Keywords (Web search, news search, email search)
+      else if ((connectorId.includes('search') || k.includes('search') || k === 'query' || k === 'q') && !isDbConnector && !k.includes('sql')) {
+        widget = 'text';
+        defaultTestValue = 'Latest AI tech developments';
+        placeholder = 'Enter search query keywords (e.g. OpenAI, SpaceX, tech news)';
+      }
+      // 4. Textarea Multi-line
       else if (k.includes('body') || k.includes('content') || k.includes('text') || k.includes('prompt') || k.includes('description') || k.includes('html')) {
         widget = 'textarea';
         if (k.includes('prompt')) defaultTestValue = 'Explain AI automation in 1 sentence.';
         else if (k.includes('body') || k.includes('content')) defaultTestValue = 'Hello! Live test message executed from AutoFlow.';
         else if (k.includes('text')) defaultTestValue = 'AutoFlow live connector action test verified!';
       }
-      // 4. Code Editor (SQL, JSON Queries)
-      else if (k.includes('query') || k.includes('sql') || k.includes('filter') || k.includes('json') || k.includes('script') || k.includes('code')) {
+      // 5. Code Editor (SQL, JSON Queries, Scripts)
+      else if ((isDbConnector && (k.includes('query') || k.includes('sql') || k.includes('filter'))) || k.includes('sql') || k.includes('json') || k.includes('script') || k.includes('code')) {
         widget = 'code_editor';
-        if (k.includes('sql') || k.includes('query')) defaultTestValue = 'SELECT 1 as live_test_connection;';
+        if (k.includes('sql') || isDbConnector) defaultTestValue = 'SELECT 1 as live_test_connection;';
         else defaultTestValue = '{\n  "status": "active"\n}';
       }
-      // 5. Key-Value Row Builder
+      // 6. Key-Value Row Builder
       else if (k.includes('params') || k.includes('headers') || k.includes('rowvalues') || k.includes('metadata') || k.includes('attributes') || k.includes('payload')) {
         if (connectorId.includes('postgres') || connectorId.includes('mysql') || connectorId.includes('mongo') || connectorId.includes('sheets') || connectorId.includes('http')) {
           widget = 'key_value';
           defaultTestValue = { testKey: 'testValue' };
         }
       }
-      // 6. Number Input
+      // 7. Number Input
       else if (meta.type === 'number' || meta.type === 'integer' || k.includes('limit') || k.includes('maxresults') || k.includes('amount') || k.includes('count')) {
         widget = 'number';
         defaultTestValue = 5;
       }
-      // 7. Boolean Switch
+      // 8. Boolean Switch
       else if (meta.type === 'boolean' || k.includes('is_') || k.includes('has_') || k.includes('enable')) {
         widget = 'boolean';
         defaultTestValue = true;
       }
-      // 8. Text Input Fallbacks
+      // 9. Text Input Fallbacks
       else {
         if (k === 'to' || k === 'recipient' || k.includes('email')) {
           defaultTestValue = 'anil4use@gmail.com';

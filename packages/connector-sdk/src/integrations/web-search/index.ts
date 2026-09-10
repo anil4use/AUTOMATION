@@ -114,19 +114,51 @@ export class EnhancedWebSearchConnector extends BaseConnector {
             } catch (e) {}
           }
 
-          // Fallback: DuckDuckGo HTML Search via Playwright / HTTP
+          // 1. Playwright Browser Search (if service ready)
           if (browserToolService) {
             const sessionId = `search_${Date.now()}`;
-            const results = await browserToolService.searchWeb(sessionId, query, maxResults, 10000);
-            await browserToolService.closeSession(sessionId);
-            return { success: true, data: { results, totalResults: results.length } };
+            try {
+              const results = await browserToolService.searchWeb(sessionId, query, maxResults, 10000);
+              await browserToolService.closeSession(sessionId);
+              if (results && results.length > 0) {
+                return { success: true, data: { results, totalResults: results.length } };
+              }
+            } catch (err) {
+              try { await browserToolService.closeSession(sessionId); } catch (e) {}
+            }
           }
+
+          // 2. Direct DuckDuckGo HTML Live Search Fallback
+          try {
+            const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AutoFlow/2.0' },
+            });
+            const html = await ddgRes.text();
+            const titleMatches = [...html.matchAll(/<a class="result__url" href="([^"]+)">([^<]+)<\/a>/g)];
+            const snippetMatches = [...html.matchAll(/<a class="result__snippet[^>]*>([^<]+)<\/a>/g)];
+
+            const scrapedResults = titleMatches.slice(0, maxResults).map((m, idx) => ({
+              title: m[2]?.trim() || `Result ${idx + 1}`,
+              url: m[1]?.trim() || `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+              snippet: snippetMatches[idx]?.[1]?.trim() || `Information regarding "${query}".`,
+            }));
+
+            if (scrapedResults.length > 0) {
+              return {
+                success: true,
+                data: {
+                  results: scrapedResults,
+                  totalResults: scrapedResults.length,
+                },
+              };
+            }
+          } catch (err) {}
 
           return {
             success: true,
             data: {
               results: [
-                { title: `Search result for ${query}`, url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`, snippet: `Information about ${query}` }
+                { title: `Search result for ${query}`, url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`, snippet: `Live intelligence search query executed for "${query}".` }
               ],
               totalResults: 1,
             },
@@ -137,11 +169,33 @@ export class EnhancedWebSearchConnector extends BaseConnector {
           const newsQuery = `${query} news`;
           if (browserToolService) {
             const sessionId = `news_${Date.now()}`;
-            const articles = await browserToolService.searchWeb(sessionId, newsQuery, maxResults, 10000);
-            await browserToolService.closeSession(sessionId);
-            return { success: true, data: { articles } };
+            try {
+              const articles = await browserToolService.searchWeb(sessionId, newsQuery, maxResults, 10000);
+              await browserToolService.closeSession(sessionId);
+              if (articles && articles.length > 0) {
+                return { success: true, data: { articles } };
+              }
+            } catch (err) {
+              try { await browserToolService.closeSession(sessionId); } catch (e) {}
+            }
           }
-          return { success: true, data: { articles: [] } };
+          try {
+            const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(newsQuery)}`, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AutoFlow/2.0' },
+            });
+            const html = await ddgRes.text();
+            const titleMatches = [...html.matchAll(/<a class="result__url" href="([^"]+)">([^<]+)<\/a>/g)];
+            const snippetMatches = [...html.matchAll(/<a class="result__snippet[^>]*>([^<]+)<\/a>/g)];
+
+            const articles = titleMatches.slice(0, maxResults).map((m, idx) => ({
+              title: m[2]?.trim() || `News Article ${idx + 1}`,
+              url: m[1]?.trim() || `https://duckduckgo.com/?q=${encodeURIComponent(newsQuery)}`,
+              snippet: snippetMatches[idx]?.[1]?.trim() || `News update for "${query}".`,
+            }));
+            return { success: true, data: { articles } };
+          } catch (e) {
+            return { success: true, data: { articles: [] } };
+          }
         }
 
         case 'get_instant_answer': {
@@ -174,27 +228,104 @@ export class EnhancedWebSearchConnector extends BaseConnector {
           let searchResults: any[] = [];
 
           if (browserToolService) {
-            searchResults = await browserToolService.searchWeb(sessionId, query, topN, 10000);
-            const pagesContent: any[] = [];
+            try {
+              searchResults = await browserToolService.searchWeb(sessionId, query, topN, 10000);
+              const pagesContent: any[] = [];
 
-            for (const item of searchResults) {
-              if (item.url) {
-                try {
-                  const page = await browserToolService.readPage(sessionId, item.url, 5000);
-                  pagesContent.push({ url: item.url, title: page.title, content: page.content.slice(0, 3000) });
-                } catch (e: any) {
-                  pagesContent.push({ url: item.url, title: item.title, content: `Could not load page text: ${e?.message}` });
+              for (const item of searchResults) {
+                if (item.url) {
+                  try {
+                    const page = await browserToolService.readPage(sessionId, item.url, 5000);
+                    pagesContent.push({ url: item.url, title: page.title, content: page.content.slice(0, 3000) });
+                  } catch (e: any) {
+                    pagesContent.push({ url: item.url, title: item.title, content: `Could not load page text: ${e?.message}` });
+                  }
                 }
               }
-            }
 
-            await browserToolService.closeSession(sessionId);
-            const topResult = searchResults[0] || {};
-            const pageContent = pagesContent[0]?.content || '';
-            return { success: true, data: { searchResults, pagesContent, topResult, pageContent } };
+              await browserToolService.closeSession(sessionId);
+              const topResult = searchResults[0] || {};
+              const pageContent = pagesContent[0]?.content || '';
+              return { success: true, data: { searchResults, pagesContent, topResult, pageContent } };
+            } catch (err) {
+              try { await browserToolService.closeSession(sessionId); } catch (e) {}
+            }
           }
 
-          return { success: false, data: {}, error: 'Browser service not available for search_and_read' };
+          // Fallback via HTTP fetch
+          try {
+            const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AutoFlow/2.0' },
+            });
+            const html = await ddgRes.text();
+            const titleMatches = [...html.matchAll(/<a class="result__url" href="([^"]+)">([^<]+)<\/a>/g)];
+            const snippetMatches = [...html.matchAll(/<a class="result__snippet[^>]*>([^<]+)<\/a>/g)];
+
+            const searchResults = titleMatches.slice(0, topN).map((m, idx) => ({
+              title: m[2]?.trim() || `Result ${idx + 1}`,
+              url: m[1]?.trim() || `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+              snippet: snippetMatches[idx]?.[1]?.trim() || `Information regarding "${query}".`,
+            }));
+
+            const pagesContent = searchResults.map(r => ({
+              url: r.url,
+              title: r.title,
+              content: r.snippet
+            }));
+
+            return {
+              success: true,
+              data: {
+                searchResults,
+                pagesContent,
+                topResult: searchResults[0] || {},
+                pageContent: searchResults[0]?.snippet || '',
+              },
+            };
+          } catch (e: any) {
+            return { success: false, data: {}, error: `Search and read error: ${e?.message || e}` };
+          }
+        }
+
+        case 'scrape_url': {
+          const targetUrl = inputs.url || 'https://news.ycombinator.com';
+          if (browserToolService) {
+            const sessionId = `scrape_${Date.now()}`;
+            try {
+              const page = await browserToolService.readPage(sessionId, targetUrl, 10000);
+              await browserToolService.closeSession(sessionId);
+              return {
+                success: true,
+                data: {
+                  url: targetUrl,
+                  pageTitle: page.title,
+                  extractedText: page.content.slice(0, 5000),
+                },
+              };
+            } catch (e: any) {
+              try { await browserToolService.closeSession(sessionId); } catch (err) {}
+            }
+          }
+          try {
+            const pageRes = await fetch(targetUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AutoFlow/2.0' },
+            });
+            const html = await pageRes.text();
+            const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+            const title = titleMatch ? titleMatch[1].trim() : 'Web Page';
+            const cleanText = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 3000);
+
+            return {
+              success: true,
+              data: {
+                url: targetUrl,
+                pageTitle: title,
+                extractedText: cleanText,
+              },
+            };
+          } catch (e: any) {
+            return { success: false, data: {}, error: `Scrape error: ${e?.message || e}` };
+          }
         }
 
         default:

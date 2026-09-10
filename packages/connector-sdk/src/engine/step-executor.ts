@@ -10,7 +10,7 @@ import { StripeConnector } from '../integrations/stripe';
 import { WhatsAppConnector } from '../integrations/whatsapp';
 import { HttpRequestConnector } from '../connectors/http-request.connector';
 import { AINodeConnector } from '../integrations/ai-node';
-import { WebSearchConnector } from '../connectors/web-search.connector';
+import { EnhancedWebSearchConnector as WebSearchConnector } from '../integrations/web-search';
 import { AutoFlowScheduleConnector } from '../connectors/autoflow-schedule.connector';
 import { ConditionConnector } from '../connectors/condition.connector';
 import { AmazonFlipkartConnector } from '../connectors/amazon-flipkart.connector';
