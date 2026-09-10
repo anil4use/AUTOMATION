@@ -71,7 +71,18 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
 
   useEffect(() => {
     if (isOpen && connectorId) {
+      setActions([]);
+      setSelectedActionId('');
+      setSelectedAction(null);
+      setInputValues({});
+      setTestResult(null);
       fetchConnectorActions();
+    } else if (!isOpen) {
+      setActions([]);
+      setSelectedActionId('');
+      setSelectedAction(null);
+      setInputValues({});
+      setTestResult(null);
     }
   }, [isOpen, connectorId]);
 

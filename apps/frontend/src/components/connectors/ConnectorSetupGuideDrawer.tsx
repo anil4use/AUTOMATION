@@ -26,7 +26,11 @@ export const ConnectorSetupGuideDrawer: React.FC<ConnectorSetupGuideDrawerProps>
 
   useEffect(() => {
     if (isOpen && connectorId) {
+      setDetails(null);
+      setCopiedRedirect(false);
       fetchConnectorDetails();
+    } else if (!isOpen) {
+      setDetails(null);
     }
   }, [isOpen, connectorId]);
 
