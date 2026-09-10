@@ -152,8 +152,36 @@ export class ConnectorSeederService {
       { actionId: 'search', name: `Search ${manifest.name}`, description: `Search records in ${manifest.name}` }
     ];
 
+    const actionsToSeed = [...rawActions];
+    const hasGetAll = actionsToSeed.some((a: any) => {
+      const id = (a.actionId || a.id || '').toLowerCase();
+      return id === 'get_all' || id === 'list_all' || id === 'get_all_records' || id === 'list_records';
+    });
+
+    if (!hasGetAll) {
+      actionsToSeed.push({
+        id: 'get_all',
+        actionId: 'get_all',
+        name: `Get All / List Records (${manifest.name})`,
+        description: `Fetch, list, and query all items/records from ${manifest.name} with pagination limit, offset, and optional filters.`,
+        type: 'action',
+        inputs: [
+          { key: 'limit', label: 'Max Records Limit (Default 50, Max 250)', type: 'number', required: false },
+          { key: 'offset', label: 'Offset / Page Starting Index', type: 'number', required: false },
+          { key: 'query', label: 'Search Filter Keywords (Optional)', type: 'string', required: false },
+          { key: 'sortBy', label: 'Sort Field (Optional)', type: 'string', required: false },
+        ],
+        outputs: [
+          { key: 'items', label: 'Records Array', type: 'json', required: true },
+          { key: 'totalCount', label: 'Total Records Count', type: 'number', required: true },
+          { key: 'limit', label: 'Applied Limit', type: 'number', required: true },
+          { key: 'hasMore', label: 'Has More Pages', type: 'boolean', required: true },
+        ],
+      });
+    }
+
     let count = 0;
-    for (const act of rawActions) {
+    for (const act of actionsToSeed) {
       const actionId = act.actionId || act.id || 'execute';
       const inputSchema = ConnectorSeederService.buildInputSchemaFromAction(act, manifest.id);
       const uiSchema = ConnectorSeederService.buildUiSchemaFromAction(inputSchema, act, manifest.id);
@@ -325,6 +353,19 @@ export class ConnectorSeederService {
 
     // Action ID or Manifest ID smart fallback map
     const actionId = (act.actionId || act.id || '').toLowerCase();
+
+    if (actionId === 'get_all' || actionId === 'list_all' || actionId.includes('get_all') || actionId.includes('list_all')) {
+      return {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', title: 'Max Records Limit (Default 50, Max 250)', description: 'Maximum number of items/records to retrieve' },
+          offset: { type: 'number', title: 'Offset / Page Starting Index', description: 'Zero-based offset index for pagination' },
+          query: { type: 'string', title: 'Search Filter Keywords (Optional)', description: 'Optional search query or metadata filter' },
+          sortBy: { type: 'string', title: 'Sort Field (Optional)', description: 'Field name to sort items by (e.g. createdAt, id)' },
+        },
+        required: [],
+      };
+    }
 
     if (actionId.includes('email') || actionId.includes('mail')) {
       return {
