@@ -892,7 +892,7 @@ export default function ConnectorsPage() {
           </div>
 
           {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCatalog.map((c) => {
               const isDb = isDatabaseConnector(c);
               const savedDbConnections = connections.filter(
@@ -904,217 +904,104 @@ export default function ConnectorsPage() {
               const isConnecting = connectingConnectorId === c.id;
 
               return (
-                <SectionCard
+                <div
                   key={c.id}
-                  className={`flex flex-col justify-between transition-all relative ${
+                  className={`p-6 rounded-2xl backdrop-blur-xl border transition-all duration-300 shadow-xl flex flex-col justify-between group ${
                     isAlreadyConnected
-                      ? 'border-emerald-500/40 bg-emerald-950/10 shadow-lg shadow-emerald-950/20'
-                      : 'hover:border-accentPurple/50'
+                      ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-950/20 via-slate-900/50 to-slate-950/80 shadow-emerald-950/20'
+                      : 'border-white/[0.08] bg-slate-900/40 hover:border-indigo-500/40 hover:bg-slate-900/70 hover:shadow-indigo-500/10'
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`p-2 rounded-xl border ${
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-black text-xl transition-transform group-hover:scale-105 ${
                           isDb
                             ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
                             : isAlreadyConnected
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-accentEmerald'
-                            : 'bg-white/5 border-borderColor text-accentPurple'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                            : 'bg-white/[0.04] border-white/10 text-indigo-400'
                         }`}>
-                          {isDb ? <Database size={20} /> : <Cpu size={20} />}
+                          {isDb ? <Database size={22} /> : c.name[0]?.toUpperCase() || <Cpu size={22} />}
                         </div>
                         <div>
-                          <Heading as="h3" className="text-sm font-bold">{c.name}</Heading>
-                          <span className="text-[10px] text-textMuted font-mono">{c.category || 'General'}</span>
+                          <h3 className="text-base font-extrabold text-white tracking-tight group-hover:text-indigo-300 transition-colors">{c.name}</h3>
+                          <span className="text-xs font-medium text-slate-400">{c.category || 'General'}</span>
                         </div>
                       </div>
 
                       {/* Connection Status Badge */}
                       {isZeroAuth ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
-                          <CheckCircle2 size={11} />
-                          <span>BUILT-IN ACTIVE</span>
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 flex items-center gap-1 shrink-0">
+                          <CheckCircle2 size={12} />
+                          <span>ACTIVE</span>
                         </span>
                       ) : isAlreadyConnected ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald">
-                          <CheckCircle2 size={11} />
-                          <span>{isDb ? `${savedDbConnections.length} ACTIVE` : 'CONNECTED'}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 flex items-center gap-1 shrink-0">
+                          <CheckCircle2 size={12} />
+                          <span>CONNECTED</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-textMuted">
-                          <span>NOT CONNECTED</span>
+                        <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-mono text-slate-400 shrink-0">
+                          NOT CONNECTED
                         </span>
                       )}
                     </div>
 
-                    <Text variant="secondary" className="text-xs mb-3 min-h-[32px] line-clamp-2">
-                      {c.description || 'Connect to trigger automation workflows and sync data payloads.'}
-                    </Text>
-
-                    {/* MULTI-CONNECTION LIST FOR DATABASE CONNECTORS */}
-                    {isDb && savedDbConnections.length > 0 ? (
-                      <div className="space-y-2 mb-4">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Saved Connections ({savedDbConnections.length})
-                        </div>
-                        <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                          {savedDbConnections.map((conn) => {
-                            const envKey = (conn.environmentTag || 'development').toLowerCase();
-                            const envStyle = ENVIRONMENT_COLORS[envKey] || ENVIRONMENT_COLORS.development;
-                            const isTestingThis = retestingConnectionId === conn._id;
-
-                            return (
-                              <div
-                                key={conn._id}
-                                className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] gap-2"
-                              >
-                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                  {/* Environment Badge */}
-                                  <span
-                                    className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase shrink-0 flex items-center gap-0.5"
-                                    style={{
-                                      backgroundColor: envStyle.bg,
-                                      color: envStyle.text,
-                                      border: `1px solid ${envStyle.border}`,
-                                    }}
-                                  >
-                                    {envKey === 'production' && <span>⚠️</span>}
-                                    <span>{envStyle.label}</span>
-                                  </span>
-
-                                  <div className="truncate min-w-0">
-                                    <div className="font-bold text-white truncate">{conn.label || conn.name}</div>
-                                    <div className="text-[9px] text-slate-400 truncate">
-                                      Last tested: {formatRelativeTime(conn.lastTestedAt)} • {conn.status === 'connected' ? 'Active 🟢' : 'Failed 🔴'}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Connection Actions */}
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    onClick={() => handleRetestConnection(conn._id)}
-                                    disabled={isTestingThis}
-                                    className="px-2 py-1 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-bold hover:bg-indigo-500/30 transition-all flex items-center gap-1"
-                                    title="Re-test Connection"
-                                  >
-                                    <RefreshCw size={10} className={isTestingThis ? 'animate-spin' : ''} />
-                                    <span>{isTestingThis ? 'Testing...' : 'Re-test'}</span>
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleOpenDatabaseModal(c.id, conn)}
-                                    className="p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
-                                    title="Edit Connection"
-                                  >
-                                    <Edit3 size={11} />
-                                  </button>
-
-                                  <button
-                                    onClick={() => setDeleteConfirmConn({ id: conn._id, name: conn.label || conn.name })}
-                                    className="p-1.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
-                                    title="Delete Connection"
-                                  >
-                                    <Trash2 size={11} />
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : !isDb && isAlreadyConnected ? (
-                      <div className="p-2 rounded-lg bg-emerald-900/20 border border-emerald-500/30 mb-4 flex items-center justify-between text-[11px]">
-                        <div className="flex items-center gap-1.5 text-emerald-300 font-medium truncate">
-                          <ShieldCheck size={12} className="text-emerald-400" />
-                          <span className="truncate">{activeConn?.name || 'Verified Connection'}</span>
-                        </div>
-                        <span className="text-[10px] font-mono text-emerald-400/80 uppercase">{activeConn?.authType}</span>
-                      </div>
-                    ) : null}
+                    <p className="text-xs text-slate-400 leading-relaxed font-normal mb-5 min-h-[36px] line-clamp-2">
+                      {c.description || 'Integrate to automate workflow execution and data sync.'}
+                    </p>
                   </div>
 
-                  {/* Card Footer Actions */}
-                  <div className="pt-3 border-t border-borderColor/60 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
+                  {/* Card Action Bar */}
+                  <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => setGuideConnector({ id: c.id, name: c.name })}
-                        className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-medium flex items-center gap-1 transition"
-                        title="View Step-by-Step Setup Guide & Provider Portal"
+                        className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        title="View Integration Guide"
                       >
-                        <BookOpen size={11} className="text-indigo-400" />
+                        <BookOpen size={13} className="text-indigo-400" />
                         <span>Guide</span>
                       </button>
                       <button
                         onClick={() => setTestRunnerConnector({ id: c.id, name: c.name })}
-                        className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-medium flex items-center gap-1 transition"
-                        title="Open Action Test Runner"
+                        className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        title="Test Actions"
                       >
-                        <Terminal size={11} className="text-emerald-400" />
+                        <Terminal size={13} className="text-emerald-400" />
                         <span>Actions</span>
                       </button>
                     </div>
 
-                    {isZeroAuth ? (
-                      <button
-                        onClick={() => handleOpenTestModal(c)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 shadow-sm"
-                        title="Run Instant Live Test & Q&A"
-                      >
-                        <Play size={12} className="text-emerald-400" />
-                        <span>{['web-search', 'web-search-pro', 'web-browser'].includes(c.id) ? '⚡ Test Search & Q&A' : '⚡ Test Native App'}</span>
-                      </button>
-                    ) : isDb ? (
+                    {isDb ? (
                       <button
                         onClick={() => handleOpenDatabaseModal(c.id)}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-600/30 transition-all flex items-center gap-1"
+                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1"
                       >
-                        <Plus size={12} />
-                        <span>{savedDbConnections.length > 0 ? '+ Add Another Connection' : '+ Connect Account'}</span>
+                        <Plus size={13} />
+                        <span>Connect</span>
                       </button>
                     ) : isAlreadyConnected ? (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <button
-                          onClick={() => handleOpenTestModal(c)}
-                          className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-all flex items-center gap-1"
-                          title="Run Live API Test"
-                        >
-                          <Play size={11} />
-                          <span>Test API</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleInitiateConnect(c)}
-                          className="px-2 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-semibold hover:bg-purple-500/30 transition-all flex items-center gap-1"
-                          title="Re-authenticate Account"
-                        >
-                          <RefreshCw size={11} />
-                          <span>Re-auth</span>
-                        </button>
-
-                        {activeConn && (
-                          <button
-                            onClick={() => setDeleteConfirmConn({ id: activeConn._id, name: activeConn.name })}
-                            className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors"
-                            title="Disconnect Account"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => handleInitiateConnect(c)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1"
+                      >
+                        <RefreshCw size={12} />
+                        <span>Re-auth</span>
+                      </button>
                     ) : (
                       <button
                         onClick={() => handleInitiateConnect(c)}
                         disabled={isConnecting}
-                        className="px-3 py-1.5 rounded-lg bg-accentPurple/20 border border-accentPurple/40 text-accentPurple text-xs font-semibold hover:bg-accentPurple/30 transition-all flex items-center gap-1 disabled:opacity-50"
+                        className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1 transform hover:-translate-y-0.5 disabled:opacity-50"
                       >
-                        {isConnecting ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
-                        <span>+ Connect Account</span>
+                        {isConnecting ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />}
+                        <span>+ Connect</span>
                       </button>
                     )}
                   </div>
-                </SectionCard>
+                </div>
               );
             })}
           </div>
