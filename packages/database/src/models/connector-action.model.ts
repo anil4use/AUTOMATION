@@ -31,6 +31,7 @@ export interface IConnectorAction extends Document {
     bodyTemplate?: any;
   };
   inputSchema: Record<string, any>;
+  uiSchema?: Record<string, any>;
   outputSchema: Record<string, any>;
   capabilities: string[];
   authenticationId?: string;
@@ -81,6 +82,7 @@ const ConnectorActionSchema = new Schema<IConnectorAction>(
       bodyTemplate: { type: Schema.Types.Mixed },
     },
     inputSchema: { type: Schema.Types.Mixed, default: { type: 'object', properties: {} } },
+    uiSchema: { type: Schema.Types.Mixed, default: {} },
     outputSchema: { type: Schema.Types.Mixed, default: { type: 'object', properties: {} } },
     capabilities: [{ type: String }],
     authenticationId: { type: String },

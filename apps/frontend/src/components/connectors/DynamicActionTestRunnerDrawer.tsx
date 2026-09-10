@@ -4,6 +4,7 @@ import { X, Play, Loader2, CheckCircle2, AlertTriangle, Code, Clock, Copy, Check
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { getConnectorBrandSpec } from '@/lib/connector-brand-utils';
+import { DynamicFieldWidget } from '@/components/connectors/DynamicFieldWidget';
 
 interface DynamicActionTestRunnerDrawerProps {
   connectorId: string;
@@ -76,10 +77,18 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
   const initializeDefaultsForAction = (act: any) => {
     if (!act) return {};
     const props = act.inputSchema?.properties || {};
+    const uiProps = act.uiSchema || {};
     const defaults: Record<string, any> = {};
+
     Object.entries(props).forEach(([propKey, propMeta]: [string, any]) => {
-      defaults[propKey] = getDefaultInputValue(propKey, propMeta, act.actionId, connectorId);
+      const uiMeta = uiProps[propKey];
+      if (uiMeta?.defaultTestValue !== undefined && uiMeta?.defaultTestValue !== '') {
+        defaults[propKey] = uiMeta.defaultTestValue;
+      } else {
+        defaults[propKey] = getDefaultInputValue(propKey, propMeta, act.actionId, connectorId);
+      }
     });
+
     return defaults;
   };
 
@@ -179,6 +188,7 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
   const BrandIcon = brand.icon;
 
   const schemaProperties = selectedAction?.inputSchema?.properties || {};
+  const uiProperties = selectedAction?.uiSchema || {};
   const requiredFields: string[] = selectedAction?.inputSchema?.required || [];
 
   return (
@@ -201,7 +211,7 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                Execute actions with discrete field inputs &amp; inspect dynamic output payload
+                Execute actions with discrete dynamic field inputs &amp; inspect output payload
               </p>
             </div>
           </div>
@@ -304,54 +314,20 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                 ) : (
                   <div className="space-y-4 pt-1">
                     {Object.entries(schemaProperties).map(([propKey, propMeta]: [string, any]) => {
+                      const uiMeta = uiProperties[propKey] || {};
                       const isRequired = requiredFields.includes(propKey);
                       return (
-                        <div key={propKey} className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <label className="font-bold text-white flex items-center gap-1.5">
-                              <span>{propMeta.title || propKey}</span>
-                              <code className="text-[11px] text-emerald-400 font-mono font-normal">({propKey})</code>
-                            </label>
-                            {isRequired ? (
-                              <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">REQUIRED</span>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded">OPTIONAL</span>
-                            )}
-                          </div>
-                          {propMeta.description && (
-                            <p className="text-[11px] text-slate-400 leading-tight">{propMeta.description}</p>
-                          )}
-                          {propMeta.enum ? (
-                            <select
-                              value={inputValues[propKey] ?? ''}
-                              onChange={(e) => handleInputChange(propKey, e.target.value)}
-                              className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500 outline-none"
-                            >
-                              <option value="">-- Select {propKey} --</option>
-                              {propMeta.enum.map((opt: string) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
-                          ) : propMeta.type === 'string' && (propKey.toLowerCase().includes('body') || propKey.toLowerCase().includes('content') || propKey.toLowerCase().includes('query') || propKey.toLowerCase().includes('html')) ? (
-                            <textarea
-                              rows={3}
-                              value={inputValues[propKey] ?? ''}
-                              onChange={(e) => handleInputChange(propKey, e.target.value)}
-                              placeholder={propMeta.description || `Enter ${propKey}...`}
-                              className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all font-sans"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              value={inputValues[propKey] ?? ''}
-                              onChange={(e) => handleInputChange(propKey, e.target.value)}
-                              placeholder={propMeta.description || `Enter ${propKey}...`}
-                              className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all"
-                            />
-                          )}
-                        </div>
+                        <DynamicFieldWidget
+                          key={propKey}
+                          propKey={propKey}
+                          propMeta={propMeta}
+                          uiMeta={uiMeta}
+                          isRequired={isRequired}
+                          value={inputValues[propKey]}
+                          onChange={(val) => handleInputChange(propKey, val)}
+                          connectorId={connectorId}
+                          actionId={selectedActionId}
+                        />
                       );
                     })}
                   </div>

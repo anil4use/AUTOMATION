@@ -155,6 +155,9 @@ export class ConnectorSeederService {
     let count = 0;
     for (const act of rawActions) {
       const actionId = act.actionId || act.id || 'execute';
+      const inputSchema = ConnectorSeederService.buildInputSchemaFromAction(act, manifest.id);
+      const uiSchema = ConnectorSeederService.buildUiSchemaFromAction(inputSchema, act, manifest.id);
+
       const actionPayload = {
         connectorId: manifest.id,
         actionId,
@@ -164,7 +167,8 @@ export class ConnectorSeederService {
         type: act.type || 'action',
         semanticType: act.semanticType || 'execute',
         executionType: act.executionType || 'adapter',
-        inputSchema: ConnectorSeederService.buildInputSchemaFromAction(act, manifest.id),
+        inputSchema,
+        uiSchema,
         outputSchema: act.outputSchema || { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'object' } } },
         capabilities: act.capabilities || ['execute'],
         destructive: act.destructive || false,
@@ -385,5 +389,84 @@ export class ConnectorSeederService {
         payload: { type: 'string', title: 'Input Payload', description: 'Enter execution payload or configuration' },
       },
     };
+  }
+
+  private static buildUiSchemaFromAction(inputSchema: any, act: any, manifestId: string): Record<string, any> {
+    const properties = inputSchema?.properties || {};
+    const uiSchema: Record<string, any> = {};
+
+    Object.entries(properties).forEach(([key, meta]: [string, any]) => {
+      const k = key.toLowerCase();
+      const connectorId = manifestId.toLowerCase();
+
+      let widget: 'text' | 'textarea' | 'select' | 'dynamic_select' | 'key_value' | 'code_editor' | 'boolean' | 'number' | 'file' = 'text';
+      let placeholder = meta.description || `Enter ${meta.title || key}...`;
+      let defaultTestValue: any = '';
+      let optionsEndpoint: string | undefined = undefined;
+
+      // 1. Dynamic Dropdown Selectors
+      if (k.includes('spreadsheet') || k.includes('sheet_id') || k.includes('project_key') || k.includes('project') || k.includes('team_id') || k.includes('folder_id') || k.includes('database_id')) {
+        widget = 'dynamic_select';
+        optionsEndpoint = `/api/v2/connectors/${manifestId}/actions/${act.actionId || act.id}/options/${key}`;
+        placeholder = `Select ${meta.title || key} dynamically...`;
+      }
+      // 2. Select Enum Dropdown
+      else if (meta.enum && Array.isArray(meta.enum) && meta.enum.length > 0) {
+        widget = 'select';
+        defaultTestValue = meta.enum[0];
+      }
+      // 3. Textarea Multi-line
+      else if (k.includes('body') || k.includes('content') || k.includes('text') || k.includes('prompt') || k.includes('description') || k.includes('html')) {
+        widget = 'textarea';
+        if (k.includes('prompt')) defaultTestValue = 'Explain AI automation in 1 sentence.';
+        else if (k.includes('body') || k.includes('content')) defaultTestValue = 'Hello! Live test message executed from AutoFlow.';
+        else if (k.includes('text')) defaultTestValue = 'AutoFlow live connector action test verified!';
+      }
+      // 4. Code Editor (SQL, JSON Queries)
+      else if (k.includes('query') || k.includes('sql') || k.includes('filter') || k.includes('json') || k.includes('script') || k.includes('code')) {
+        widget = 'code_editor';
+        if (k.includes('sql') || k.includes('query')) defaultTestValue = 'SELECT 1 as live_test_connection;';
+        else defaultTestValue = '{\n  "status": "active"\n}';
+      }
+      // 5. Key-Value Row Builder
+      else if (k.includes('params') || k.includes('headers') || k.includes('rowvalues') || k.includes('metadata') || k.includes('attributes') || k.includes('payload')) {
+        if (connectorId.includes('postgres') || connectorId.includes('mysql') || connectorId.includes('mongo') || connectorId.includes('sheets') || connectorId.includes('http')) {
+          widget = 'key_value';
+          defaultTestValue = { testKey: 'testValue' };
+        }
+      }
+      // 6. Number Input
+      else if (meta.type === 'number' || meta.type === 'integer' || k.includes('limit') || k.includes('maxresults') || k.includes('amount') || k.includes('count')) {
+        widget = 'number';
+        defaultTestValue = 5;
+      }
+      // 7. Boolean Switch
+      else if (meta.type === 'boolean' || k.includes('is_') || k.includes('has_') || k.includes('enable')) {
+        widget = 'boolean';
+        defaultTestValue = true;
+      }
+      // 8. Text Input Fallbacks
+      else {
+        if (k === 'to' || k === 'recipient' || k.includes('email')) {
+          defaultTestValue = 'anil4use@gmail.com';
+        } else if (k === 'subject') {
+          defaultTestValue = 'AutoFlow Verification Test Email';
+        } else if (k === 'channel') {
+          defaultTestValue = 'general';
+        } else if (k === 'title' || k === 'summary') {
+          defaultTestValue = 'AutoFlow Live Verification Item';
+        }
+      }
+
+      uiSchema[key] = {
+        widget,
+        placeholder,
+        defaultTestValue,
+        ...(optionsEndpoint ? { optionsEndpoint } : {}),
+        ...(meta.enum ? { enum: meta.enum.map((e: any) => ({ label: String(e), value: e })) } : {}),
+      };
+    });
+
+    return uiSchema;
   }
 }
