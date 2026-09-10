@@ -87,6 +87,7 @@ export * from './core/database-driver.factory';
 
 export * from './engine/step-executor';
 export * from './engine/dag-runner';
+export * from './engine/connector-runtime';
 
 export * from './auth/oauth2.strategy';
 export * from './auth/api-key.strategy';

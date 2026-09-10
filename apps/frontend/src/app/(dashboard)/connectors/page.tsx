@@ -185,6 +185,21 @@ export default function ConnectorsPage() {
 
   const fetchConnectors = useCallback(async () => {
     try {
+      const res = await apiClient.get('/v2/connectors');
+      if (res.data?.data && res.data.data.length > 0) {
+        setAvailableConnectors(res.data.data.map((c: any) => ({
+          id: c.connectorId || c.slug,
+          name: c.displayName || c.name,
+          description: c.description,
+          category: c.categoryId,
+          authType: c.runtimeType === 'http' ? 'api_key' : 'oauth2',
+        })));
+        return;
+      }
+    } catch (v2Err) {
+      console.warn('V2 connectors endpoint fetch notice, falling back to V1:', v2Err);
+    }
+    try {
       const res = await apiClient.get('/v1/connectors/available');
       setAvailableConnectors(res.data.data || []);
     } catch (err) {

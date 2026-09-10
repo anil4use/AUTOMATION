@@ -17,6 +17,21 @@ async function bootstrap(retries = 3) {
     // 1. Connect to Database Infrastructure
     await connectDatabase();
 
+    // Auto-Bootstrap V2 Connector Platform if MongoDB connectors collection is empty
+    try {
+      const { ConnectorModel } = require('@automation/database');
+      const count = await ConnectorModel.countDocuments();
+      if (count === 0) {
+        logger.info('📦 [Bootstrap] Empty connector database detected. Auto-seeding all 70 connectors into MongoDB...');
+        const { ConnectorSeederService } = require('./modules/connectors/connector-seeder.service');
+        await ConnectorSeederService.seedAllConnectors();
+      } else {
+        logger.info(`✅ [Bootstrap] Connector database verified (${count} connectors active in MongoDB).`);
+      }
+    } catch (bootstrapErr: any) {
+      logger.warn(`⚠️ [Bootstrap] Connector auto-seeding check notice: ${bootstrapErr?.message || bootstrapErr}`);
+    }
+
     // 2. Instantiate Express App & HTTP Server
     const app = createApp();
     const server = http.createServer(app);

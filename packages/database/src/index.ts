@@ -16,3 +16,12 @@ export * from './models/workflow-version.model';
 export * from './models/webhook.model';
 export * from './models/agent-conversation.model';
 
+// V2 Connector Platform & Capability Registry Models
+export * from './models/connector-category.model';
+export * from './models/connector.model';
+export * from './models/connector-action.model';
+export * from './models/connector-auth.model';
+export * from './models/connector-feature.model';
+export * from './models/connector-test.model';
+
+
