@@ -777,47 +777,55 @@ export default function ConnectorsPage() {
         </div>
       )}
 
-      {/* Hero Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-purple-900/20 to-bgSecondary border-purple-500/30">
-          <div className="p-3 rounded-xl bg-purple-500/20 text-accentPurple border border-purple-500/30">
-            <Cpu size={20} />
+      {/* Futuristic Hero Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4.5 rounded-2xl bg-gradient-to-br from-indigo-950/60 via-slate-900/90 to-slate-950 border border-indigo-500/30 shadow-lg shadow-indigo-500/5 relative overflow-hidden group">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 group-hover:scale-110 transition-transform">
+              <Cpu size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-white font-mono tracking-tight">{catalogConnectors.length || 70}</div>
+              <div className="text-[11px] text-indigo-300/80 font-bold uppercase tracking-wider">Enterprise Connectors</div>
+            </div>
           </div>
-          <div>
-            <div className="text-2xl font-extrabold text-white font-mono">{catalogConnectors.length}</div>
-            <div className="text-[11px] text-textMuted font-medium">Enterprise Apps &amp; Databases</div>
-          </div>
-        </SectionCard>
+        </div>
 
-        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-emerald-900/20 to-bgSecondary border-emerald-500/30">
-          <div className="p-3 rounded-xl bg-emerald-500/20 text-accentEmerald border border-emerald-500/30">
-            <CheckCircle2 size={20} />
+        <div className="p-4.5 rounded-2xl bg-gradient-to-br from-emerald-950/60 via-slate-900/90 to-slate-950 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 relative overflow-hidden group">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 group-hover:scale-110 transition-transform">
+              <CheckCircle2 size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-white font-mono tracking-tight">{connections.length}</div>
+              <div className="text-[11px] text-emerald-300/80 font-bold uppercase tracking-wider">Active Accounts Active</div>
+            </div>
           </div>
-          <div>
-            <div className="text-2xl font-extrabold text-white font-mono">{connections.length}</div>
-            <div className="text-[11px] text-textMuted font-medium">Connected Accounts Active</div>
-          </div>
-        </SectionCard>
+        </div>
 
-        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-indigo-900/20 to-bgSecondary border-indigo-500/30">
-          <div className="p-3 rounded-xl bg-indigo-500/20 text-accentIndigo border border-indigo-500/30">
-            <ShieldCheck size={20} />
+        <div className="p-4.5 rounded-2xl bg-gradient-to-br from-purple-950/60 via-slate-900/90 to-slate-950 border border-purple-500/30 shadow-lg shadow-purple-500/5 relative overflow-hidden group">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 group-hover:scale-110 transition-transform">
+              <Terminal size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-white font-mono tracking-tight">410+</div>
+              <div className="text-[11px] text-purple-300/80 font-bold uppercase tracking-wider">Database Action Operations</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-bold text-white">AES-256-CBC</div>
-            <div className="text-[11px] text-textMuted font-medium">Encrypted Credentials Layer</div>
-          </div>
-        </SectionCard>
+        </div>
 
-        <SectionCard className="p-4 flex items-center gap-3.5 bg-gradient-to-br from-sky-900/20 to-bgSecondary border-sky-500/30">
-          <div className="p-3 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
-            <Globe size={20} />
+        <div className="p-4.5 rounded-2xl bg-gradient-to-br from-cyan-950/60 via-slate-900/90 to-slate-950 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 relative overflow-hidden group">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 group-hover:scale-110 transition-transform">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <div className="text-sm font-black text-white uppercase tracking-wider">AES-256-CBC</div>
+              <div className="text-[11px] text-cyan-300/80 font-bold uppercase tracking-wider">Encrypted Vault Protection</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-bold text-white">SSH &amp; SSL Supported</div>
-            <div className="text-[11px] text-textMuted font-medium">Multi-Environment Isolation</div>
-          </div>
-        </SectionCard>
+        </div>
       </div>
 
       {/* Main Content Tabs Switcher */}
