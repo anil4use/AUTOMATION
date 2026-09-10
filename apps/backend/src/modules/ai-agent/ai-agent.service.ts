@@ -101,21 +101,34 @@ export class AIAgentService {
    * Build Live Runtime System Context Injected into Gemini / Groq LLM
    */
   static async buildDynamicSystemPrompt(orgId: string): Promise<string> {
-    // 1. Fetch ALL 55+ Connector Registry Manifests dynamically from SDK
+    // 1. Fetch ALL Connectors & Actions dynamically from MongoDB Atlas Store
     let connectorSummary = '';
     try {
-      const { ALL_50_CONNECTOR_MANIFESTS } = require('@automation/connector-sdk');
-      if (Array.isArray(ALL_50_CONNECTOR_MANIFESTS)) {
-        connectorSummary = ALL_50_CONNECTOR_MANIFESTS.map(
-          (c: any) => `- Connector ID '${c.id}' (${c.name}): ${c.description} [Category: ${c.category}]`
-        ).join('\n');
+      const { ConnectorModel, ConnectorActionModel } = require('@automation/database');
+      const dbConnectors = await ConnectorModel.find({ enabled: true });
+      if (dbConnectors && dbConnectors.length > 0) {
+        const actionSummaries = await Promise.all(
+          dbConnectors.map(async (c: any) => {
+            const actions = await ConnectorActionModel.find({ connectorId: c.connectorId, enabled: true }).limit(6);
+            const actionNames = actions.map((a: any) => `${a.actionId} (${a.name})`).join(', ');
+            return `- Connector ID '${c.connectorId}' (${c.displayName || c.name}): ${c.description} [Category: ${c.categoryId}] -> Actions: ${actionNames || 'execute'}`;
+          })
+        );
+        connectorSummary = actionSummaries.join('\n');
       }
     } catch (err) {
-      logger.warn('[AIAgentService] Error loading connector manifests for prompt:', err);
+      logger.warn('[AIAgentService] Error loading MongoDB connectors for AI Agent prompt:', err);
     }
 
     if (!connectorSummary) {
-      connectorSummary = 'All 55+ Enterprise Connectors (Google Suite, AI Suite, Databases, Messaging, Dev Tools, Finance)';
+      try {
+        const { ALL_50_CONNECTOR_MANIFESTS } = require('@automation/connector-sdk');
+        if (Array.isArray(ALL_50_CONNECTOR_MANIFESTS)) {
+          connectorSummary = ALL_50_CONNECTOR_MANIFESTS.map(
+            (c: any) => `- Connector ID '${c.id}' (${c.name}): ${c.description} [Category: ${c.category}]`
+          ).join('\n');
+        }
+      } catch (err) {}
     }
 
     // 2. Fetch User's Active Connected Accounts from MongoDB Atlas

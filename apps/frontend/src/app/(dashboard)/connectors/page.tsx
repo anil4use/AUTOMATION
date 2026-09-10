@@ -13,6 +13,9 @@ import { signInWithGoogleFirebase } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { DatabaseConnectModal, ENVIRONMENT_COLORS } from '@/components/connectors/DatabaseConnectModal';
 import { MultiAuthModal } from '@/components/connectors/MultiAuthModal';
+import { ConnectorSetupGuideDrawer } from '@/components/connectors/ConnectorSetupGuideDrawer';
+import { DynamicActionTestRunnerDrawer } from '@/components/connectors/DynamicActionTestRunnerDrawer';
+import { BookOpen, Terminal } from 'lucide-react';
 import { getSocketClient } from '@/lib/socket-client';
 
 export interface ConnectionAccount {
@@ -148,6 +151,10 @@ export default function ConnectorsPage() {
   const [testEventTitle, setTestEventTitle] = useState('AutoFlow Verification Sync');
   const [testResult, setTestResult] = useState<any>(null);
   const [isTestingAction, setIsTestingAction] = useState(false);
+
+  // V2 Drawer States
+  const [guideConnector, setGuideConnector] = useState<{ id: string; name: string } | null>(null);
+  const [testRunnerConnector, setTestRunnerConnector] = useState<{ id: string; name: string } | null>(null);
 
   // Multi-Field Custom Connection Form States
   const [dbHost, setDbHost] = useState('localhost');
@@ -1022,9 +1029,24 @@ export default function ConnectorsPage() {
 
                   {/* Card Footer Actions */}
                   <div className="pt-3 border-t border-borderColor/60 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono text-textMuted uppercase tracking-wider">
-                      {isDb ? 'PROTOCOL: DATABASE DRIVER' : `AUTH: ${c.authType.toUpperCase()}`}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setGuideConnector({ id: c.id, name: c.name })}
+                        className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-medium flex items-center gap-1 transition"
+                        title="View Step-by-Step Setup Guide & Provider Portal"
+                      >
+                        <BookOpen size={11} className="text-indigo-400" />
+                        <span>Guide</span>
+                      </button>
+                      <button
+                        onClick={() => setTestRunnerConnector({ id: c.id, name: c.name })}
+                        className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-medium flex items-center gap-1 transition"
+                        title="Open Action Test Runner"
+                      >
+                        <Terminal size={11} className="text-emerald-400" />
+                        <span>Actions</span>
+                      </button>
+                    </div>
 
                     {isZeroAuth ? (
                       <button
@@ -1640,6 +1662,26 @@ export default function ConnectorsPage() {
           onClose={() => setIsMultiAuthModalOpen(false)}
         />
       )}
+
+      {/* V2 Connector Setup Guide Drawer */}
+      <ConnectorSetupGuideDrawer
+        connectorId={guideConnector?.id || ''}
+        connectorName={guideConnector?.name}
+        isOpen={!!guideConnector}
+        onClose={() => setGuideConnector(null)}
+        onConnectClick={() => {
+          const conn = catalogConnectors.find((c) => c.id === guideConnector?.id);
+          if (conn) handleInitiateConnect(conn);
+        }}
+      />
+
+      {/* V2 Dynamic Action Test Runner Drawer */}
+      <DynamicActionTestRunnerDrawer
+        connectorId={testRunnerConnector?.id || ''}
+        connectorName={testRunnerConnector?.name}
+        isOpen={!!testRunnerConnector}
+        onClose={() => setTestRunnerConnector(null)}
+      />
     </div>
   );
 }
