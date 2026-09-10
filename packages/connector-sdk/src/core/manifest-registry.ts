@@ -1,6 +1,18 @@
 import { ConnectorManifest, AIConnectorIndex } from '@automation/shared-types';
+import { linkedinManifest } from '../integrations/linkedin/manifest';
+import { indeedManifest } from '../integrations/indeed/manifest';
+import { ziprecruiterManifest } from '../integrations/ziprecruiter/manifest';
+import { glassdoorManifest } from '../integrations/glassdoor/manifest';
+import { greenhouseManifest } from '../integrations/greenhouse/manifest';
+import { leverManifest } from '../integrations/lever/manifest';
 
 const _STATIC_MANIFESTS: ConnectorManifest[] = [
+  linkedinManifest,
+  indeedManifest,
+  ziprecruiterManifest,
+  glassdoorManifest,
+  greenhouseManifest,
+  leverManifest,
   // Google Suite
   {
     id: 'gmail',

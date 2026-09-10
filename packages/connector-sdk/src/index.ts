@@ -50,6 +50,12 @@ export * from './integrations/docusign';
 export * from './integrations/webhook-trigger';
 export * from './integrations/web-browser';
 export * from './integrations/web-search';
+export * from './integrations/linkedin';
+export * from './integrations/indeed';
+export * from './integrations/ziprecruiter';
+export * from './integrations/glassdoor';
+export * from './integrations/greenhouse';
+export * from './integrations/lever';
 
 // Utility & auxiliary connectors
 export * from './connectors/autoflow-schedule.connector';

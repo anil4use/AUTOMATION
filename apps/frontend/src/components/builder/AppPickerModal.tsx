@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Search, Mail, MessageSquare, Table, Sparkles, HardDrive, FileText,
   CreditCard, Send, Globe, Clock, X, Home, Cpu, Sliders, Wrench, Layers,
-  Database, Server, Cloud, Code, Phone, ShieldCheck, Box, BarChart, Calendar, CheckSquare
+  Database, Server, Cloud, Code, Phone, ShieldCheck, Box, BarChart, Calendar, CheckSquare, Briefcase
 } from 'lucide-react';
 import { Heading, Text } from '@/components/ui';
 import { apiClient } from '@/lib/api-client';
@@ -18,6 +18,14 @@ export interface AppOption {
 }
 
 export const availableApps: AppOption[] = [
+  // Jobs & Recruitment
+  { id: 'linkedin', name: 'LinkedIn Jobs & Network', category: 'Jobs & Recruitment', type: 'action', icon: Briefcase, operation: 'search_jobs' },
+  { id: 'indeed', name: 'Indeed Job Board', category: 'Jobs & Recruitment', type: 'action', icon: Search, operation: 'search_jobs' },
+  { id: 'ziprecruiter', name: 'ZipRecruiter Marketplace', category: 'Jobs & Recruitment', type: 'action', icon: Briefcase, operation: 'search_jobs' },
+  { id: 'glassdoor', name: 'Glassdoor Reviews & Salaries', category: 'Jobs & Recruitment', type: 'action', icon: BarChart, operation: 'search_companies' },
+  { id: 'greenhouse', name: 'Greenhouse ATS', category: 'Jobs & Recruitment', type: 'action', icon: Layers, operation: 'list_jobs' },
+  { id: 'lever', name: 'Lever ATS', category: 'Jobs & Recruitment', type: 'action', icon: CheckSquare, operation: 'list_opportunities' },
+
   // Google Suite
   { id: 'gmail', name: 'Gmail', category: 'Google Suite', type: 'action', icon: Mail, operation: 'send_email' },
   { id: 'google-sheets', name: 'Google Sheets', category: 'Google Suite', type: 'action', icon: Table, operation: 'append_row' },
@@ -145,6 +153,7 @@ export function AppPickerModal({
 
   const categories = [
     { id: 'Home', icon: Home },
+    { id: 'Jobs & Recruitment', icon: Briefcase },
     { id: 'Google Suite', icon: Mail },
     { id: 'Communication', icon: MessageSquare },
     { id: 'AI Native', icon: Sparkles },

@@ -192,7 +192,7 @@ export class OAuth2Strategy {
             redirect_uri: redirectUri,
           }).toString(),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         if (data.access_token) {
           let accountEmail = '';
           if (connectorId.startsWith('google') || connectorId === 'gmail') {
@@ -208,7 +208,7 @@ export class OAuth2Strategy {
                 const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
                   headers: { Authorization: `Bearer ${data.access_token}` },
                 });
-                const userData = await userRes.json();
+                const userData: any = await userRes.json();
                 if (userData.email) accountEmail = userData.email;
               }
             } catch (e) {}

@@ -800,6 +800,14 @@ function getDynamicWizardTabs(manifest: any) {
     ];
   }
 
+  if (category.includes('jobs') || category.includes('recruitment') || ['linkedin', 'indeed', 'ziprecruiter', 'glassdoor', 'greenhouse', 'lever'].includes(id)) {
+    return [
+      { id: 'setup', label: '1. OAuth & Account', subtitle: 'LinkedIn / Portal Credentials' },
+      { id: 'configure', label: '2. Job & Search Setup', subtitle: 'Keywords, Location & Job ID' },
+      { id: 'test', label: '3. Test Job Query', subtitle: 'Verify Job Portal API Connection' },
+    ];
+  }
+
   if (category.includes('finance') || category.includes('commerce') || ['stripe', 'razorpay', 'shopify'].includes(id)) {
     return [
       { id: 'setup', label: '1. Secret Auth', subtitle: 'Secret Key & Store Domain' },

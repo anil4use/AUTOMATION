@@ -516,7 +516,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
         }),
       }
     );
-    const data = await response.json();
+    const data: any = await response.json();
     if (data.error) throw new Error(`Gemini API error: ${data.error.message}`);
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
@@ -539,7 +539,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
         ],
       }),
     });
-    const data = await response.json();
+    const data: any = await response.json();
     if (data.error) throw new Error(`Groq API error: ${data.error.message}`);
     return data.choices?.[0]?.message?.content || '';
   }
@@ -598,7 +598,7 @@ RULES FOR CANVAS MUTATION:
             }),
           }
         );
-        const data = await response.json();
+        const data: any = await response.json();
         if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
           llmJsonText = data.candidates[0].content.parts[0].text;
         }
@@ -624,7 +624,7 @@ RULES FOR CANVAS MUTATION:
             ],
           }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         if (data.choices?.[0]?.message?.content) {
           llmJsonText = data.choices[0].message.content;
         }

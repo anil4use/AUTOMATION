@@ -48,6 +48,12 @@ import { VercelConnector } from '../integrations/vercel';
 import { QuickBooksConnector } from '../integrations/quickbooks';
 import { DocuSignConnector } from '../integrations/docusign';
 import { WebhookTriggerConnector } from '../integrations/webhook-trigger';
+import { LinkedInConnector } from '../integrations/linkedin';
+import { IndeedConnector } from '../integrations/indeed';
+import { ZipRecruiterConnector } from '../integrations/ziprecruiter';
+import { GlassdoorConnector } from '../integrations/glassdoor';
+import { GreenhouseConnector } from '../integrations/greenhouse';
+import { LeverConnector } from '../integrations/lever';
 import { MongodbConnector } from '../integrations/mongodb';
 import { PostgresqlConnector } from '../integrations/postgresql';
 import { MysqlConnector } from '../integrations/mysql';
@@ -59,6 +65,12 @@ import { DynamodbConnector } from '../integrations/dynamodb';
 import * as crypto from 'crypto';
 
 export const connectorRegistry: Record<string, any> = {
+  linkedin: new LinkedInConnector(),
+  indeed: new IndeedConnector(),
+  ziprecruiter: new ZipRecruiterConnector(),
+  glassdoor: new GlassdoorConnector(),
+  greenhouse: new GreenhouseConnector(),
+  lever: new LeverConnector(),
   'autoflow-schedule': new AutoFlowScheduleConnector(),
   gmail: new GmailConnector(),
   slack: new SlackConnector(),

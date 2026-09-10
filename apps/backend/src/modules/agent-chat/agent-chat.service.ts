@@ -33,6 +33,12 @@ const CONNECTOR_KEYWORD_ALIASES: Record<string, string[]> = {
   'web-search': ['search', 'google', 'web', 'scrape', 'internet', 'news', 'find', 'article', 'lookup', 'tech news', 'latest', 'headline', 'information', 'query', 'tell me about', 'what is', 'who is'],
   'web-browser': ['browser', 'playwright', 'navigate', 'click', 'form', 'screenshot', 'page', 'url', 'website', 'open'],
   dynamodb: ['dynamodb', 'dynamo', 'aws', 'table'],
+  linkedin: ['linkedin', 'job', 'jobs', 'hiring', 'recruiter', 'recruitment', 'applicant', 'candidate', 'resume', 'career', 'post job'],
+  indeed: ['indeed', 'indeed jobs', 'indeed salary'],
+  ziprecruiter: ['ziprecruiter', 'zip recruiter', 'zip jobs'],
+  glassdoor: ['glassdoor', 'company reviews', 'salary estimate'],
+  greenhouse: ['greenhouse', 'greenhouse ats', 'candidate note', 'candidate stage'],
+  lever: ['lever', 'lever ats', 'candidate opportunity'],
 };
 
 // ─── Redis Client ─────────────────────────────────────────────────────────────
@@ -947,6 +953,11 @@ export class AgentChatService {
     }
     if (lower.includes('whatsapp')) {
       return 'WhatsApp Messaging Task';
+    }
+    if (lower.includes('linkedin') || lower.includes('job') || lower.includes('hiring') || lower.includes('recruiting')) {
+      if (lower.includes('search') || lower.includes('find')) return 'LinkedIn Job Search';
+      if (lower.includes('post') || lower.includes('publish')) return 'LinkedIn Job Posting';
+      return 'LinkedIn Recruitment Task';
     }
     if (lower.includes('web') || lower.includes('search') || lower.includes('news')) {
       return 'Web Search & Intelligence';

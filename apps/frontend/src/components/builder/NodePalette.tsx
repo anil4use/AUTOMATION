@@ -1,12 +1,18 @@
 'use client';
 import React, { useState } from 'react';
-import { Search, Mail, MessageSquare, Table, Sparkles, HardDrive, FileText, CreditCard, Send, Globe, Clock } from 'lucide-react';
+import { Search, Mail, MessageSquare, Table, Sparkles, HardDrive, FileText, CreditCard, Send, Globe, Clock, Briefcase } from 'lucide-react';
 import { Heading, Text, Badge } from '@/components/ui';
 
 export function NodePalette() {
   const [search, setSearch] = useState('');
 
   const connectors = [
+    { id: 'linkedin', name: 'LinkedIn Jobs & Network', category: 'Jobs & Recruitment', type: 'action', icon: Briefcase, operations: ['search_jobs', 'get_job_details', 'post_job', 'post_company_update', 'post_user_share'] },
+    { id: 'indeed', name: 'Indeed Job Board', category: 'Jobs & Recruitment', type: 'action', icon: Search, operations: ['search_jobs', 'get_job_details', 'post_job'] },
+    { id: 'ziprecruiter', name: 'ZipRecruiter Marketplace', category: 'Jobs & Recruitment', type: 'action', icon: Briefcase, operations: ['search_jobs', 'post_job', 'search_candidates'] },
+    { id: 'glassdoor', name: 'Glassdoor Reviews & Salaries', category: 'Jobs & Recruitment', type: 'action', icon: Search, operations: ['search_companies', 'get_salary_estimates', 'search_jobs'] },
+    { id: 'greenhouse', name: 'Greenhouse ATS', category: 'Jobs & Recruitment', type: 'action', icon: Briefcase, operations: ['list_jobs', 'get_candidate', 'add_candidate_note', 'advance_candidate_stage'] },
+    { id: 'lever', name: 'Lever ATS', category: 'Jobs & Recruitment', type: 'action', icon: Briefcase, operations: ['list_opportunities', 'create_opportunity', 'update_opportunity_stage', 'archive_opportunity'] },
     { id: 'autoflow-schedule', name: 'AutoFlow Schedule Trigger', category: 'Core Triggers', type: 'trigger', icon: Clock, operations: ['schedule_time', 'schedule_weekly', 'schedule_date', 'schedule_cron', 'inbound_webhook'] },
     { id: 'web-browser', name: 'Web Browser Automation', category: 'Developer Tools', type: 'action', icon: Globe, operations: ['browser_navigate', 'browser_read_page', 'browser_take_screenshot', 'browser_click_element', 'browser_fill_form', 'browser_search_web', 'browser_extract_data', 'browser_run_script'] },
     { id: 'web-search', name: 'Web Search & Scraper', category: 'Data & Search', type: 'action', icon: Search, operations: ['search_web', 'scrape_url'] },

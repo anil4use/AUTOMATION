@@ -276,7 +276,8 @@ AUTOMATIONS
 │   │   ├──05_frontend_nextjs_ui.md
 │   │   ├──06_ai_agent_service.md
 │   │   ├──07_database_and_shared_types.md
-│   │   └──08_frontend_design_system_and_tokens.md
+│   │   ├──08_frontend_design_system_and_tokens.md
+│   │   └──09_agent_chat_service.md
 │   ├──Automation_Platform_Master_Build_Plan.docx
 │   ├──DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md
 │   ├──MASTER_INTEGRATION_ROADMAP.md

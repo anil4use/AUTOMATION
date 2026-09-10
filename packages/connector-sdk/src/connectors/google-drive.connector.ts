@@ -127,7 +127,7 @@ export class GoogleDriveConnector extends BaseConnector {
         body: multipartRequestBody,
       });
 
-      const data = await res.json();
+      const data: any = await res.json();
       if (!res.ok) throw new Error(`Google Drive Upload Error (${res.status}): ${data.error?.message || res.statusText}`);
 
       return {
@@ -162,7 +162,7 @@ export class GoogleDriveConnector extends BaseConnector {
         body: JSON.stringify(metadata),
       });
 
-      const data = await res.json();
+      const data: any = await res.json();
       if (!res.ok) throw new Error(`Google Drive Create Folder Error (${res.status}): ${data.error?.message || res.statusText}`);
 
       return {
@@ -185,7 +185,7 @@ export class GoogleDriveConnector extends BaseConnector {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const data = await res.json();
+      const data: any = await res.json();
       if (!res.ok) throw new Error(`Google Drive Search Error (${res.status}): ${data.error?.message || res.statusText}`);
 
       const files = data.files || [];
@@ -209,7 +209,7 @@ export class GoogleDriveConnector extends BaseConnector {
       });
 
       if (!res.ok && res.status !== 204) {
-        const data = await res.json().catch(() => ({}));
+        const data: any = await res.json().catch(() => ({}));
         throw new Error(`Google Drive Delete Error (${res.status}): ${data.error?.message || res.statusText}`);
       }
 

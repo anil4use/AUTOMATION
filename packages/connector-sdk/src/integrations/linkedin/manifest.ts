@@ -1,0 +1,171 @@
+import { ConnectorManifest } from '@automation/shared-types';
+
+export const linkedinManifest: ConnectorManifest = {
+  id: 'linkedin',
+  name: 'LinkedIn Jobs & Network',
+  description: 'Search & post jobs, track applicants, search companies, and share professional updates on LinkedIn.',
+  category: 'Jobs & Recruitment',
+  icon: '/icons/linkedin.svg',
+  authType: 'oauth2',
+  authConfig: {
+    authorizationUrl: 'https://www.linkedin.com/oauth/v2/authorization',
+    tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
+    scopes: ['r_liteprofile', 'w_member_social', 'r_organization_social', 'rw_organization_admin', 'r_compliance'],
+  },
+  triggers: [
+    {
+      id: 'new_job_posting',
+      name: 'New Job Posting Match',
+      description: 'Triggers when a new job posting matching specified search criteria is published.',
+      type: 'trigger',
+      inputs: [
+        { key: 'keywords', label: 'Job Title / Keywords (e.g. Software Engineer)', type: 'string', required: true },
+        { key: 'location', label: 'Location (e.g. San Francisco, CA or Remote)', type: 'string', required: false },
+        { key: 'workplaceType', label: 'Workplace Type (remote, hybrid, onsite)', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'jobId', label: 'Job Posting ID', type: 'string', required: true },
+        { key: 'title', label: 'Job Title', type: 'string', required: true },
+        { key: 'companyName', label: 'Company Name', type: 'string', required: true },
+        { key: 'location', label: 'Job Location', type: 'string', required: true },
+        { key: 'workplaceType', label: 'Workplace Type', type: 'string', required: true },
+        { key: 'jobUrl', label: 'LinkedIn Job URL', type: 'string', required: true },
+        { key: 'postedDate', label: 'Posted Date', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'new_applicant',
+      name: 'New Candidate Applicant',
+      description: 'Triggers when a new applicant applies for one of your organization job postings.',
+      type: 'trigger',
+      inputs: [
+        { key: 'jobId', label: 'Job Posting ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'applicantId', label: 'Applicant ID', type: 'string', required: true },
+        { key: 'fullName', label: 'Applicant Name', type: 'string', required: true },
+        { key: 'headline', label: 'Applicant Headline / Title', type: 'string', required: true },
+        { key: 'email', label: 'Applicant Contact Email', type: 'string', required: true },
+        { key: 'resumeUrl', label: 'Resume File URL', type: 'string', required: false },
+        { key: 'appliedAt', label: 'Applied Timestamp', type: 'string', required: true },
+      ],
+    },
+  ],
+  actions: [
+    {
+      id: 'search_jobs',
+      name: 'Search Job Postings',
+      description: 'Search active LinkedIn job listings by title, keywords, location, and workplace type.',
+      type: 'action',
+      inputs: [
+        { key: 'keywords', label: 'Job Title or Keywords (e.g. React Developer)', type: 'string', required: true },
+        { key: 'location', label: 'Location (e.g. New York, Remote)', type: 'string', required: false },
+        { key: 'workplaceType', label: 'Workplace Type (remote, hybrid, onsite)', type: 'string', required: false },
+        { key: 'limit', label: 'Result Limit (Default: 10)', type: 'number', required: false },
+      ],
+      outputs: [
+        { key: 'jobs', label: 'Array of Job Postings', type: 'json', required: true },
+        { key: 'totalCount', label: 'Total Matching Jobs Count', type: 'number', required: true },
+      ],
+    },
+    {
+      id: 'get_job_details',
+      name: 'Get Job Details',
+      description: 'Retrieve detailed requirements, description, and application URL for a specific job posting.',
+      type: 'action',
+      inputs: [
+        { key: 'jobId', label: 'Job Posting ID', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'jobId', label: 'Job ID', type: 'string', required: true },
+        { key: 'title', label: 'Job Title', type: 'string', required: true },
+        { key: 'companyName', label: 'Company Name', type: 'string', required: true },
+        { key: 'description', label: 'Full Job Description', type: 'string', required: true },
+        { key: 'skillsRequired', label: 'Required Skills List', type: 'json', required: false },
+        { key: 'jobUrl', label: 'LinkedIn Job URL', type: 'string', required: true },
+        { key: 'employmentType', label: 'Employment Type (Full-time, Contract)', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'post_job',
+      name: 'Post New Job Opening',
+      description: 'Publish a new job opportunity listing on LinkedIn for your company.',
+      type: 'action',
+      inputs: [
+        { key: 'title', label: 'Job Title', type: 'string', required: true },
+        { key: 'companyId', label: 'LinkedIn Company / Organization ID', type: 'string', required: true },
+        { key: 'location', label: 'Job Location', type: 'string', required: true },
+        { key: 'workplaceType', label: 'Workplace Type (remote, hybrid, onsite)', type: 'string', required: true },
+        { key: 'employmentType', label: 'Employment Type (full-time, part-time, contract)', type: 'string', required: true },
+        { key: 'description', label: 'Job Description & Requirements', type: 'string', required: true },
+        { key: 'applyUrl', label: 'External Candidate Apply URL or Email', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'jobId', label: 'Created Job Posting ID', type: 'string', required: true },
+        { key: 'jobUrl', label: 'Published Job Page URL', type: 'string', required: true },
+        { key: 'status', label: 'Posting Status (active, pending)', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'post_company_update',
+      name: 'Share Update to Company Page',
+      description: 'Post a hiring notice or corporate announcement to your LinkedIn Company Organization page.',
+      type: 'action',
+      inputs: [
+        { key: 'organizationId', label: 'LinkedIn Organization ID', type: 'string', required: true },
+        { key: 'message', label: 'Post Text Content', type: 'string', required: true },
+        { key: 'linkUrl', label: 'Target Link URL (Job post or website link)', type: 'string', required: false },
+        { key: 'title', label: 'Link Preview Title', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'shareId', label: 'LinkedIn Share Post ID', type: 'string', required: true },
+        { key: 'shareUrl', label: 'Published Post URL', type: 'string', required: true },
+        { key: 'status', label: 'Publication Status', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'post_user_share',
+      name: 'Share Update to Personal Profile',
+      description: 'Share a professional update, job opening, or article to your personal LinkedIn profile feed.',
+      type: 'action',
+      inputs: [
+        { key: 'message', label: 'Post Content Text', type: 'string', required: true },
+        { key: 'linkUrl', label: 'Shared Link URL', type: 'string', required: false },
+        { key: 'title', label: 'Link Title', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'shareId', label: 'Created Share ID', type: 'string', required: true },
+        { key: 'shareUrl', label: 'LinkedIn Post URL', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'search_companies',
+      name: 'Search Companies & Organizations',
+      description: 'Look up company profiles, employee counts, industry types, and LinkedIn Organization IDs.',
+      type: 'action',
+      inputs: [
+        { key: 'keywords', label: 'Company Name or Keywords', type: 'string', required: true },
+        { key: 'limit', label: 'Max Results Limit (Default: 5)', type: 'number', required: false },
+      ],
+      outputs: [
+        { key: 'companies', label: 'Array of Company Profiles', type: 'json', required: true },
+        { key: 'totalCount', label: 'Matching Count', type: 'number', required: true },
+      ],
+    },
+    {
+      id: 'get_user_profile',
+      name: 'Get User Profile Info',
+      description: 'Fetch authenticated LinkedIn member profile information (name, headline, vanity name, email).',
+      type: 'action',
+      inputs: [],
+      outputs: [
+        { key: 'id', label: 'LinkedIn Member ID', type: 'string', required: true },
+        { key: 'firstName', label: 'First Name', type: 'string', required: true },
+        { key: 'lastName', label: 'Last Name', type: 'string', required: true },
+        { key: 'headline', label: 'Professional Headline', type: 'string', required: false },
+        { key: 'vanityName', label: 'Public Profile Handle / Vanity Name', type: 'string', required: false },
+        { key: 'profileUrl', label: 'Public Profile URL', type: 'string', required: true },
+      ],
+    },
+  ],
+};

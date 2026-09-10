@@ -91,7 +91,7 @@ export class AINodeConnector extends BaseConnector {
             }),
           }
         );
-        const data = await res.json();
+        const data: any = await res.json();
         if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
           const aiText = data.candidates[0].content.parts[0].text.trim();
           return {

@@ -61,16 +61,11 @@ AUTOMATIONS/
 - **62 Platform Connectors**: Exposes 317 actions and 119 triggers across SaaS, AI, Cloud, Storage, and Database integrations.
 - **Dynamic Choices API**: Provides cached choices (`GET /v1/connectors/choices/:appId/:fieldId`) with a 5-minute Redis TTL for dynamic workspace items (Slack channels, Gmail labels, GitHub repositories, DB tables).
 
-### 7. Enterprise Database Connector Subsystem (Full Flexibility Protocol)
-- **10 Database Engines Supported**: PostgreSQL, MySQL, MongoDB, Redis, DynamoDB, SQL Server (MSSQL), Supabase, PlanetScale, Neon Postgres, SQLite.
-- **6 Connection Methods**: Individual Host Fields, Connection URI/String, SSH Tunnel Forwarding, SSL/TLS Certificates, Unix Domain Sockets, Read Replicas.
-- **Dialect-Aware Parameterizer (`query-sanitizer.ts`)**: Auto-translates `{{variable.path}}` parameters into dialect placeholders (`$1, $2` for PostgreSQL; `?` for MySQL; `@p1, @p2` for SQL Server).
-- **Automated `LIMIT` Capper**: Enforces default 10,000 row ceiling (max 50,000) on SQL queries to prevent worker memory exhaustion.
-- **Statement Guard (`allowedStatements`)**: Enforces operation safety (e.g. restricting read-only connections to `SELECT` operations only).
-- **Dynamic SSH Tunnel Management**: Port allocation (`15000-25000`), cap of 20 tunnels, and automatic lifecycle binding to connection pool.
-- **In-Memory Connection Pooling**: Singleton `poolMap` with 10-minute idle eviction sweeper and `destroyPool()` on credential update/deletion.
-- **Production Protection Locks**: Production environment tag (`environmentTag === 'production'`) blocks destructive operations like Redis `FLUSHDB` or SQL `DROP`.
-- **Pre-Save Verification Protocol**: All database connections require a successful live ping test (`POST /v1/connectors/test-connection`) before saving to database.
+### 8. Interactive Agent Chat Execution Service (`/agent-chat`)
+- **Autonomous Multi-Step Execution**: Directly executes tool calls across SaaS apps, databases, and search engines using live Gemini / Groq LLM intent parsing and a fallback universal dynamic matcher.
+- **Real-Time SSE Streaming**: Emits live `step_start`, `step_complete`, `step_error`, and `confirmation_required` events via Server-Sent Events (`POST /api/v1/agent-chat/message`).
+- **Destructive Operation Safety Shield**: Detects dangerous operations (`delete`, `drop`, `truncate`, `flush`, bulk dispatches) and pauses execution for user confirmation (`POST /api/v1/agent-chat/confirm`).
+- **1-Click Plan-to-Workflow Conversion**: Converts chat execution steps into a visual drag-and-drop vertical ReactFlow DAG draft saved directly to MongoDB Atlas (`POST /api/v1/agent-chat/convert-workflow`).
 
 ---
 
@@ -78,6 +73,8 @@ AUTOMATIONS/
 
 | Feature Area | Document File | Description |
 | :--- | :--- | :--- |
+| **Agent Chat Service** | [09_agent_chat_service.md](file:///d:/CODE/AUTOMATIONS/docs/features/09_agent_chat_service.md) | Architectural guide for Agent Chat real-time execution engine, SSE stream, and safety shield |
+| **AI Agent Service** | [06_ai_agent_service.md](file:///d:/CODE/AUTOMATIONS/docs/features/06_ai_agent_service.md) | Conversational prompt-to-workflow compilation and connector verification |
 | **Database Connector Architecture** | [DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md](file:///d:/CODE/AUTOMATIONS/docs/DATABASE_CONNECTOR_ARCHITECTURE_GUIDE.md) | Full guide for DB engines, SSH tunnels, pooling, parameterization & security |
 | **System Diagnostics & Roadmap** | [SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md](file:///d:/CODE/AUTOMATIONS/docs/SYSTEM_DIAGNOSTICS_AND_IMPROVEMENTS.md) | Architectural audit, scalability diagnosis, and feature roadmap |
-| **Master Task Status** | [TASK_STATUS.md](file:///d:/CODE/AUTOMATIONS/docs/TASK_STATUS.md) | Comprehensive task tracker across all 10 implementation phases (72/72 tasks) |
+| **Master Task Status** | [TASK_STATUS.md](file:///d:/CODE/AUTOMATIONS/docs/TASK_STATUS.md) | Comprehensive task tracker across all implementation phases |
