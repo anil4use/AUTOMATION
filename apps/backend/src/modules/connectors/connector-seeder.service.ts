@@ -164,13 +164,7 @@ export class ConnectorSeederService {
         type: act.type || 'action',
         semanticType: act.semanticType || 'execute',
         executionType: act.executionType || 'adapter',
-        adapterMethod: act.adapterMethod || actionId,
-        inputSchema: act.inputSchema || {
-          type: 'object',
-          properties: {
-            payload: { type: 'string', title: 'Input Payload', description: 'Enter execution payload or configuration' },
-          },
-        },
+        inputSchema: ConnectorSeederService.buildInputSchemaFromAction(act, manifest.id),
         outputSchema: act.outputSchema || { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'object' } } },
         capabilities: act.capabilities || ['execute'],
         destructive: act.destructive || false,
@@ -293,5 +287,103 @@ export class ConnectorSeederService {
       { upsert: true, new: true }
     );
     return 1;
+  }
+
+  private static buildInputSchemaFromAction(act: any, manifestId: string): any {
+    if (act.inputSchema && Object.keys(act.inputSchema?.properties || {}).length > 0) {
+      return act.inputSchema;
+    }
+
+    const inputsList = act.inputs || act.parameters || act.fields || [];
+    if (Array.isArray(inputsList) && inputsList.length > 0) {
+      const properties: Record<string, any> = {};
+      const required: string[] = [];
+      inputsList.forEach((inp: any) => {
+        const key = inp.key || inp.name || inp.id;
+        if (key) {
+          properties[key] = {
+            type: inp.type || 'string',
+            title: inp.label || inp.name || key,
+            description: inp.description || inp.help || `Enter ${inp.label || key}`,
+          };
+          if (inp.enum) properties[key].enum = inp.enum;
+          if (inp.required) required.push(key);
+        }
+      });
+      if (Object.keys(properties).length > 0) {
+        return {
+          type: 'object',
+          properties,
+          ...(required.length > 0 ? { required } : {}),
+        };
+      }
+    }
+
+    // Action ID or Manifest ID smart fallback map
+    const actionId = (act.actionId || act.id || '').toLowerCase();
+
+    if (actionId.includes('email') || actionId.includes('mail')) {
+      return {
+        type: 'object',
+        properties: {
+          to: { type: 'string', title: 'Recipient Email', description: 'Destination email address (e.g. user@example.com)' },
+          subject: { type: 'string', title: 'Subject Line', description: 'Email subject title' },
+          body: { type: 'string', title: 'Email Body Content', description: 'Main message content in HTML or plain text' },
+          cc: { type: 'string', title: 'CC (Optional)', description: 'Carbon copy recipient email' },
+          bcc: { type: 'string', title: 'BCC (Optional)', description: 'Blind carbon copy recipient email' },
+        },
+        required: ['to', 'subject', 'body'],
+      };
+    }
+
+    if (actionId.includes('message') || actionId.includes('slack') || actionId.includes('post_text') || actionId.includes('send_chat')) {
+      return {
+        type: 'object',
+        properties: {
+          channel: { type: 'string', title: 'Channel / Recipient ID', description: 'Target channel name, ID, or phone number' },
+          text: { type: 'string', title: 'Message Text', description: 'Content of the message to send' },
+        },
+        required: ['channel', 'text'],
+      };
+    }
+
+    if (actionId.includes('issue') || actionId.includes('ticket') || actionId.includes('task')) {
+      return {
+        type: 'object',
+        properties: {
+          title: { type: 'string', title: 'Title / Summary', description: 'Short title or summary' },
+          description: { type: 'string', title: 'Description', description: 'Detailed explanation' },
+        },
+        required: ['title'],
+      };
+    }
+
+    if (actionId.includes('completion') || actionId.includes('prompt') || actionId.includes('generate') || actionId.includes('ai') || actionId.includes('chat')) {
+      return {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', title: 'Prompt / Instruction', description: 'Input text or prompt for AI' },
+          model: { type: 'string', title: 'Model (Optional)', description: 'AI model identifier' },
+        },
+        required: ['prompt'],
+      };
+    }
+
+    if (actionId.includes('query') || actionId.includes('sql') || actionId.includes('select')) {
+      return {
+        type: 'object',
+        properties: {
+          query: { type: 'string', title: 'Query Statement', description: 'SQL or database query string' },
+        },
+        required: ['query'],
+      };
+    }
+
+    return {
+      type: 'object',
+      properties: {
+        payload: { type: 'string', title: 'Input Payload', description: 'Enter execution payload or configuration' },
+      },
+    };
   }
 }

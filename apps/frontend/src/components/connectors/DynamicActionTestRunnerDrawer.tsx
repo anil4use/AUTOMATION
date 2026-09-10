@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { X, Play, Loader2, CheckCircle2, AlertTriangle, Code, Clock, Copy, Check, ChevronDown, Layers, Terminal, Zap, Sparkles } from 'lucide-react';
+import { X, Play, Loader2, CheckCircle2, AlertTriangle, Code, Clock, Copy, Check, ChevronDown, Layers, Terminal, Zap, Sparkles, RefreshCw } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { getConnectorBrandSpec } from '@/lib/connector-brand-utils';
@@ -10,6 +10,45 @@ interface DynamicActionTestRunnerDrawerProps {
   connectorName?: string;
   isOpen: boolean;
   onClose: () => void;
+}
+
+function getDefaultInputValue(propKey: string, propMeta: any, actionId: string = '', connectorId: string = ''): string {
+  const k = propKey.toLowerCase();
+
+  if (k === 'to' || k === 'recipient' || k === 'email') {
+    return 'anil4use@gmail.com';
+  }
+  if (k === 'subject') {
+    return 'AutoFlow Verification Test Email';
+  }
+  if (k === 'body' || k === 'html' || k === 'content') {
+    return 'Hello! This is an automated test email executed live from AutoFlow Action Test Runner.';
+  }
+  if (k === 'channel') {
+    return 'general';
+  }
+  if (k === 'text' || k === 'message') {
+    return 'AutoFlow live connector action test verified!';
+  }
+  if (k === 'prompt') {
+    return 'Explain AI automation in 1 sentence.';
+  }
+  if (k === 'query' || k === 'sql') {
+    return 'SELECT 1 as live_test_connection;';
+  }
+  if (k === 'title' || k === 'summary') {
+    return 'AutoFlow Live Verification Item';
+  }
+  if (k === 'description') {
+    return 'Created automatically during live action test run.';
+  }
+  if (k === 'maxresults' || k === 'limit') {
+    return '5';
+  }
+  if (propMeta?.default) {
+    return String(propMeta.default);
+  }
+  return '';
 }
 
 export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDrawerProps> = ({
@@ -34,6 +73,16 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
     }
   }, [isOpen, connectorId]);
 
+  const initializeDefaultsForAction = (act: any) => {
+    if (!act) return {};
+    const props = act.inputSchema?.properties || {};
+    const defaults: Record<string, any> = {};
+    Object.entries(props).forEach(([propKey, propMeta]: [string, any]) => {
+      defaults[propKey] = getDefaultInputValue(propKey, propMeta, act.actionId, connectorId);
+    });
+    return defaults;
+  };
+
   const fetchConnectorActions = async () => {
     try {
       setLoading(true);
@@ -42,8 +91,10 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
         const actionList = res.data.data.actions || [];
         setActions(actionList);
         if (actionList.length > 0) {
-          setSelectedActionId(actionList[0].actionId);
-          setSelectedAction(actionList[0]);
+          const firstAct = actionList[0];
+          setSelectedActionId(firstAct.actionId);
+          setSelectedAction(firstAct);
+          setInputValues(initializeDefaultsForAction(firstAct));
         }
       }
     } catch (err) {
@@ -57,12 +108,19 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
     setSelectedActionId(actionId);
     const act = actions.find((a) => a.actionId === actionId);
     setSelectedAction(act || null);
-    setInputValues({});
+    setInputValues(initializeDefaultsForAction(act));
     setTestResult(null);
   };
 
   const handleInputChange = (key: string, val: any) => {
     setInputValues((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleResetDefaults = () => {
+    if (selectedAction) {
+      setInputValues(initializeDefaultsForAction(selectedAction));
+      toast.info('Reset input arguments to default test values');
+    }
   };
 
   const handleRunTest = async () => {
@@ -72,9 +130,17 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
       setTesting(true);
       setTestResult(null);
 
+      // Clean empty string values for optional payload fields
+      const cleanInput: Record<string, any> = {};
+      Object.entries(inputValues).forEach(([k, v]) => {
+        if (v !== '' && v !== undefined && v !== null) {
+          cleanInput[k] = v;
+        }
+      });
+
       const res = await apiClient.post(`/v2/connectors/${connectorId}/test`, {
         actionId: selectedActionId,
-        input: inputValues,
+        input: cleanInput,
       });
 
       setTestResult(res.data);
@@ -113,6 +179,7 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
   const BrandIcon = brand.icon;
 
   const schemaProperties = selectedAction?.inputSchema?.properties || {};
+  const requiredFields: string[] = selectedAction?.inputSchema?.required || [];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
@@ -134,7 +201,7 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                Execute actions with optional inputs &amp; inspect dynamic output payload
+                Execute actions with discrete field inputs &amp; inspect dynamic output payload
               </p>
             </div>
           </div>
@@ -219,59 +286,74 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
                     <Code className="w-4 h-4 text-emerald-400" />
-                    <span>Payload Arguments</span>
+                    <span>Payload Input Parameters</span>
                   </h3>
-                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-bold">
-                    OPTIONAL FOR TESTING
-                  </span>
+                  <button
+                    onClick={handleResetDefaults}
+                    className="text-[10px] text-slate-400 hover:text-white font-mono bg-white/[0.04] hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1 transition-all"
+                  >
+                    <RefreshCw className="w-3 h-3 text-emerald-400" />
+                    <span>Pre-fill Defaults</span>
+                  </button>
                 </div>
 
                 {Object.keys(schemaProperties).length === 0 ? (
                   <div className="py-4 text-center text-xs text-slate-400 italic bg-slate-950/50 rounded-xl border border-white/[0.04]">
-                    No arguments required for this action operation.
+                    No input parameters required for this operation.
                   </div>
                 ) : (
-                  <div className="space-y-3.5 pt-1">
-                    {Object.entries(schemaProperties).map(([propKey, propMeta]: [string, any]) => (
-                      <div key={propKey} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <label className="font-semibold text-slate-200">
-                            {propMeta.title || propKey} <code className="text-[11px] text-slate-400 font-mono">({propKey})</code>
-                          </label>
-                          <span className="text-[10px] text-slate-400 font-mono uppercase">{propMeta.type || 'string'}</span>
+                  <div className="space-y-4 pt-1">
+                    {Object.entries(schemaProperties).map(([propKey, propMeta]: [string, any]) => {
+                      const isRequired = requiredFields.includes(propKey);
+                      return (
+                        <div key={propKey} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <label className="font-bold text-white flex items-center gap-1.5">
+                              <span>{propMeta.title || propKey}</span>
+                              <code className="text-[11px] text-emerald-400 font-mono font-normal">({propKey})</code>
+                            </label>
+                            {isRequired ? (
+                              <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">REQUIRED</span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded">OPTIONAL</span>
+                            )}
+                          </div>
+                          {propMeta.description && (
+                            <p className="text-[11px] text-slate-400 leading-tight">{propMeta.description}</p>
+                          )}
+                          {propMeta.enum ? (
+                            <select
+                              value={inputValues[propKey] ?? ''}
+                              onChange={(e) => handleInputChange(propKey, e.target.value)}
+                              className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500 outline-none"
+                            >
+                              <option value="">-- Select {propKey} --</option>
+                              {propMeta.enum.map((opt: string) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          ) : propMeta.type === 'string' && (propKey.toLowerCase().includes('body') || propKey.toLowerCase().includes('content') || propKey.toLowerCase().includes('query') || propKey.toLowerCase().includes('html')) ? (
+                            <textarea
+                              rows={3}
+                              value={inputValues[propKey] ?? ''}
+                              onChange={(e) => handleInputChange(propKey, e.target.value)}
+                              placeholder={propMeta.description || `Enter ${propKey}...`}
+                              className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all font-sans"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={inputValues[propKey] ?? ''}
+                              onChange={(e) => handleInputChange(propKey, e.target.value)}
+                              placeholder={propMeta.description || `Enter ${propKey}...`}
+                              className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all"
+                            />
+                          )}
                         </div>
-                        {propMeta.enum ? (
-                          <select
-                            value={inputValues[propKey] || ''}
-                            onChange={(e) => handleInputChange(propKey, e.target.value)}
-                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500 outline-none"
-                          >
-                            <option value="">-- Select {propKey} --</option>
-                            {propMeta.enum.map((opt: string) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        ) : propMeta.type === 'string' && (propMeta.title?.toLowerCase().includes('body') || propMeta.title?.toLowerCase().includes('payload')) ? (
-                          <textarea
-                            rows={3}
-                            value={inputValues[propKey] || ''}
-                            onChange={(e) => handleInputChange(propKey, e.target.value)}
-                            placeholder={propMeta.description || `Enter ${propKey}...`}
-                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={inputValues[propKey] || ''}
-                            onChange={(e) => handleInputChange(propKey, e.target.value)}
-                            placeholder={propMeta.description || `Enter ${propKey}...`}
-                            className="w-full p-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-all"
-                          />
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
