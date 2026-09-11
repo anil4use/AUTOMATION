@@ -434,17 +434,17 @@ export class OpenAIConnector extends BaseConnector {
 
         case 'count_tokens': {
           try {
-            // Use js-tiktoken for accurate token counting
-            const { encodingForModel } = await import('js-tiktoken');
-            const model = (inputs.model || 'gpt-4o') as any;
-            const enc = encodingForModel(model);
-            const tokens = enc.encode(inputs.text);
-            return { success: true, data: { estimatedTokens: tokens.length } };
-          } catch {
-            // Fallback if model not in tiktoken
-            const rough = Math.ceil((inputs.text as string).length / 4);
-            return { success: true, data: { estimatedTokens: rough } };
-          }
+            const safeReq = new Function('name', 'return require(name)');
+            const tiktokenMod = safeReq('js-tiktoken');
+            if (tiktokenMod && tiktokenMod.encodingForModel) {
+              const model = (inputs.model || 'gpt-4o') as any;
+              const enc = tiktokenMod.encodingForModel(model);
+              const tokens = enc.encode(inputs.text);
+              return { success: true, data: { estimatedTokens: tokens.length } };
+            }
+          } catch {}
+          const rough = Math.ceil((inputs.text as string).length / 4);
+          return { success: true, data: { estimatedTokens: rough } };
         }
 
         case 'create_assistant': {

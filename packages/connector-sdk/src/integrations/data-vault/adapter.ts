@@ -1,4 +1,4 @@
-import { LocalStorageFileModel } from '@automation/database';
+import { safeRequire } from '../../utils/safe-require';
 
 export class DataVaultAdapter {
   /**
@@ -63,6 +63,11 @@ export class DataVaultAdapter {
   ) {
     const orgId = context.organizationId || 'default-org';
     const baseUrl = process.env.PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const dbMod = safeRequire('@automation/database');
+    const LocalStorageFileModel = dbMod?.LocalStorageFileModel;
+    if (!LocalStorageFileModel) {
+      return { success: false, data: {}, error: 'LocalStorageFileModel is not available in current process context.' };
+    }
 
     if (actionId === 'save_document' || actionId === 'save_json' || actionId === 'save_text' || actionId === 'save_html') {
       const rawFileName = inputs.fileName || `document_${Date.now()}.${inputs.format || 'json'}`;
