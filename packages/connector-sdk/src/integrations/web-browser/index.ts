@@ -204,14 +204,12 @@ export class WebBrowserConnector extends BaseConnector {
     const sessionId = (context as any).sessionId || (context as any).executionId || `session_${Date.now()}`;
 
     // Dynamically load browserToolService from backend service layer if running in backend context
-    let browserToolService: any = null;
-    try {
-      const mod = require('../../../../../apps/backend/src/services/browser-tool.service');
-      browserToolService = mod.browserToolService;
-    } catch {
+    let browserToolService: any = (globalThis as any).browserToolService || null;
+    if (!browserToolService && typeof window === 'undefined') {
       try {
-        const mod = require('../../../../apps/backend/src/services/browser-tool.service');
-        browserToolService = mod.browserToolService;
+        const safeReq = new Function('name', 'return require(name)');
+        const mod = safeReq('../../../../apps/backend/src/services/browser-tool.service') || safeReq('../../../../../apps/backend/src/services/browser-tool.service');
+        browserToolService = mod?.browserToolService || null;
       } catch {}
     }
 

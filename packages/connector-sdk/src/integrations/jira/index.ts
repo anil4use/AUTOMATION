@@ -468,7 +468,10 @@ export class JiraConnector extends BaseConnector {
         }
 
         case 'add_attachment': {
-          const formData = new (require('form-data'))();
+          const safeReq = new Function('name', 'return require(name)');
+          const FormDataMod = safeReq('form-data');
+          if (!FormDataMod) throw new Error('form-data module not available');
+          const formData = new FormDataMod();
           formData.append('file', Buffer.from(inputs.content), inputs.filename);
           const { data } = await api.post(`/issue/${inputs.issueKey}/attachments`, formData, {
             headers: { ...formData.getHeaders(), 'X-Atlassian-Token': 'no-check' },

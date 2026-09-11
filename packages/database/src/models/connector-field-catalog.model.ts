@@ -75,7 +75,7 @@ ConnectorFieldCatalogSchema.index(
 );
 ConnectorFieldCatalogSchema.index({ semanticRole: 1 });
 ConnectorFieldCatalogSchema.index({ connectorId: 1, direction: 1 });
-ConnectorFieldCatalogSchema.index({ enabled: 1 });
+
 
 export const ConnectorFieldCatalogModel =
   mongoose.models.ConnectorFieldCatalog ||

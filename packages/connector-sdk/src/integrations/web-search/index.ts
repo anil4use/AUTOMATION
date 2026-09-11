@@ -84,14 +84,12 @@ export class EnhancedWebSearchConnector extends BaseConnector {
     const provider = (inputs.provider || 'duckduckgo').toLowerCase();
     const apiKey = context.connectionCredentials?.apiKey || process.env.GOOGLE_CUSTOM_SEARCH_API_KEY || process.env.TAVILY_API_KEY;
 
-    let browserToolService: any = null;
-    try {
-      const mod = require('../../../../../apps/backend/src/services/browser-tool.service');
-      browserToolService = mod.browserToolService;
-    } catch {
+    let browserToolService: any = (globalThis as any).browserToolService || null;
+    if (!browserToolService && typeof window === 'undefined') {
       try {
-        const mod = require('../../../../apps/backend/src/services/browser-tool.service');
-        browserToolService = mod.browserToolService;
+        const safeReq = new Function('name', 'return require(name)');
+        const mod = safeReq('../../../../apps/backend/src/services/browser-tool.service') || safeReq('../../../../../apps/backend/src/services/browser-tool.service');
+        browserToolService = mod?.browserToolService || null;
       } catch {}
     }
 

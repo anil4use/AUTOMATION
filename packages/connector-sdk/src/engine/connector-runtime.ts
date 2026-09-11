@@ -39,10 +39,13 @@ export class ConnectorRuntime {
       let dbAction: any = null;
 
       try {
-        const { ConnectorModel, ConnectorActionModel } = require('@automation/database');
-        dbConnector = await ConnectorModel.findOne({ connectorId, enabled: true });
-        if (dbConnector) {
-          dbAction = await ConnectorActionModel.findOne({ connectorId, actionId, enabled: true });
+        const safeReq = new Function('name', 'return require(name)');
+        const dbMod = safeReq('@automation/database');
+        if (dbMod?.ConnectorModel && dbMod?.ConnectorActionModel) {
+          dbConnector = await dbMod.ConnectorModel.findOne({ connectorId, enabled: true });
+          if (dbConnector) {
+            dbAction = await dbMod.ConnectorActionModel.findOne({ connectorId, actionId, enabled: true });
+          }
         }
       } catch (dbErr) {
         // Database not reachable or models not seeded yet — graceful fallback to V1

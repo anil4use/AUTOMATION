@@ -1,4 +1,5 @@
 import { DAGNode } from '@automation/shared-types';
+import { safeRequire } from '../utils/safe-require';
 import { GmailConnector } from '../integrations/gmail';
 import { GoogleSheetsConnector } from '../integrations/google-sheets';
 import { GoogleDriveConnector } from '../connectors/google-drive.connector';
@@ -173,30 +174,32 @@ export class StepExecutor {
 
     // AUTOMATIC AI DATA BRIDGE & DATA MAPPER STEP (App A -> App B)
     try {
-      const { AIDataBridge } = require('@automation/ai-data-bridge');
-      const bridge = new AIDataBridge();
+      const bridgeMod = safeRequire('@automation/ai-data-bridge');
+      if (bridgeMod && bridgeMod.AIDataBridge) {
+        const bridge = new bridgeMod.AIDataBridge();
 
-      // Find primary previous step output or trigger payload
-      const prevStepKeys = Object.keys(previousResults || {});
-      const lastStepKey = prevStepKeys[prevStepKeys.length - 1];
-      const sourceOutputs = (lastStepKey && previousResults[lastStepKey]?.output) 
-        ? previousResults[lastStepKey].output 
-        : (previousResults[lastStepKey] || triggerPayload || {});
+        // Find primary previous step output or trigger payload
+        const prevStepKeys = Object.keys(previousResults || {});
+        const lastStepKey = prevStepKeys[prevStepKeys.length - 1];
+        const sourceOutputs = (lastStepKey && previousResults[lastStepKey]?.output) 
+          ? previousResults[lastStepKey].output 
+          : (previousResults[lastStepKey] || triggerPayload || {});
 
-      const targetInputSchema = connector.manifest?.actions?.find((a: any) => a.id === (node.operationId || (node as any).actionId))?.inputs || [];
+        const targetInputSchema = connector.manifest?.actions?.find((a: any) => a.id === (node.operationId || (node as any).actionId))?.inputs || [];
 
-      const bridgeResult = await bridge.execute({
-        sourceConnectorId: previousResults[lastStepKey]?.connectorId || 'previous_step',
-        sourceOperationId: previousResults[lastStepKey]?.operationId || 'output',
-        sourceOutputs,
-        targetConnectorId: node.connectorId,
-        targetOperationId: node.operationId || (node as any).actionId || 'execute',
-        targetInputSchema,
-        userConfiguredMapping: resolvedInputs
-      });
+        const bridgeResult = await bridge.execute({
+          sourceConnectorId: previousResults[lastStepKey]?.connectorId || 'previous_step',
+          sourceOperationId: previousResults[lastStepKey]?.operationId || 'output',
+          sourceOutputs,
+          targetConnectorId: node.connectorId,
+          targetOperationId: node.operationId || (node as any).actionId || 'execute',
+          targetInputSchema,
+          userConfiguredMapping: resolvedInputs
+        });
 
-      if (bridgeResult.inputPayload) {
-        Object.assign(resolvedInputs, bridgeResult.inputPayload);
+        if (bridgeResult.inputPayload) {
+          Object.assign(resolvedInputs, bridgeResult.inputPayload);
+        }
       }
     } catch (bridgeErr: any) {
       console.warn(`[StepExecutor] AIDataBridge warning for step '${node.id}':`, bridgeErr.message);
@@ -280,7 +283,9 @@ export class StepExecutor {
     let credentials: Record<string, any> = {};
 
     try {
-      const { ConnectionModel } = require('@automation/database');
+      const dbMod = safeRequire('@automation/database');
+      const ConnectionModel = dbMod?.ConnectionModel;
+      if (!ConnectionModel) return credentials;
       let query: any = { connectorId, status: 'connected' };
       if (orgId) query.organizationId = orgId;
 

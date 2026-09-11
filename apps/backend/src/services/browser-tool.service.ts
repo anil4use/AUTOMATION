@@ -422,3 +422,5 @@ export class BrowserToolService {
 }
 
 export const browserToolService = new BrowserToolService();
+(globalThis as any).browserToolService = browserToolService;
+
