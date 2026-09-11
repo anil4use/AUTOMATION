@@ -7,6 +7,7 @@ import { AccountConnectModal } from './AccountConnectModal';
 import { DatabaseConnectModal } from '@/components/connectors/DatabaseConnectModal';
 import { apiClient } from '@/lib/api-client';
 import { ALL_50_CONNECTOR_MANIFESTS, getActionOrTriggerSchema, getManifestById } from '@/lib/connector-manifests';
+import { toast } from 'sonner';
 
 interface StepSetupDrawerProps {
   node: any;
@@ -245,6 +246,61 @@ export function StepSetupDrawer({
       m.id.toLowerCase().includes(appSearch.toLowerCase())
   );
 
+  const handleAutoMapFields = () => {
+    if (dataSources.length === 0) {
+      toast.error('No Upstream Steps Available', {
+        description: 'Add or connect a trigger or previous step before auto-mapping.',
+      });
+      return;
+    }
+
+    const allAvailableFields: Array<{ path: string; key: string; label: string }> = [];
+    dataSources.forEach((src) => {
+      src.fields.forEach((f) => {
+        allAvailableFields.push({ path: f.path, key: f.key.toLowerCase(), label: f.label.toLowerCase() });
+      });
+    });
+
+    const updatedConfig = { ...config };
+    let count = 0;
+
+    inputFieldKeys.forEach((input) => {
+      const keyLower = input.key.toLowerCase();
+      const labelLower = input.label.toLowerCase();
+
+      const match = allAvailableFields.find((f) => {
+        if (f.key === keyLower) return true;
+        if (keyLower.includes('email') || keyLower.includes('recipient') || keyLower.includes('to')) {
+          return f.key.includes('email') || f.key.includes('recipient') || f.key.includes('sender') || f.key.includes('to');
+        }
+        if (keyLower.includes('phone') || keyLower.includes('mobile')) {
+          return f.key.includes('phone') || f.key.includes('mobile');
+        }
+        if (keyLower.includes('amount') || keyLower.includes('price')) {
+          return f.key.includes('amount') || f.key.includes('price') || f.key.includes('cents');
+        }
+        if (keyLower.includes('body') || keyLower.includes('text') || keyLower.includes('message') || keyLower.includes('content')) {
+          return f.key.includes('body') || f.key.includes('text') || f.key.includes('summary') || f.key.includes('message') || f.key.includes('content');
+        }
+        if (keyLower.includes('subject') || keyLower.includes('title')) {
+          return f.key.includes('subject') || f.key.includes('title') || f.key.includes('name');
+        }
+        return f.label.includes(labelLower);
+      });
+
+      if (match) {
+        updatedConfig[input.key] = `{{${match.path}}}`;
+        count++;
+      }
+    });
+
+    setConfig(updatedConfig);
+    setFieldMapping(updatedConfig);
+    toast.success(`🤖 Auto-Mapped ${count} Fields!`, {
+      description: `Populated template variables using AI Data Bridge synonym matching.`,
+    });
+  };
+
   return (
     <div className="fixed inset-y-0 right-0 w-[560px] bg-[#0d1117] border-l border-white/10 shadow-2xl flex flex-col z-50 text-xs">
       {/* Drawer Header */}
@@ -440,9 +496,37 @@ export function StepSetupDrawer({
                   <span className="font-bold text-white text-xs uppercase tracking-wider">
                     {currentManifest?.name || connectorId} Inputs ({inputFieldKeys.length})
                   </span>
-                  <span className="text-[10px] text-indigo-400 flex items-center gap-1">
-                    <Sparkles size={11} /> Click "Insert Step Data" to map variables
+                  <span className="text-[10px] text-indigo-400 flex items-center gap-1 font-semibold">
+                    <Sparkles size={11} className="text-amber-300 animate-pulse" /> AI Data Bridge Active
                   </span>
+                </div>
+
+                {/* ✨ AI Data Bridge Smart Mapping Banner & Auto-Map Action */}
+                <div className="p-3.5 bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-black/40 border border-indigo-500/30 rounded-xl flex flex-col gap-3 shadow-md">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex-shrink-0 mt-0.5">
+                      <Sparkles size={16} className="text-amber-300" />
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="font-bold text-white flex items-center gap-1.5">
+                        <span>Automatic AI Data Bridge Enabled</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-mono">
+                          ZERO-CODE MAPPING
+                        </span>
+                      </span>
+                      <p className="text-gray-300 text-[11px] leading-relaxed">
+                        You can manually enter template paths (e.g. <code className="text-indigo-300 font-mono">{'{{nodes.step1.output.email}}'}</code>) or click below to let AI Data Bridge auto-populate input fields.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleAutoMapFields}
+                    className="w-full py-2 px-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 shadow-lg transition-all border border-indigo-400/30"
+                  >
+                    <Sparkles size={14} className="text-amber-300 animate-pulse" />
+                    <span>🤖 Auto-Map Fields with AI Data Bridge</span>
+                  </button>
                 </div>
 
                 {/* Dynamically Rendered Input Fields */}

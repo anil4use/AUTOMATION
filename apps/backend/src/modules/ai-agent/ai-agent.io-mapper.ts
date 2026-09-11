@@ -113,6 +113,66 @@ export interface IOMapResult {
   fieldsNeedingReview: string[];
 }
 
+export async function autoMapNodeInputsAsync(
+  targetNodeId: string,
+  connectorId: string,
+  operationId: string,
+  upstreamNodes: Array<{ id: string; connectorId: string; operationId: string }>,
+  existingConfig: Record<string, any> = {}
+): Promise<IOMapResult> {
+  const targetManifest = manifestRegistry.getManifest(connectorId);
+  if (!targetManifest) return { fieldMapping: {}, fieldsNeedingReview: [] };
+
+  const operations = [...(targetManifest.triggers || []), ...(targetManifest.actions || [])];
+  const targetOp = operations.find((o) => o.id === operationId);
+  if (!targetOp) return { fieldMapping: {}, fieldsNeedingReview: [] };
+
+  const fieldMapping: Record<string, string> = {};
+  const fieldsNeedingReview: string[] = [];
+
+  try {
+    const { SemanticFieldMatcher } = require('@automation/data-mapper');
+
+    for (const u of upstreamNodes) {
+      const uManifest = manifestRegistry.getManifest(u.connectorId);
+      const uOps = [...(uManifest?.triggers || []), ...(uManifest?.actions || [])];
+      const uOp = uOps.find((o) => o.id === u.operationId);
+      const sourceOutputs = (uOp?.outputs || []).map((out) => ({ key: out.key, label: out.label, type: out.type }));
+      const targetInputs = (targetOp?.inputs || []).map((inp) => ({ key: inp.key, label: inp.label, type: inp.type }));
+
+      const matches = await SemanticFieldMatcher.findMatches(
+        u.connectorId,
+        u.operationId,
+        connectorId,
+        operationId,
+        sourceOutputs,
+        targetInputs
+      );
+
+      for (const match of matches) {
+        if (!fieldMapping[match.targetKey]) {
+          fieldMapping[match.targetKey] = `{{nodes.${u.id}.output.${match.sourceKey}}}`;
+          if (match.confidence < 0.95) {
+            fieldsNeedingReview.push(`${targetNodeId}.${match.targetKey}`);
+          }
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn('[autoMapNodeInputsAsync] SemanticFieldMatcher warning, falling back to local matcher:', err.message);
+  }
+
+  // Fallback / sync check for any missing inputs
+  const syncResult = autoMapNodeInputs(targetNodeId, connectorId, operationId, upstreamNodes, existingConfig);
+  for (const [k, v] of Object.entries(syncResult.fieldMapping)) {
+    if (!fieldMapping[k]) {
+      fieldMapping[k] = v;
+    }
+  }
+
+  return { fieldMapping, fieldsNeedingReview: Array.from(new Set([...fieldsNeedingReview, ...syncResult.fieldsNeedingReview])) };
+}
+
 export function autoMapNodeInputs(
   targetNodeId: string,
   connectorId: string,
@@ -142,7 +202,6 @@ export function autoMapNodeInputs(
 
   for (const input of targetOp.inputs || []) {
     const existingVal = existingConfig[input.key] || '';
-    // System variables guard: {{sys.*}} is always Tier 1 (1.0), never flag for review
     if (typeof existingVal === 'string' && existingVal.includes('{{sys.')) {
       continue;
     }
@@ -151,12 +210,10 @@ export function autoMapNodeInputs(
     if (match && match.confidence >= 0.65) {
       fieldMapping[input.key] = match.mappingExpression;
 
-      // Tier 2 (0.8) & Tier 3 (0.65) require user review flag
       if (match.confidence < 1.0) {
         fieldsNeedingReview.push(`${targetNodeId}.${input.key}`);
       }
     } else {
-      // Tier 4 (0.0): No match. Flag required empty fields for user review
       if (input.required && !existingVal) {
         fieldsNeedingReview.push(`${targetNodeId}.${input.key}`);
       }

@@ -38,6 +38,11 @@ router.post('/test-connection', ConnectorController.testRawConnectionConfig as a
 router.post('/connections/:connectionId/test', ConnectorController.testSavedConnection as any);
 router.put('/connections/:connectionId', ConnectorController.updateConnection as any);
 
+// Smart Mapping & AI Data Bridge Knowledge Collections
+router.get('/intelligence/field-catalog', ConnectorController.getFieldCatalog as any);
+router.get('/intelligence/coercion-rules', ConnectorController.getCoercionRules as any);
+router.get('/intelligence/synonym-groups', ConnectorController.getSynonymGroups as any);
+
 // Dynamic Dropdown Choices API (Zapier.md Topics 21, 22)
 router.get('/:appId/choices/:actionId', ConnectorChoicesController.getDynamicChoices as any);
 

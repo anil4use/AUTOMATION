@@ -1,5 +1,51 @@
 export type AuthType = 'oauth2' | 'api_key' | 'webhook' | 'basic' | 'none';
 
+// ─── AI Data Bridge — Semantic Role & Format ──────────────────────────────────
+//
+// These two types are used by the AI Data Bridge and deterministic safety layer
+// to understand the MEANING of a field across all 70+ connectors so it can
+// automatically transform, coerce, and sanitize values without manual mapping.
+//
+// ALL fields are optional — existing connectors work without changes.
+
+/** Semantic role describes WHAT a field represents across all connectors */
+export type FieldSemanticRole =
+  | 'email_address'    // any email field: gmail.from, hubspot.email, stripe.customerEmail
+  | 'phone_number'     // any phone: whatsapp.phone, twilio.to — E.164 format required
+  | 'full_name'        // combined name: "John Doe" — may need firstName/lastName split
+  | 'first_name'       // first name only: hubspot.firstname, salesforce.firstName
+  | 'last_name'        // last name only: hubspot.lastname, salesforce.lastName
+  | 'message_content'  // main text body: slack.text, telegram.message_text, gmail.bodyPlain
+  | 'title_subject'    // title/subject: github.title, jira.summary, gmail.subject
+  | 'description_body' // longer description: jira.description, github.body
+  | 'url_link'         // any URL: github.issueUrl, google-drive.fileUrl, notion.pageUrl
+  | 'timestamp'        // date/time: gmail.date, stripe.created, hubspot.createdate
+  | 'amount_money'     // monetary amount: stripe.amount (cents), hubspot.amount (dollars)
+  | 'currency_code'    // ISO 4217: "usd", "eur", "inr"
+  | 'unique_id'        // system ID: orderId, messageId, chargeId, vid, leadId
+  | 'status'           // state value: dealstage, issueType, deliveryStatus
+  | 'tags_list'        // tags/labels: comma-separated or array
+  | 'file_content'     // binary or base64 file: google-drive.fileContent
+  | 'json_data'        // arbitrary JSON blob
+  | 'count_number'     // numeric count/quantity
+  | 'channel_id';      // messaging channel: slack.channel, discord.webhookUrl
+
+/** Format specifies HOW the value is encoded — used for coercion rules */
+export type FieldFormat =
+  | 'email'              // RFC 5321 email string
+  | 'phone_e164'         // "+14155552671" E.164 format
+  | 'url'                // "https://..." full URL
+  | 'iso_date'           // "2024-01-15T10:30:00.000Z" ISO 8601
+  | 'unix_timestamp'     // 1699900000 (seconds since epoch, integer)
+  | 'unix_timestamp_ms'  // 1699900000000 (milliseconds, integer)
+  | 'currency_cents'     // 4999 (Stripe-style, integer)
+  | 'currency_dollars'   // 49.99 (float string or number)
+  | 'json_string'        // '{"key":"value"}' — JSON encoded as string
+  | 'markdown'           // Markdown formatted text
+  | 'html'               // HTML formatted text
+  | 'csv'                // comma-separated values string
+  | 'base64';            // base64-encoded data
+
 // ─── Field Schema ──────────────────────────────────────────────────────────────
 
 export interface ConnectorFieldSchema {
@@ -10,6 +56,11 @@ export interface ConnectorFieldSchema {
   options?: Array<{ label: string; value: string }>;
   description?: string;
   placeholder?: string;
+  // ── AI Data Bridge metadata (optional — backward compatible) ──
+  /** Semantic role for cross-connector automatic field mapping */
+  semanticRole?: FieldSemanticRole;
+  /** Format hint — used by TypeCoercer for automatic type conversion */
+  format?: FieldFormat;
   // Dynamic choices — dropdown populated via live API call at config time
   hasDynamicChoices?: boolean;
   choicesFieldId?: string;        // fieldId passed to /connectors/:appId/choices/:fieldId

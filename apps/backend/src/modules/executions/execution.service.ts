@@ -11,4 +11,14 @@ export class ExecutionService {
     if (!log) throw new AppError('Execution log not found', 404);
     return log;
   }
+
+  static async getStepLog(executionId: string, stepId: string, orgId: string) {
+    const step = await ExecutionRepository.findStepLog(executionId, stepId, orgId);
+    if (!step) throw new AppError('Step log not found', 404);
+    return step;
+  }
+
+  static async getStats(orgId: string) {
+    return await ExecutionRepository.getStats(orgId);
+  }
 }

@@ -1265,12 +1265,26 @@ function getDynamicWizardTabs(manifest: any) {
                 )}
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-white">
                     Configure {manifest.name} ({currentOperation?.label})
                   </span>
-                  <Badge variant="active">DYNAMIC FIELDS</Badge>
+                  <Badge variant="active" className="flex items-center gap-1">
+                    <Sparkles size={11} className="text-amber-300 animate-pulse" />
+                    AI BRIDGE ACTIVE
+                  </Badge>
+                </div>
+
+                {/* AI Data Bridge Auto-Mapping Informational Banner */}
+                <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-bgSecondary border border-indigo-500/30 flex items-start gap-2.5 shadow-sm">
+                  <Sparkles size={16} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-0.5 text-[11px]">
+                    <span className="font-bold text-white">Automatic AI Data Bridge Enabled</span>
+                    <p className="text-slate-300 leading-normal">
+                      Fields left empty below will be automatically mapped, type-coerced (cents ↔ dollars, timestamps), and sanitized at runtime from upstream step outputs.
+                    </p>
+                  </div>
                 </div>
 
                 {currentOperation && currentOperation.fields.length > 0 ? (

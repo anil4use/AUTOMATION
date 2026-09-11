@@ -76,3 +76,13 @@ export function emitAuthExpired(orgId: string, payload: any) {
   }
 }
 
+export class SocketService {
+  static emitToOrg(orgId: string, event: string, payload: any) {
+    if (io) {
+      io.to(`org_${orgId}`).emit(event, payload);
+    } else {
+      emitExecutionUpdate(orgId, { event, payload });
+    }
+  }
+}
+

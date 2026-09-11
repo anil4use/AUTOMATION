@@ -24,4 +24,12 @@ export * from './models/connector-auth.model';
 export * from './models/connector-feature.model';
 export * from './models/connector-test.model';
 
+// Smart Data Mapping & AI Bridge — Knowledge Base Collections
+// These are database-driven so adding 1000+ connectors never requires code changes.
+// See: docs/features/11_database_collections.md
+export * from './models/connector-field-catalog.model';
+export * from './models/connector-coercion-rules.model';
+export * from './models/connector-synonym-groups.model';
+
+
 

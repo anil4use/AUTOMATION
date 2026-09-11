@@ -2,7 +2,14 @@
   "extends": "../../packages/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "baseUrl": ".",
+    "paths": {
+      "@automation/database": ["../../packages/database/dist"],
+      "@automation/data-mapper": ["../../packages/data-mapper/dist"],
+      "@automation/ai-data-bridge": ["../../packages/ai-data-bridge/dist"],
+      "@automation/connector-sdk": ["../../packages/connector-sdk/dist"],
+      "@automation/shared-types": ["../../packages/shared-types/dist"]
+    }
   },
   "include": ["src/**/*"]
 }

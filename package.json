@@ -15,7 +15,11 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean && rimraf node_modules",
     "connectors:seed": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-connectors-v2.ts",
-    "connectors:migrate:v2": "npm run connectors:seed"
+    "connectors:migrate:v2": "npm run connectors:seed",
+    "seed:field-catalog": "npm run seed:field-catalog --workspace=@automation/database",
+    "seed:coercion-rules": "npm run seed:coercion-rules --workspace=@automation/database",
+    "seed:synonym-groups": "npm run seed:synonym-groups --workspace=@automation/database",
+    "seed:all": "npm run seed:all --workspace=@automation/database"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

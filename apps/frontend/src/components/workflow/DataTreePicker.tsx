@@ -8,6 +8,7 @@ interface DataField {
   path: string; // e.g. "trigger.email" or "step_1.output.id"
   sampleValue?: any;
   type?: string;
+  semanticRole?: string;
 }
 
 interface StepOutputSource {
@@ -21,6 +22,28 @@ interface DataTreePickerProps {
   sources: StepOutputSource[];
   onSelectVariable: (variableExpression: string) => void;
   onClose?: () => void;
+}
+
+function getSemanticRoleBadge(field: DataField) {
+  const role = field.semanticRole?.toLowerCase() || '';
+  const key = field.key.toLowerCase();
+  
+  if (role === 'email_address' || key.includes('email') || key.includes('recipient') || key.includes('to')) {
+    return <span className="text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">📧 email</span>;
+  }
+  if (role === 'amount_money' || key.includes('amount') || key.includes('price') || key.includes('cents') || key.includes('cost') || key.includes('total')) {
+    return <span className="text-[9px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">💵 money</span>;
+  }
+  if (role === 'timestamp' || key.includes('time') || key.includes('date') || key.includes('createdat') || key.includes('updatedat')) {
+    return <span className="text-[9px] bg-purple-500/15 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">📅 date/time</span>;
+  }
+  if (role === 'phone_number' || key.includes('phone') || key.includes('mobile') || key.includes('sms')) {
+    return <span className="text-[9px] bg-sky-500/15 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">📱 phone</span>;
+  }
+  if (role === 'url' || key.includes('url') || key.includes('link') || key.includes('website')) {
+    return <span className="text-[9px] bg-blue-500/15 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">🔗 url</span>;
+  }
+  return null;
 }
 
 export function DataTreePicker({ sources, onSelectVariable, onClose }: DataTreePickerProps) {
@@ -98,6 +121,7 @@ export function DataTreePicker({ sources, onSelectVariable, onClose }: DataTreeP
                   <div className="p-2 space-y-1 bg-[#0b0f19]/60 border-t border-white/5">
                     {source.fields.map((field) => {
                       const expr = `{{${field.path}}}`;
+                      const badge = getSemanticRoleBadge(field);
                       return (
                         <button
                           key={field.path}
@@ -110,6 +134,7 @@ export function DataTreePicker({ sources, onSelectVariable, onClose }: DataTreeP
                             <span className="text-[10px] font-mono text-gray-500 group-hover:text-indigo-300 truncate">
                               {field.path}
                             </span>
+                            {badge}
                           </div>
                           {field.sampleValue !== undefined && (
                             <div className="flex items-center gap-1.5 flex-shrink-0">

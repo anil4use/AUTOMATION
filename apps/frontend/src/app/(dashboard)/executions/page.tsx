@@ -11,20 +11,68 @@ import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import { useUserRole } from '@/context/UserRoleContext';
 
+export interface StepLog {
+  stepId: string;
+  stepName: string;
+  connectorId: string;
+  operationId: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED' | string;
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  rawInput?: Record<string, any>;
+  resolvedInput?: Record<string, any>;
+  aiBridge?: {
+    sourceConnectorId?: string;
+    sourceOperationId?: string;
+    decisionSource?: 'USER_OVERRIDE' | 'DETERMINISTIC' | 'CACHE_HIT' | 'AI_GENERATED' | 'FALLBACK';
+    coercionsApplied?: Array<{
+      field: string;
+      ruleId?: string;
+      originalValue: any;
+      coercedValue: any;
+    }>;
+    confidence?: number;
+    reasoning?: string;
+    fieldMapping?: Record<string, any>;
+  };
+  outputPayload?: Record<string, any>;
+  errorDetails?: {
+    message: string;
+    code?: string;
+    stack?: string;
+  };
+}
+
 export interface ExecutionLog {
   _id: string;
   jobId?: string;
+  executionId?: string;
   workflowId?: string;
   workflowName?: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | string;
-  duration?: string;
+  durationMs?: number;
   startedAt?: string;
   completedAt?: string;
   createdAt?: string;
-  steps?: any[];
+  steps?: StepLog[];
   nodeResults?: Record<string, any>;
   triggerPayload?: Record<string, any>;
+  metrics?: {
+    aiBridgeInvocations?: number;
+    totalCoercionsCount?: number;
+  };
   error?: string;
+}
+
+export interface ExecutionStats {
+  totalExecutions: number;
+  successfulExecutions: number;
+  failedExecutions: number;
+  successRate: number;
+  avgDurationMs: number;
+  aiInvocations: number;
+  totalCoercions: number;
 }
 
 function formatTime(isoString?: string) {
@@ -45,7 +93,11 @@ function formatTime(isoString?: string) {
   }
 }
 
-function calculateDuration(start?: string, end?: string): string {
+function calculateDuration(start?: string, end?: string, ms?: number): string {
+  if (ms !== undefined && ms > 0) {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
   if (!start) return '—';
   try {
     const startTime = new Date(start).getTime();
@@ -61,6 +113,7 @@ function calculateDuration(start?: string, end?: string): string {
 export default function ExecutionsPage() {
   const { user } = useUserRole();
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
+  const [stats, setStats] = useState<ExecutionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -70,7 +123,7 @@ export default function ExecutionsPage() {
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({});
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [activeInspectorTab, setActiveInspectorTab] = useState<'steps' | 'json' | 'payload'>('steps');
+  const [activeInspectorTab, setActiveInspectorTab] = useState<'steps' | 'aibridge' | 'json' | 'payload'>('steps');
 
   const fetchLogs = useCallback(async (isSilent = false) => {
     try {
@@ -79,10 +132,15 @@ export default function ExecutionsPage() {
       const params: any = {};
       if (filterStatus !== 'all') params.status = filterStatus;
 
-      const [logsRes, wfRes] = await Promise.all([
+      const [logsRes, statsRes, wfRes] = await Promise.all([
         apiClient.get('/v1/executions', { params }),
+        apiClient.get('/v1/executions/stats').catch(() => ({ data: { data: null } })),
         apiClient.get('/v1/workflows').catch(() => ({ data: { data: [] } })),
       ]);
+
+      if (statsRes.data?.data) {
+        setStats(statsRes.data.data);
+      }
 
       const wfList = wfRes.data?.data || [];
       const map: Record<string, string> = {};
@@ -251,7 +309,7 @@ export default function ExecutionsPage() {
       </div>
 
       {/* 📊 Live Metrics Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Card 1: Total Executions */}
         <div className="bg-bgSecondary/80 p-4 rounded-xl border border-borderColor flex flex-col gap-1 shadow-md hover:border-purple-500/40 transition-all">
           <div className="flex items-center justify-between text-textMuted text-xs font-medium">
@@ -259,7 +317,7 @@ export default function ExecutionsPage() {
             <Database size={15} className="text-accentPurple" />
           </div>
           <div className="text-2xl font-bold text-white font-mono mt-1">
-            {totalCount}
+            {stats ? stats.totalExecutions : totalCount}
           </div>
           <div className="text-[11px] text-textMuted flex items-center gap-1 mt-0.5">
             <span className="text-emerald-400 font-semibold">MongoDB Atlas</span> live records
@@ -273,36 +331,49 @@ export default function ExecutionsPage() {
             <CheckCircle2 size={15} className="text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-emerald-400 font-mono mt-1">
-            {successRate}%
+            {stats ? `${stats.successRate}%` : `${successRate}%`}
           </div>
           <div className="text-[11px] text-textMuted flex items-center gap-1 mt-0.5">
             <span className="text-white font-semibold">{completedCount}</span> of {totalCount} completed
           </div>
         </div>
 
-        {/* Card 3: Active & Running */}
+        {/* Card 3: AI Data Bridge */}
         <div className="bg-bgSecondary/80 p-4 rounded-xl border border-borderColor flex flex-col gap-1 shadow-md hover:border-indigo-500/40 transition-all">
           <div className="flex items-center justify-between text-textMuted text-xs font-medium">
-            <span>Active Worker Jobs</span>
-            <Zap size={15} className="text-amber-400" />
+            <span>AI Bridge Mapping</span>
+            <Sparkles size={15} className="text-indigo-400" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono mt-1 flex items-center gap-2">
-            <span>{runningCount}</span>
-            {runningCount > 0 && <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />}
+          <div className="text-2xl font-bold text-indigo-300 font-mono mt-1">
+            {stats ? stats.aiInvocations : 0}
           </div>
           <div className="text-[11px] text-textMuted flex items-center gap-1 mt-0.5">
-            BullMQ Queue worker active
+            Auto App A → B transforms
           </div>
         </div>
 
-        {/* Card 4: Failed Runs */}
+        {/* Card 4: Type Coercions */}
+        <div className="bg-bgSecondary/80 p-4 rounded-xl border border-borderColor flex flex-col gap-1 shadow-md hover:border-amber-500/40 transition-all">
+          <div className="flex items-center justify-between text-textMuted text-xs font-medium">
+            <span>Type Coercions</span>
+            <Zap size={15} className="text-amber-400" />
+          </div>
+          <div className="text-2xl font-bold text-amber-300 font-mono mt-1">
+            {stats ? stats.totalCoercions : 0}
+          </div>
+          <div className="text-[11px] text-textMuted flex items-center gap-1 mt-0.5">
+            Zero-loss format conversions
+          </div>
+        </div>
+
+        {/* Card 5: Failed Runs */}
         <div className="bg-bgSecondary/80 p-4 rounded-xl border border-borderColor flex flex-col gap-1 shadow-md hover:border-red-500/40 transition-all">
           <div className="flex items-center justify-between text-textMuted text-xs font-medium">
             <span>Failed Runs</span>
             <AlertCircle size={15} className="text-red-400" />
           </div>
           <div className="text-2xl font-bold text-red-400 font-mono mt-1">
-            {failedCount}
+            {stats ? stats.failedExecutions : failedCount}
           </div>
           <div className="text-[11px] text-textMuted flex items-center gap-1 mt-0.5">
             {failedCount === 0 ? 'Zero pipeline errors' : 'Requires inspection'}
@@ -547,7 +618,7 @@ export default function ExecutionsPage() {
             </div>
 
             {/* Modal Inspector Sub-Nav Tabs */}
-            <div className="flex items-center gap-2 px-5 py-2.5 bg-black/40 border-b border-borderColor text-xs font-semibold">
+            <div className="flex items-center gap-2 px-5 py-2.5 bg-black/40 border-b border-borderColor text-xs font-semibold overflow-x-auto">
               <button
                 onClick={() => setActiveInspectorTab('steps')}
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
@@ -557,8 +628,21 @@ export default function ExecutionsPage() {
                 }`}
               >
                 <Layers size={13} />
-                <span>Step Execution Flow</span>
+                <span>Step Execution Flow ({selectedLog.steps?.length || Object.keys(selectedLog.nodeResults || {}).length})</span>
               </button>
+
+              <button
+                onClick={() => setActiveInspectorTab('aibridge')}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeInspectorTab === 'aibridge'
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-textMuted hover:text-white'
+                }`}
+              >
+                <Sparkles size={13} className="text-amber-300" />
+                <span>AI Bridge &amp; Coercions</span>
+              </button>
+
               <button
                 onClick={() => setActiveInspectorTab('json')}
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
@@ -589,8 +673,78 @@ export default function ExecutionsPage() {
               {activeInspectorTab === 'steps' && (
                 <div className="flex flex-col gap-3">
                   {(() => {
+                    const stepsList = selectedLog.steps && selectedLog.steps.length > 0 ? selectedLog.steps : null;
                     const nodeRes = selectedLog.nodeResults || {};
                     const stepEntries = Object.entries(nodeRes);
+
+                    if (stepsList) {
+                      return stepsList.map((step: StepLog, idx: number) => {
+                        const isSuccess = step.status === 'COMPLETED' || step.status === 'completed';
+                        const isSkipped = step.status === 'SKIPPED' || step.status === 'skipped';
+                        return (
+                          <div
+                            key={step.stepId || idx}
+                            className="p-4 bg-white/[0.02] border border-borderColor rounded-xl flex flex-col gap-3"
+                          >
+                            <div className="flex items-center justify-between font-bold border-b border-borderColor/40 pb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 flex items-center justify-center text-[10px]">
+                                  {idx + 1}
+                                </span>
+                                <span className={isSuccess ? 'text-emerald-400' : isSkipped ? 'text-amber-400' : 'text-red-400'}>
+                                  {step.stepName || step.stepId} ({step.connectorId} → {step.operationId})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px]">
+                                {step.durationMs !== undefined && (
+                                  <span className="text-slate-400 flex items-center gap-1">
+                                    <Clock size={11} /> {step.durationMs}ms
+                                  </span>
+                                )}
+                                <span className={isSuccess ? 'text-emerald-400' : isSkipped ? 'text-amber-400' : 'text-red-400'}>
+                                  {isSuccess ? '🟢 COMPLETED' : isSkipped ? '🟡 SKIPPED' : '🔴 FAILED'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* AI Bridge Summary Pill */}
+                            {step.aiBridge && (
+                              <div className="flex items-center justify-between p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-[11px] text-indigo-300">
+                                <div className="flex items-center gap-1.5">
+                                  <Sparkles size={13} className="text-amber-300" />
+                                  <span>AI Bridge Source: <strong>{step.aiBridge.decisionSource}</strong></span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px]">
+                                  <span>Confidence: {Math.round((step.aiBridge.confidence || 0.9) * 100)}%</span>
+                                  {step.aiBridge.coercionsApplied && step.aiBridge.coercionsApplied.length > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200">
+                                      {step.aiBridge.coercionsApplied.length} Coercions
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Output Data */}
+                            {step.outputPayload && (
+                              <div>
+                                <div className="text-[10px] text-slate-400 font-sans mb-1">Output Data:</div>
+                                <pre className="p-3 bg-black/60 border border-borderColor/60 rounded-lg text-[11px] text-emerald-300 overflow-x-auto max-h-48 leading-relaxed">
+                                  {JSON.stringify(step.outputPayload, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+
+                            {/* Error Message */}
+                            {step.errorDetails && (
+                              <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 font-semibold text-[11px]">
+                                Error: {step.errorDetails.message}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    }
 
                     if (stepEntries.length === 0) {
                       return (
@@ -635,6 +789,73 @@ export default function ExecutionsPage() {
                         </div>
                       );
                     });
+                  })()}
+                </div>
+              )}
+
+              {/* TAB 2: AI Bridge & Coercions */}
+              {activeInspectorTab === 'aibridge' && (
+                <div className="flex flex-col gap-4">
+                  {(() => {
+                    const stepsWithBridge = (selectedLog.steps || []).filter(s => s.aiBridge);
+
+                    if (stepsWithBridge.length === 0) {
+                      return (
+                        <div className="p-6 text-center text-textMuted bg-white/[0.02] rounded-xl border border-borderColor flex flex-col items-center gap-2">
+                          <Sparkles size={24} className="text-amber-400" />
+                          <span>Deterministic direct mapping applied or trigger step.</span>
+                          <span className="text-[11px] text-slate-500">Run multi-step workflows across Gmail, Stripe, Slack, etc. to trigger automatic AI Data Bridge transformations.</span>
+                        </div>
+                      );
+                    }
+
+                    return stepsWithBridge.map((step, idx) => (
+                      <div key={idx} className="p-4 bg-black/60 border border-indigo-500/40 rounded-xl flex flex-col gap-3">
+                        <div className="flex items-center justify-between border-b border-indigo-500/30 pb-2">
+                          <span className="text-indigo-300 font-bold flex items-center gap-1.5">
+                            <Sparkles size={14} className="text-amber-400" />
+                            {step.stepName || step.stepId} ({step.connectorId})
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                            Source: {step.aiBridge?.decisionSource}
+                          </span>
+                        </div>
+
+                        {step.aiBridge?.reasoning && (
+                          <div className="p-2.5 rounded-lg bg-white/5 text-[11px] text-slate-300 font-sans leading-relaxed">
+                            <strong>Reasoning:</strong> {step.aiBridge.reasoning}
+                          </div>
+                        )}
+
+                        {step.aiBridge?.coercionsApplied && step.aiBridge.coercionsApplied.length > 0 && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[11px] text-amber-300 font-semibold">Automatic Type &amp; Format Coercions Applied:</span>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-[11px] border border-borderColor rounded-lg overflow-hidden">
+                                <thead className="bg-white/5 text-slate-400">
+                                  <tr>
+                                    <th className="p-2">Target Field</th>
+                                    <th className="p-2">Rule ID</th>
+                                    <th className="p-2">Original Value</th>
+                                    <th className="p-2">Coerced Output</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {step.aiBridge.coercionsApplied.map((c, cIdx) => (
+                                    <tr key={cIdx} className="border-t border-borderColor/40">
+                                      <td className="p-2 text-indigo-300 font-bold">{c.field}</td>
+                                      <td className="p-2 text-amber-400">{c.ruleId || 'auto_coerce'}</td>
+                                      <td className="p-2 text-slate-400">{JSON.stringify(c.originalValue)}</td>
+                                      <td className="p-2 text-emerald-300">{JSON.stringify(c.coercedValue)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ));
                   })()}
                 </div>
               )}

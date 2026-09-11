@@ -230,4 +230,34 @@ export class ConnectorController {
       next(err);
     }
   }
+
+  static async getFieldCatalog(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { ConnectorFieldCatalogModel } = await import('@automation/database');
+      const catalog = await ConnectorFieldCatalogModel.find().lean();
+      return sendResponse(res, 200, true, catalog);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getCoercionRules(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { ConnectorCoercionRuleModel } = await import('@automation/database');
+      const rules = await ConnectorCoercionRuleModel.find().lean();
+      return sendResponse(res, 200, true, rules);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getSynonymGroups(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { ConnectorSynonymGroupModel } = await import('@automation/database');
+      const groups = await ConnectorSynonymGroupModel.find().lean();
+      return sendResponse(res, 200, true, groups);
+    } catch (err) {
+      next(err);
+    }
+  }
 }

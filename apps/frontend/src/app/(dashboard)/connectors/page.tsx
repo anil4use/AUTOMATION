@@ -15,6 +15,7 @@ import { DatabaseConnectModal, ENVIRONMENT_COLORS } from '@/components/connector
 import { MultiAuthModal } from '@/components/connectors/MultiAuthModal';
 import { ConnectorSetupGuideDrawer } from '@/components/connectors/ConnectorSetupGuideDrawer';
 import { DynamicActionTestRunnerDrawer } from '@/components/connectors/DynamicActionTestRunnerDrawer';
+import { FieldCatalogInspectorModal } from '@/components/connectors/FieldCatalogInspectorModal';
 import { BookOpen, Terminal } from 'lucide-react';
 import { getSocketClient } from '@/lib/socket-client';
 import { getConnectorBrandSpec } from '@/lib/connector-brand-utils';
@@ -123,6 +124,9 @@ export default function ConnectorsPage() {
   // Delete Confirmation Modal State
   const [deleteConfirmConn, setDeleteConfirmConn] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Field Catalog & Intelligence Inspector Modal
+  const [isFieldCatalogModalOpen, setIsFieldCatalogModalOpen] = useState(false);
 
   // General API Key Modal
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -735,6 +739,14 @@ export default function ConnectorsPage() {
           </Text>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsFieldCatalogModalOpen(true)}
+            className="px-3.5 py-2 text-xs flex items-center gap-1.5 font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md"
+            title="Inspect seeded field catalog, coercion rules & synonym groups"
+          >
+            <Sparkles size={14} className="text-amber-300 animate-pulse" />
+            <span>Inspect AI Field Catalog</span>
+          </button>
           <button
             onClick={handleCleanMockConnections}
             disabled={loadingConnections}
@@ -1577,6 +1589,12 @@ export default function ConnectorsPage() {
         connectorName={testRunnerConnector?.name}
         isOpen={!!testRunnerConnector}
         onClose={() => setTestRunnerConnector(null)}
+      />
+
+      {/* Field Catalog & Intelligence Inspector Modal */}
+      <FieldCatalogInspectorModal
+        isOpen={isFieldCatalogModalOpen}
+        onClose={() => setIsFieldCatalogModalOpen(false)}
       />
     </div>
   );

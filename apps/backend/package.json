@@ -12,6 +12,7 @@
   "dependencies": {
     "@automation/connector-sdk": "*",
     "@automation/database": "*",
+    "@automation/ai-data-bridge": "*",
     "@automation/shared-types": "*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/mcp": "^0.0.80",

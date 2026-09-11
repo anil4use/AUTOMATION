@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@automation/shared-types": "*",
+    "@automation/database": "workspace:*",
+    "@automation/data-mapper": "workspace:*",
+    "@automation/ai-data-bridge": "workspace:*",
     "@aws-sdk/client-dynamodb": "^3.500.0",
     "@aws-sdk/lib-dynamodb": "^3.500.0",
     "@elastic/elasticsearch": "^8.12.0",
