@@ -200,7 +200,7 @@ if (require.main === module) {
     verbose:   args.includes('--verbose'),
   };
 
-  const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/automations';
+  const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/automation_platform';
 
   mongoose.connect(MONGO_URI)
     .then(() => {

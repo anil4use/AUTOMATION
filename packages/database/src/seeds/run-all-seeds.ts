@@ -1,7 +1,12 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import path from 'path';
 import { seedFieldCatalog } from './seed-field-catalog';
 import { seedCoercionRules } from './seed-coercion-rules';
 import { seedSynonymGroups } from './seed-synonym-groups';
+
+dotenv.config({ path: path.join(__dirname, '../../../../.env') });
+dotenv.config({ path: path.join(__dirname, '../../../../apps/backend/.env') });
 
 export async function runAllSeeds(options: { connector?: string; force?: boolean; dryRun?: boolean } = {}) {
   console.log('🚀 Starting AutoFlow Smart Mapping Database Seed...');
@@ -19,7 +24,8 @@ export async function runAllSeeds(options: { connector?: string; force?: boolean
 }
 
 if (require.main === module) {
-  const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoflow';
+  const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/automation_platform';
+  console.log(`[SeedRunner] Connecting to MongoDB Database: "${MONGO_URI}"...`);
   mongoose.connect(MONGO_URI).then(async () => {
     const isDryRun = process.argv.includes('--dry-run');
     const isForce = process.argv.includes('--force');

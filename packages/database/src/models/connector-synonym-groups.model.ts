@@ -15,9 +15,11 @@ import { Schema, model, Document } from 'mongoose';
  * Adding new synonyms = update a document. Zero code change.
  */
 export interface IConnectorSynonymGroup extends Document {
-  groupName:    string;    // "message_content" — matches FieldSemanticRole
-  semanticRole: string;    // the role this group serves
-  synonyms:     string[];  // all field key names that mean this concept
+  groupName?:   string;
+  canonicalRole?: string;
+  semanticRole?: string;
+  name?:         string;
+  synonyms:     string[];
   description:  string;
   enabled:      boolean;
   createdAt:    Date;
@@ -26,8 +28,10 @@ export interface IConnectorSynonymGroup extends Document {
 
 const ConnectorSynonymGroupSchema = new Schema<IConnectorSynonymGroup>(
   {
-    groupName:    { type: String, required: true, unique: true },
-    semanticRole: { type: String, required: true, index: true },
+    groupName:    { type: String },
+    canonicalRole: { type: String, index: true },
+    semanticRole: { type: String, index: true },
+    name:         { type: String },
     synonyms:     { type: [String], default: [] },
     description:  { type: String, default: '' },
     enabled:      { type: Boolean, default: true, index: true },

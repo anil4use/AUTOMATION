@@ -125,10 +125,20 @@ export async function seedSynonymGroups(options: { dryRun?: boolean } = {}) {
 
   let count = 0;
   for (const group of UNIVERSAL_SYNONYM_GROUPS) {
+    const docData = {
+      groupName: group.canonicalRole,
+      canonicalRole: group.canonicalRole,
+      semanticRole: group.canonicalRole,
+      name: group.name,
+      synonyms: group.synonyms,
+      description: group.description,
+      enabled: group.enabled,
+      updatedAt: new Date(),
+    };
     await ConnectorSynonymGroupsModel.findOneAndUpdate(
-      { canonicalRole: group.canonicalRole },
-      { $set: { ...group, updatedAt: new Date() } },
-      { upsert: true, new: true }
+      { groupName: group.canonicalRole },
+      { $set: docData },
+      { upsert: true, new: true, strict: false }
     );
     count++;
   }
@@ -137,7 +147,7 @@ export async function seedSynonymGroups(options: { dryRun?: boolean } = {}) {
 
 // Run directly if called as a script
 if (require.main === module) {
-  const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoflow';
+  const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/automation_platform';
   mongoose.connect(MONGO_URI).then(async () => {
     await seedSynonymGroups({ dryRun: process.argv.includes('--dry-run') });
     await mongoose.disconnect();

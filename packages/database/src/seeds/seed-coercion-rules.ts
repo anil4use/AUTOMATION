@@ -222,7 +222,7 @@ export async function seedCoercionRules(options: { dryRun?: boolean } = {}) {
 
 // Run directly if called as a script
 if (require.main === module) {
-  const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoflow';
+  const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/automation_platform';
   mongoose.connect(MONGO_URI).then(async () => {
     await seedCoercionRules({ dryRun: process.argv.includes('--dry-run') });
     await mongoose.disconnect();

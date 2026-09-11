@@ -8,10 +8,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rimraf dist",
-    "seed:field-catalog": "tsx src/seeds/seed-field-catalog.ts",
-    "seed:coercion-rules": "tsx src/seeds/seed-coercion-rules.ts",
-    "seed:synonym-groups": "tsx src/seeds/seed-synonym-groups.ts",
-    "seed:all": "tsx src/seeds/run-all-seeds.ts"
+    "seed:field-catalog": "ts-node src/seeds/seed-field-catalog.ts",
+    "seed:coercion-rules": "ts-node src/seeds/seed-coercion-rules.ts",
+    "seed:synonym-groups": "ts-node src/seeds/seed-synonym-groups.ts",
+    "seed:all": "ts-node src/seeds/run-all-seeds.ts"
   },
   "dependencies": {
     "mongoose": "^8.2.0"
