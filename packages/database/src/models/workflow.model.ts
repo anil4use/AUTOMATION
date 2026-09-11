@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IWorkflow extends Document {
   organizationId: Schema.Types.ObjectId;
@@ -59,4 +59,4 @@ const WorkflowSchema = new Schema<IWorkflow>(
   { timestamps: true }
 );
 
-export const WorkflowModel = model<IWorkflow>('Workflow', WorkflowSchema);
+export const WorkflowModel = mongoose.models.Workflow || model<IWorkflow>('Workflow', WorkflowSchema);

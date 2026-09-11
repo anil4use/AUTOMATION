@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnector extends Document {
   connectorId: string; // e.g. 'gmail', 'slack', 'github'
@@ -63,4 +63,4 @@ const ConnectorSchema = new Schema<IConnector>(
   { timestamps: true }
 );
 
-export const ConnectorModel = model<IConnector>('Connector', ConnectorSchema, 'connectors');
+export const ConnectorModel = mongoose.models.Connector || model<IConnector>('Connector', ConnectorSchema, 'connectors');

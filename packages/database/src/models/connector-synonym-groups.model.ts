@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 /**
  * connector_synonym_groups
@@ -39,10 +39,12 @@ const ConnectorSynonymGroupSchema = new Schema<IConnectorSynonymGroup>(
   { timestamps: true }
 );
 
-export const ConnectorSynonymGroupModel = model<IConnectorSynonymGroup>(
-  'ConnectorSynonymGroup',
-  ConnectorSynonymGroupSchema,
-  'connector_synonym_groups'
-);
+export const ConnectorSynonymGroupModel =
+  mongoose.models.ConnectorSynonymGroup ||
+  model<IConnectorSynonymGroup>(
+    'ConnectorSynonymGroup',
+    ConnectorSynonymGroupSchema,
+    'connector_synonym_groups'
+  );
 
 export const ConnectorSynonymGroupsModel = ConnectorSynonymGroupModel;

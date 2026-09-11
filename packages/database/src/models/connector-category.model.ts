@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnectorCategory extends Document {
   categoryId: string; // e.g. 'communication', 'jobs', 'productivity', 'ai'
@@ -23,8 +23,10 @@ const ConnectorCategorySchema = new Schema<IConnectorCategory>(
   { timestamps: true }
 );
 
-export const ConnectorCategoryModel = model<IConnectorCategory>(
-  'ConnectorCategory',
-  ConnectorCategorySchema,
-  'connector_categories'
-);
+export const ConnectorCategoryModel =
+  mongoose.models.ConnectorCategory ||
+  model<IConnectorCategory>(
+    'ConnectorCategory',
+    ConnectorCategorySchema,
+    'connector_categories'
+  );

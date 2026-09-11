@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IWebhook extends Document {
   organizationId: Schema.Types.ObjectId;
@@ -25,4 +25,4 @@ const WebhookSchema = new Schema<IWebhook>(
   { timestamps: true }
 );
 
-export const WebhookModel = model<IWebhook>('Webhook', WebhookSchema);
+export const WebhookModel = mongoose.models.Webhook || model<IWebhook>('Webhook', WebhookSchema);

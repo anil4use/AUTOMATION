@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IOrganization extends Document {
   name: string;
@@ -19,4 +19,4 @@ const OrganizationSchema = new Schema<IOrganization>(
   { timestamps: true }
 );
 
-export const OrganizationModel = model<IOrganization>('Organization', OrganizationSchema);
+export const OrganizationModel = mongoose.models.Organization || model<IOrganization>('Organization', OrganizationSchema);

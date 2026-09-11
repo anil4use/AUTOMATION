@@ -175,7 +175,7 @@ export class ConversationService {
    * Used to determine when to trigger memory extraction.
    */
   static async getSessionMessageCount(conversationId: string): Promise<number> {
-    const conv = await WAConversationModel.findById(conversationId).select('messageCount').lean();
+    const conv = (await WAConversationModel.findById(conversationId).select('messageCount').lean()) as any;
     return conv?.messageCount || 0;
   }
 }

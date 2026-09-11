@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 /**
  * connector_field_catalog
@@ -77,8 +77,10 @@ ConnectorFieldCatalogSchema.index({ semanticRole: 1 });
 ConnectorFieldCatalogSchema.index({ connectorId: 1, direction: 1 });
 ConnectorFieldCatalogSchema.index({ enabled: 1 });
 
-export const ConnectorFieldCatalogModel = model<IConnectorFieldCatalog>(
-  'ConnectorFieldCatalog',
-  ConnectorFieldCatalogSchema,
-  'connector_field_catalog'
-);
+export const ConnectorFieldCatalogModel =
+  mongoose.models.ConnectorFieldCatalog ||
+  model<IConnectorFieldCatalog>(
+    'ConnectorFieldCatalog',
+    ConnectorFieldCatalogSchema,
+    'connector_field_catalog'
+  );

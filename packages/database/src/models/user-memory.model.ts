@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IMemoryFact {
   key: string;           // dot-notation key, e.g. "daily_routine.wake_up"
@@ -69,4 +69,4 @@ const UserMemorySchema = new Schema<IUserMemory>(
 // One memory record per user per automation
 UserMemorySchema.index({ organizationId: 1, automationId: 1, externalUserId: 1 }, { unique: true });
 
-export const UserMemoryModel = model<IUserMemory>('UserMemory', UserMemorySchema);
+export const UserMemoryModel = mongoose.models.UserMemory || model<IUserMemory>('UserMemory', UserMemorySchema);

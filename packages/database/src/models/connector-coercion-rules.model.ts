@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 /**
  * connector_coercion_rules
@@ -79,10 +79,12 @@ const ConnectorCoercionRuleSchema = new Schema<IConnectorCoercionRule>(
 ConnectorCoercionRuleSchema.index({ sourceRole: 1, sourceFormat: 1, targetRole: 1, targetFormat: 1 });
 ConnectorCoercionRuleSchema.index({ priority: -1, enabled: 1 });
 
-export const ConnectorCoercionRuleModel = model<IConnectorCoercionRule>(
-  'ConnectorCoercionRule',
-  ConnectorCoercionRuleSchema,
-  'connector_coercion_rules'
-);
+export const ConnectorCoercionRuleModel =
+  mongoose.models.ConnectorCoercionRule ||
+  model<IConnectorCoercionRule>(
+    'ConnectorCoercionRule',
+    ConnectorCoercionRuleSchema,
+    'connector_coercion_rules'
+  );
 
 export const ConnectorCoercionRulesModel = ConnectorCoercionRuleModel;

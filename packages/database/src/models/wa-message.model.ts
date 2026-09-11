@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export type MessageRole = 'user' | 'agent';
 export type MessageType = 'text' | 'image' | 'audio' | 'document' | 'location' | 'sticker' | 'video';
@@ -44,4 +44,4 @@ const WAMessageSchema = new Schema<IWAMessage>(
 // Fast retrieval for conversation history (sorted by time)
 WAMessageSchema.index({ conversationId: 1, timestamp: 1 });
 
-export const WAMessageModel = model<IWAMessage>('WAMessage', WAMessageSchema);
+export const WAMessageModel = mongoose.models.WAMessage || model<IWAMessage>('WAMessage', WAMessageSchema);

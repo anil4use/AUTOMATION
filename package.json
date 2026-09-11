@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run build --filter=\"./packages/*\" && turbo run dev --filter=@automation/frontend --filter=@automation/backend --filter=@automation/worker",
     "build": "turbo run build",
     "test": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/test-runner.ts",
     "lint": "turbo run lint",

@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export type ConversationChannel = 'whatsapp' | 'telegram' | 'slack' | 'email' | 'sms';
 export type ConversationStatus = 'active' | 'closed' | 'paused';
@@ -46,4 +46,4 @@ const WAConversationSchema = new Schema<IWAConversation>(
 // Compound index: one active session per user per automation
 WAConversationSchema.index({ automationId: 1, externalUserId: 1, status: 1 });
 
-export const WAConversationModel = model<IWAConversation>('WAConversation', WAConversationSchema);
+export const WAConversationModel = mongoose.models.WAConversation || model<IWAConversation>('WAConversation', WAConversationSchema);

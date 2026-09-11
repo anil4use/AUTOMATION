@@ -10,8 +10,8 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@automation/database": "workspace:*",
-    "@automation/data-mapper": "workspace:*"
+    "@automation/database": "*",
+    "@automation/data-mapper": "*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -28,7 +28,7 @@ export function StepSetupDrawer({
   onClose,
   onAddNewAccount,
 }: StepSetupDrawerProps) {
-  const isSystemApp = ['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request'].includes(node?.connectorId);
+  const isSystemApp = ['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request', 'data-vault', 'local-storage'].includes(node?.connectorId);
 
   const [connectorId, setConnectorId] = useState(node.connectorId || 'gmail');
   const [connectionId, setConnectionId] = useState(node.connectionId || '');
@@ -61,7 +61,7 @@ export function StepSetupDrawer({
       setTestResult(null);
       setTestError('');
 
-      const systemNode = ['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request'].includes(node.connectorId);
+      const systemNode = ['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request', 'data-vault', 'local-storage'].includes(node.connectorId);
       if (!systemNode && !node.connectionId) {
         setActiveTab('account');
       } else {
@@ -106,7 +106,7 @@ export function StepSetupDrawer({
   const currentActionSchema = getActionOrTriggerSchema(connectorId, operationId);
 
   // Gatekeeper auth check: Does this app require an account connection?
-  const requiresAccount = !['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request'].includes(connectorId) && currentManifest?.authType !== 'none';
+  const requiresAccount = !['autoflow-schedule', 'ai-agent', 'web-search', 'autoflow-condition', 'http-request', 'data-vault', 'local-storage'].includes(connectorId) && currentManifest?.authType !== 'none';
   const isAccountConnected = Boolean(connectionId);
 
   // Derive dynamic input fields for this specific connector & action

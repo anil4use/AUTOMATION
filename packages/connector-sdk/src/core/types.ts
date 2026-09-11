@@ -1,4 +1,5 @@
 import { ConnectorManifest } from '@automation/shared-types';
+export type { ConnectorManifest };
 
 export interface ExecutionContext {
   connectionCredentials?: Record<string, any>;

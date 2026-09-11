@@ -206,8 +206,25 @@ export class StepExecutor {
     const idempotencyKey = `idemp_${node.id}_${crypto.createHash('md5').update(JSON.stringify(resolvedInputs)).digest('hex').substring(0, 12)}`;
     resolvedInputs._idempotencyKey = idempotencyKey;
 
-    // Execute REAL connector action (NO mock/sandbox fallbacks!)
     const actionId = node.operationId || (node as any).actionId || 'execute';
+
+    // Execute Data Vault & Storage SDK Actions natively
+    if (node.connectorId === 'data-vault' || node.connectorId === 'local-storage') {
+      const { DataVaultAdapter } = require('../integrations/data-vault/adapter');
+      const vaultResult = await DataVaultAdapter.executeAction(actionId, resolvedInputs, {
+        organizationId: orgId || 'default-org',
+        workflowId: (node as any).workflowId,
+        stepId: node.id,
+        executionId: (context as any).executionId,
+      });
+      return {
+        success: true,
+        data: vaultResult,
+        outputPayload: vaultResult,
+      };
+    }
+
+    // Execute REAL connector action (NO mock/sandbox fallbacks!)
     let result = await connector.executeAction(actionId, {
       connectionCredentials: credentials,
       stepInput: resolvedInputs,
@@ -288,7 +305,7 @@ export class StepExecutor {
     }
 
     // System connectors that execute natively
-    if (!Object.keys(credentials).length && ['autoflow-schedule', 'http-request', 'ai-agent', 'ai-node', 'web-search'].includes(connectorId)) {
+    if (!Object.keys(credentials).length && ['autoflow-schedule', 'http-request', 'ai-agent', 'ai-node', 'web-search', 'data-vault', 'local-storage'].includes(connectorId)) {
       credentials = { status: 'system_active' };
     }
 

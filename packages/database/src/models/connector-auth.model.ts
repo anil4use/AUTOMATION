@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnectorAuthField {
   key: string;
@@ -75,8 +75,10 @@ const ConnectorAuthSchema = new Schema<IConnectorAuth>(
   { timestamps: true }
 );
 
-export const ConnectorAuthModel = model<IConnectorAuth>(
-  'ConnectorAuth',
-  ConnectorAuthSchema,
-  'connector_authentications'
-);
+export const ConnectorAuthModel =
+  mongoose.models.ConnectorAuth ||
+  model<IConnectorAuth>(
+    'ConnectorAuth',
+    ConnectorAuthSchema,
+    'connector_authentications'
+  );

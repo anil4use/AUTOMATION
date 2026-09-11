@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnectorFeature extends Document {
   connectorId: string;
@@ -44,8 +44,10 @@ const ConnectorFeatureSchema = new Schema<IConnectorFeature>(
 
 ConnectorFeatureSchema.index({ connectorId: 1, featureId: 1 }, { unique: true });
 
-export const ConnectorFeatureModel = model<IConnectorFeature>(
-  'ConnectorFeature',
-  ConnectorFeatureSchema,
-  'connector_features'
-);
+export const ConnectorFeatureModel =
+  mongoose.models.ConnectorFeature ||
+  model<IConnectorFeature>(
+    'ConnectorFeature',
+    ConnectorFeatureSchema,
+    'connector_features'
+  );

@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export type AgentModelProvider = 'gemini' | 'groq' | 'openai';
 
@@ -103,7 +103,9 @@ const WhatsAppAutomationSchema = new Schema<IWhatsAppAutomation>(
   { timestamps: true }
 );
 
-export const WhatsAppAutomationModel = model<IWhatsAppAutomation>(
-  'WhatsAppAutomation',
-  WhatsAppAutomationSchema
-);
+export const WhatsAppAutomationModel =
+  mongoose.models.WhatsAppAutomation ||
+  model<IWhatsAppAutomation>(
+    'WhatsAppAutomation',
+    WhatsAppAutomationSchema
+  );

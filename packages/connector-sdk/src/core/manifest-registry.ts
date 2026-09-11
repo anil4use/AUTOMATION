@@ -5,8 +5,10 @@ import { ziprecruiterManifest } from '../integrations/ziprecruiter/manifest';
 import { glassdoorManifest } from '../integrations/glassdoor/manifest';
 import { greenhouseManifest } from '../integrations/greenhouse/manifest';
 import { leverManifest } from '../integrations/lever/manifest';
+import { DATA_VAULT_MANIFEST } from '../integrations/data-vault/manifest';
 
 const _STATIC_MANIFESTS: ConnectorManifest[] = [
+  DATA_VAULT_MANIFEST,
   linkedinManifest,
   indeedManifest,
   ziprecruiterManifest,

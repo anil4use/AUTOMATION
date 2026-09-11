@@ -80,6 +80,7 @@ export * from './integrations/mongodb';
 export * from './integrations/amazon-s3';
 export * from './integrations/cloudflare-r2';
 export * from './integrations/dynamodb';
+export * from './integrations/data-vault';
 
 export * from './core/query-sanitizer';
 export * from './core/database-tester';

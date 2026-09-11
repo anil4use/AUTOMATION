@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IUsage extends Document {
   organizationId: Schema.Types.ObjectId;
@@ -23,4 +23,4 @@ const UsageSchema = new Schema<IUsage>(
 
 UsageSchema.index({ organizationId: 1, period: 1 }, { unique: true });
 
-export const UsageModel = model<IUsage>('Usage', UsageSchema);
+export const UsageModel = mongoose.models.Usage || model<IUsage>('Usage', UsageSchema);

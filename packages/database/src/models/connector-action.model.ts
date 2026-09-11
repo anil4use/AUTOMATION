@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnectorAction extends Document {
   connectorId: string;
@@ -94,8 +94,10 @@ const ConnectorActionSchema = new Schema<IConnectorAction>(
 
 ConnectorActionSchema.index({ connectorId: 1, actionId: 1 }, { unique: true });
 
-export const ConnectorActionModel = model<IConnectorAction>(
-  'ConnectorAction',
-  ConnectorActionSchema,
-  'connector_actions'
-);
+export const ConnectorActionModel =
+  mongoose.models.ConnectorAction ||
+  model<IConnectorAction>(
+    'ConnectorAction',
+    ConnectorActionSchema,
+    'connector_actions'
+  );

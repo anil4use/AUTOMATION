@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IAIChatMessage {
   id: string;
@@ -39,4 +39,4 @@ const AIChatSchema = new Schema<IAIChat>(
   { timestamps: true }
 );
 
-export const AIChatModel = model<IAIChat>('AIChat', AIChatSchema);
+export const AIChatModel = mongoose.models.AIChat || model<IAIChat>('AIChat', AIChatSchema);

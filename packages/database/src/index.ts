@@ -30,6 +30,7 @@ export * from './models/connector-test.model';
 export * from './models/connector-field-catalog.model';
 export * from './models/connector-coercion-rules.model';
 export * from './models/connector-synonym-groups.model';
+export * from './models/local-storage-file.model';
 
 
 

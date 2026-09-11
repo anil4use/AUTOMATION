@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 /**
  * execution_logs (enhanced)
@@ -283,4 +283,4 @@ ExecutionLogSchema.index({ 'steps.aiBridge.confidence': 1 });
 ExecutionLogSchema.index({ 'steps.error.code': 1 });
 ExecutionLogSchema.index({ 'summary.estimatedAiCostUsd': -1 });
 
-export const ExecutionLogModel = model<IExecutionLog>('ExecutionLog', ExecutionLogSchema);
+export const ExecutionLogModel = mongoose.models.ExecutionLog || model<IExecutionLog>('ExecutionLog', ExecutionLogSchema);

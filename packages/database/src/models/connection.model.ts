@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnection extends Document {
   organizationId: Schema.Types.ObjectId;
@@ -57,4 +57,4 @@ const ConnectionSchema = new Schema<IConnection>(
   { timestamps: true }
 );
 
-export const ConnectionModel = model<IConnection>('Connection', ConnectionSchema);
+export const ConnectionModel = mongoose.models.Connection || model<IConnection>('Connection', ConnectionSchema);

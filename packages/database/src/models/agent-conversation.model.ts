@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IAgentChatMessage {
   id: string;
@@ -63,4 +63,4 @@ const AgentConversationSchema = new Schema<IAgentConversation>(
   { timestamps: true }
 );
 
-export const AgentConversationModel = model<IAgentConversation>('AgentConversation', AgentConversationSchema);
+export const AgentConversationModel = mongoose.models.AgentConversation || model<IAgentConversation>('AgentConversation', AgentConversationSchema);

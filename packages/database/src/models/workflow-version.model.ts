@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IWorkflowVersion extends Document {
   workflowId: Schema.Types.ObjectId;
@@ -29,4 +29,4 @@ const WorkflowVersionSchema = new Schema<IWorkflowVersion>(
 
 WorkflowVersionSchema.index({ workflowId: 1, version: 1 }, { unique: true });
 
-export const WorkflowVersionModel = model<IWorkflowVersion>('WorkflowVersion', WorkflowVersionSchema);
+export const WorkflowVersionModel = mongoose.models.WorkflowVersion || model<IWorkflowVersion>('WorkflowVersion', WorkflowVersionSchema);

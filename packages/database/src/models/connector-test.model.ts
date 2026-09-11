@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IConnectorTestDefinition extends Document {
   testId: string;
@@ -25,8 +25,10 @@ const ConnectorTestDefinitionSchema = new Schema<IConnectorTestDefinition>(
   { timestamps: true }
 );
 
-export const ConnectorTestDefinitionModel = model<IConnectorTestDefinition>(
-  'ConnectorTestDefinition',
-  ConnectorTestDefinitionSchema,
-  'connector_test_definitions'
-);
+export const ConnectorTestDefinitionModel =
+  mongoose.models.ConnectorTestDefinition ||
+  model<IConnectorTestDefinition>(
+    'ConnectorTestDefinition',
+    ConnectorTestDefinitionSchema,
+    'connector_test_definitions'
+  );
