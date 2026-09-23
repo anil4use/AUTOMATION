@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { env } from './config/env';
+// Trigger ts-node-dev auto-reload for updated connector-sdk modules
 
 import authRoutes from './modules/auth/auth.routes';
 import userRoutes from './modules/users/user.routes';
@@ -17,6 +18,7 @@ import agentChatRoutes from './modules/agent-chat/agent-chat.routes';
 import browserSessionRoutes from './modules/connectors/browser-session.routes';
 import connectorV2Routes from './modules/connectors/connector-v2.routes';
 import storageRoutes from './modules/storage/storage.routes';
+import vaultRoutes from './modules/vault/vault.routes';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
@@ -49,6 +51,7 @@ export function createApp() {
   app.use('/api/v1/connectors', connectorRoutes);
   app.use('/api/v2/connectors', connectorV2Routes);
   app.use('/api/v1/storage', storageRoutes);
+  app.use('/api/v2/vault', vaultRoutes);
   app.use('/api/v1/ai-agent', aiAgentRoutes);
   app.use('/api/v1/executions', executionRoutes);
   app.use('/api/v1/billing', billingRoutes);

@@ -520,6 +520,15 @@ export class ProviderVerifier {
         };
       }
 
+      case 'data-vault': {
+        return {
+          success: true,
+          accountName: `Native Local Data Vault`,
+          message: `Zero-Auth Local Data Vault Active! Saves files directly to local persistent disk storage.`,
+          details: { storageType: 'local_disk', path: 'storage/data-vault' },
+        };
+      }
+
       case 'aws-s3': {
         if (!key.includes(':') && !key.includes('{')) {
           throw new Error(`Invalid AWS S3 Credentials format. Format must be 'AccessKeyId:SecretAccessKey:Region:BucketName' (e.g. AKIAXXXXXX:SecretKey123:us-east-1:my-bucket).`);
