@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Copy, Check, ChevronDown, ChevronRight, Eye, Code, Layers, FileText, Mail, Table, Database, Terminal } from 'lucide-react';
+import { Copy, Check, ChevronDown, ChevronRight, Eye, Code, Layers, Terminal, ExternalLink, Braces } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DynamicResponseVisualizerProps {
@@ -15,8 +15,17 @@ export const DynamicResponseVisualizer: React.FC<DynamicResponseVisualizerProps>
   connectorId = '',
 }) => {
   const [activeTab, setActiveTab] = useState<'visual' | 'tree' | 'raw'>('visual');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({ root: true });
+
+  const copyValue = (value: any, keyName: string) => {
+    const valStr = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+    navigator.clipboard.writeText(valStr);
+    setCopiedKey(keyName);
+    toast.success(`Copied '${keyName}' value`, { description: valStr });
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const copyTag = (keyPath: string) => {
     const tag = `{{step_1.output.${keyPath}}}`;
@@ -115,26 +124,59 @@ export const DynamicResponseVisualizer: React.FC<DynamicResponseVisualizerProps>
       {/* BODY VIEW 1: VISUAL CARDS / TABLES */}
       {activeTab === 'visual' && (
         <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
-          {/* Top Level Summary Badges */}
+          {/* Top Level Summary Cards */}
           {typeof data === 'object' && !Array.isArray(data) && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {Object.entries(data).map(([k, v]) => {
                 if (Array.isArray(v)) return null; // Array items handled separately below
+                const valueStr = typeof v === 'object' ? JSON.stringify(v) : String(v);
+                const isUrl = typeof v === 'string' && (v.startsWith('http://') || v.startsWith('https://'));
+
                 return (
-                  <div key={k} className="p-3 rounded-xl bg-slate-900/80 border border-white/[0.06] flex items-center justify-between gap-2">
-                    <div className="overflow-hidden">
+                  <div key={k} className="p-3 rounded-xl bg-slate-900/80 border border-white/[0.06] flex items-center justify-between gap-2 group hover:border-emerald-500/30 transition-all">
+                    <div className="overflow-hidden flex-1 min-w-0">
                       <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{k}</div>
-                      <div className="text-xs font-bold text-emerald-400 truncate mt-0.5">
-                        {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                      <div
+                        className="text-xs font-bold text-emerald-400 truncate mt-0.5 cursor-pointer hover:underline"
+                        title={valueStr}
+                        onClick={() => copyValue(v, k)}
+                      >
+                        {valueStr}
                       </div>
                     </div>
-                    <button
-                      onClick={() => copyTag(k)}
-                      className="p-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg text-[10px] transition-all shrink-0"
-                      title={`Copy {{${k}}}`}
-                    >
-                      {copiedTag === k ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Open Link Button (if URL) */}
+                      {isUrl && (
+                        <a
+                          href={String(v)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 bg-slate-800 hover:bg-teal-600 text-teal-400 hover:text-white rounded-lg text-[10px] transition-all"
+                          title={`Open ${k} link in new tab`}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+
+                      {/* Copy Actual Value Button */}
+                      <button
+                        onClick={() => copyValue(v, k)}
+                        className="p-1.5 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-lg text-[10px] transition-all"
+                        title={`Copy value of ${k}`}
+                      >
+                        {copiedKey === k ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      </button>
+
+                      {/* Copy Variable Tag Button */}
+                      <button
+                        onClick={() => copyTag(k)}
+                        className="p-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-lg text-[10px] transition-all font-mono"
+                        title={`Copy tag: {{step_1.output.${k}}}`}
+                      >
+                        {copiedTag === k ? <Check className="w-3 h-3 text-emerald-400" /> : <Braces className="w-3 h-3" />}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -146,16 +188,15 @@ export const DynamicResponseVisualizer: React.FC<DynamicResponseVisualizerProps>
             <div className="space-y-3 pt-2">
               <div className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center justify-between">
                 <span>Returned Array Items ({arrayItems.length})</span>
-                <span className="text-[10px] text-slate-400 font-mono">Click tag button to copy variable</span>
+                <span className="text-[10px] text-slate-400 font-mono">Click value to copy text | Click Tag button to copy variable</span>
               </div>
 
               {arrayItems.map((item: any, idx: number) => {
                 const itemPath = arrayKey ? `${arrayKey}[${idx}]` : `items[${idx}]`;
                 const subject = item.subject || item.title || item.name || item.summary || item.id || `Item #${idx + 1}`;
                 const from = item.from || item.sender || item.author || item.user || item.owner;
-                const to = item.to || item.recipient;
-                const snippet = item.snippet || item.description || item.body || item.text || item.content;
                 const date = item.date || item.createdAt || item.updatedAt;
+                const snippet = item.snippet || item.description || item.body || item.text || item.content;
 
                 return (
                   <div key={idx} className="p-4 rounded-2xl bg-slate-900/60 border border-white/[0.08] hover:border-emerald-500/40 transition-all space-y-3 group shadow-md">
@@ -187,21 +228,45 @@ export const DynamicResponseVisualizer: React.FC<DynamicResponseVisualizerProps>
                       </p>
                     )}
 
-                    {/* Property Tags Toolbar */}
+                    {/* Property Toolbar: Copy Value / Copy Tag */}
                     {typeof item === 'object' && (
                       <div className="pt-2 border-t border-white/[0.06] flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-mono text-slate-500 uppercase mr-1">Copy Property Tag:</span>
-                        {Object.keys(item).map((propKey) => (
-                          <button
-                            key={propKey}
-                            onClick={() => copyTag(`${itemPath}.${propKey}`)}
-                            className="px-2 py-1 bg-slate-950 hover:bg-indigo-600 border border-white/10 hover:border-indigo-400 text-[10px] font-mono text-emerald-400 hover:text-white rounded-lg transition-all flex items-center gap-1"
-                            title={`Copy {{step_1.output.${itemPath}.${propKey}}}`}
-                          >
-                            <span>{propKey}</span>
-                            {copiedTag === `${itemPath}.${propKey}` ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
-                          </button>
-                        ))}
+                        <span className="text-[10px] font-mono text-slate-500 uppercase mr-1">Copy Field:</span>
+                        {Object.entries(item).map(([propKey, propVal]) => {
+                          const tagKey = `${itemPath}.${propKey}`;
+                          const isUrl = typeof propVal === 'string' && (propVal.startsWith('http://') || propVal.startsWith('https://'));
+
+                          return (
+                            <div key={propKey} className="inline-flex items-center rounded-lg bg-slate-950 border border-white/10 overflow-hidden">
+                              <button
+                                onClick={() => copyValue(propVal, propKey)}
+                                className="px-2 py-1 text-[10px] font-mono text-emerald-400 hover:text-white hover:bg-emerald-600/30 transition-all flex items-center gap-1 border-r border-white/10"
+                                title={`Copy value: ${String(propVal)}`}
+                              >
+                                <span>{propKey}</span>
+                                {copiedKey === propKey ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                              </button>
+                              {isUrl && (
+                                <a
+                                  href={String(propVal)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-1.5 py-1 text-[10px] text-teal-400 hover:bg-teal-600/30 border-r border-white/10 transition-all"
+                                  title={`Open ${propKey} URL`}
+                                >
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => copyTag(tagKey)}
+                                className="px-1.5 py-1 text-[10px] font-mono text-slate-400 hover:text-white hover:bg-indigo-600/40 transition-all"
+                                title={`Copy tag: {{step_1.output.${tagKey}}}`}
+                              >
+                                {copiedTag === tagKey ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Braces className="w-2.5 h-2.5" />}
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -209,8 +274,14 @@ export const DynamicResponseVisualizer: React.FC<DynamicResponseVisualizerProps>
               })}
             </div>
           ) : typeof data !== 'object' ? (
-            <div className="p-4 bg-slate-900 rounded-xl text-emerald-400 font-mono text-xs break-all">
-              {String(data)}
+            <div className="p-4 bg-slate-900 rounded-xl text-emerald-400 font-mono text-xs break-all flex items-center justify-between gap-2">
+              <span>{String(data)}</span>
+              <button
+                onClick={() => copyValue(data, 'response')}
+                className="p-1.5 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-lg text-[10px] transition-all"
+              >
+                {copiedKey === 'response' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
             </div>
           ) : null}
         </div>
@@ -235,13 +306,24 @@ export const DynamicResponseVisualizer: React.FC<DynamicResponseVisualizerProps>
                   </span>
                 </button>
 
-                <button
-                  onClick={() => copyTag(k)}
-                  className="px-2 py-0.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded text-[10px] font-mono transition-all flex items-center gap-1"
-                >
-                  {copiedTag === k ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{`{{${k}}}`}</span>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => copyValue(v, k)}
+                    className="px-2 py-0.5 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded text-[10px] font-mono transition-all flex items-center gap-1"
+                    title={`Copy actual value of ${k}`}
+                  >
+                    {copiedKey === k ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>Copy Value</span>
+                  </button>
+                  <button
+                    onClick={() => copyTag(k)}
+                    className="px-2 py-0.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded text-[10px] font-mono transition-all flex items-center gap-1"
+                    title={`Copy variable tag {{step_1.output.${k}}}`}
+                  >
+                    {copiedTag === k ? <Check className="w-3 h-3 text-emerald-400" /> : <Braces className="w-3 h-3" />}
+                    <span>{`{{${k}}}`}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Collapsible Content */}

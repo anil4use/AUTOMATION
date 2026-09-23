@@ -180,9 +180,16 @@ export class VaultController {
         payload = JSON.stringify(payload, null, 2);
       }
 
-      if (isBase64 || (typeof payload === 'string' && payload.startsWith('data:'))) {
-        const base64Data = payload.includes('base64,') ? payload.split('base64,')[1] : payload;
-        fs.writeFileSync(targetPath, Buffer.from(base64Data, 'base64'));
+      const isPdf = cleanName.toLowerCase().endsWith('.pdf');
+
+      if (isBase64 || (typeof payload === 'string' && (payload.startsWith('data:') || payload.startsWith('%PDF-')))) {
+        const base64Data = typeof payload === 'string' && payload.includes('base64,') ? payload.split('base64,')[1] : payload;
+        const buffer = typeof payload === 'string' && payload.startsWith('%PDF-') ? Buffer.from(payload, 'binary') : Buffer.from(base64Data, 'base64');
+        fs.writeFileSync(targetPath, buffer);
+      } else if (isPdf) {
+        const { createPdfBuffer } = require('@automation/connector-sdk');
+        const pdfBuffer = createPdfBuffer ? createPdfBuffer(String(payload), path.basename(cleanName, '.pdf')) : Buffer.from(String(payload));
+        fs.writeFileSync(targetPath, pdfBuffer);
       } else {
         fs.writeFileSync(targetPath, String(payload), 'utf-8');
       }

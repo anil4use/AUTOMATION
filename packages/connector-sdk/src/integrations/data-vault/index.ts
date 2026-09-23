@@ -65,6 +65,67 @@ const jsonToCsv = (items: any[]): string => {
   return csvRows.join('\n');
 };
 
+export const createPdfBuffer = (content: string, titleName: string = 'AutoFlow Document'): Buffer => {
+  const plainText = (content || 'AutoFlow Vault PDF Document')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/[\r\n]+/g, '\n')
+    .trim();
+
+  const lines = plainText.split('\n').flatMap((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return [];
+    const chunks: string[] = [];
+    for (let i = 0; i < trimmed.length; i += 80) {
+      chunks.push(trimmed.slice(i, i + 80));
+    }
+    return chunks;
+  }).slice(0, 25);
+
+  const titleText = (titleName || 'AutoFlow PDF Export').replace(/[()]/g, '');
+
+  let streamCmds = `BT /HelvBold 18 Tf 50 740 Td (${titleText}) Tj /Helv 11 Tf 0 -30 Td`;
+  lines.forEach((l) => {
+    const safeLine = l.replace(/[()]/g, '');
+    streamCmds += ` (${safeLine}) Tj 0 -18 Td`;
+  });
+  streamCmds += ` ET`;
+
+  const streamLen = Buffer.byteLength(streamCmds, 'utf-8');
+
+  const pdfStr = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /Helv 4 0 R /HelvBold 5 0 R >> >> /Contents 6 0 R >> endobj
+4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj
+6 0 obj << /Length ${streamLen} >>
+stream
+${streamCmds}
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000111 00000 n 
+0000000235 00000 n 
+0000000305 00000 n 
+0000000380 00000 n 
+trailer << /Size 7 /Root 1 0 R >>
+startxref
+480
+%%EOF`;
+
+  return Buffer.from(pdfStr, 'utf-8');
+};
+
 export const dataVaultManifest: ConnectorManifest = {
   id: 'data-vault',
   name: 'Data Vault & Local Storage',
@@ -270,10 +331,15 @@ export class DataVaultConnector extends BaseConnector {
             rawContent = JSON.stringify(rawContent, null, 2);
           }
 
-          if (isBase64 || (typeof rawContent === 'string' && rawContent.startsWith('data:'))) {
-            const base64Data = rawContent.includes('base64,') ? rawContent.split('base64,')[1] : rawContent;
-            const buffer = Buffer.from(base64Data, 'base64');
+          const isPdf = fileName.toLowerCase().endsWith('.pdf') || formatExt.toLowerCase() === 'pdf';
+
+          if (isBase64 || (typeof rawContent === 'string' && (rawContent.startsWith('data:') || rawContent.startsWith('%PDF-')))) {
+            const base64Data = typeof rawContent === 'string' && rawContent.includes('base64,') ? rawContent.split('base64,')[1] : rawContent;
+            const buffer = typeof rawContent === 'string' && rawContent.startsWith('%PDF-') ? Buffer.from(rawContent, 'binary') : Buffer.from(base64Data, 'base64');
             fs.writeFileSync(targetPath, buffer);
+          } else if (isPdf) {
+            const pdfBuffer = createPdfBuffer(String(rawContent), path.basename(fileName, '.pdf'));
+            fs.writeFileSync(targetPath, pdfBuffer);
           } else {
             fs.writeFileSync(targetPath, String(rawContent), 'utf-8');
           }
