@@ -463,6 +463,24 @@ export class ConnectorSeederService {
         defaultTestValue = 'Latest AI tech developments';
         placeholder = 'Enter search query keywords (e.g. OpenAI, SpaceX, tech news)';
       }
+      // 3b. Data Vault & Storage File Name / Format / Dataset Defaults
+      else if (k === 'filename' || k === 'name' || k === 'datasetname' || k === 'file_name') {
+        widget = 'text';
+        defaultTestValue = connectorId === 'data-vault' ? 'sample_test_document' : 'sample_test_file.txt';
+        placeholder = 'Enter File Name (e.g. report, document, dataset)';
+      }
+      else if (k === 'format' || k === 'fileformat' || k === 'extension') {
+        widget = 'text';
+        defaultTestValue = '.html';
+        placeholder = 'Enter File Format (e.g. .html, .csv, .json, .pdf, .md)';
+      }
+      else if (k === 'records' || k === 'items' || k === 'dataset') {
+        widget = 'code_editor';
+        defaultTestValue = JSON.stringify([
+          { id: 1, name: "Alice", role: "Developer", company: "AutoFlow" },
+          { id: 2, name: "Bob", role: "Architect", company: "AutoFlow" }
+        ], null, 2);
+      }
       // 4. Textarea Multi-line
       else if (k.includes('body') || k.includes('content') || k.includes('text') || k.includes('prompt') || k.includes('description') || k.includes('html')) {
         widget = 'textarea';

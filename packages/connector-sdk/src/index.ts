@@ -50,6 +50,7 @@ export * from './integrations/docusign';
 export * from './integrations/webhook-trigger';
 export * from './integrations/web-browser';
 export * from './integrations/web-search';
+export * from './integrations/data-vault';
 export * from './integrations/linkedin';
 export * from './integrations/indeed';
 export * from './integrations/ziprecruiter';

@@ -62,6 +62,7 @@ import { RedisConnector } from '../integrations/redis';
 import { AmazonS3Connector } from '../integrations/amazon-s3';
 import { CloudflareR2Connector } from '../integrations/cloudflare-r2';
 import { DynamodbConnector } from '../integrations/dynamodb';
+import { DataVaultConnector } from '../integrations/data-vault';
 import * as crypto from 'crypto';
 
 export const connectorRegistry: Record<string, any> = {
@@ -134,6 +135,7 @@ export const connectorRegistry: Record<string, any> = {
   'amazon-s3': new AmazonS3Connector(),
   'cloudflare-r2': new CloudflareR2Connector(),
   dynamodb: new DynamodbConnector(),
+  'data-vault': new DataVaultConnector(),
 };
 
 export class StepExecutor {
@@ -257,7 +259,7 @@ export class StepExecutor {
     }
 
     // System connectors that execute natively
-    if (!Object.keys(credentials).length && ['autoflow-schedule', 'http-request', 'ai-agent', 'ai-node', 'web-search'].includes(connectorId)) {
+    if (!Object.keys(credentials).length && ['autoflow-schedule', 'http-request', 'ai-agent', 'ai-node', 'web-search', 'data-vault'].includes(connectorId)) {
       credentials = { status: 'system_active' };
     }
 
