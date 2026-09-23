@@ -75,6 +75,26 @@ export const dataVaultManifest: ConnectorManifest = {
   triggers: [],
   actions: [
     {
+      id: 'save_document',
+      name: 'Save Document File',
+      description: 'Save structured JSON, Markdown, HTML, or text content as a persistent vault file.',
+      type: 'action',
+      inputs: [
+        { key: 'fileName', label: 'File Name (e.g. sample_test_document)', type: 'string', required: true },
+        { key: 'format', label: 'File Format (e.g. .html, .csv, .json, .pdf, .md)', type: 'string', required: true },
+        { key: 'content', label: 'Document Content Payload', type: 'string', required: true },
+        { key: 'subfolder', label: 'Optional Subfolder', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'fileName', label: 'Saved File Name', type: 'string', required: true },
+        { key: 'filePath', label: 'Local Disk Path', type: 'string', required: true },
+        { key: 'fileSize', label: 'File Size (Bytes)', type: 'number', required: true },
+        { key: 'mimeType', label: 'MIME Content Type', type: 'string', required: true },
+        { key: 'downloadUrl', label: '1-Click Download URL', type: 'string', required: true },
+        { key: 'viewUrl', label: '1-Click Preview / View URL', type: 'string', required: true },
+      ],
+    },
+    {
       id: 'upload_file',
       name: 'Save & Store Local File',
       description: 'Saves text, JSON, CSV, Base64 buffer, or document directly into local persistent vault storage.',
@@ -112,6 +132,51 @@ export const dataVaultManifest: ConnectorManifest = {
         { key: 'fileSize', label: 'File Size (Bytes)', type: 'number', required: true },
         { key: 'downloadUrl', label: '1-Click Download URL', type: 'string', required: true },
         { key: 'viewUrl', label: '1-Click View URL', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'append_csv_dataset',
+      name: 'Append CSV Dataset Rows',
+      description: 'Appends JSON record array or CSV rows to an existing or new CSV file in local vault storage.',
+      type: 'action',
+      inputs: [
+        { key: 'datasetName', label: 'CSV Dataset File Name (e.g. scraped_leads.csv)', type: 'string', required: true },
+        { key: 'records', label: 'Array of Records or Row Payload', type: 'string', required: true },
+      ],
+      outputs: [
+        { key: 'fileName', label: 'File Name', type: 'string', required: true },
+        { key: 'totalSize', label: 'Total File Size (Bytes)', type: 'number', required: true },
+        { key: 'downloadUrl', label: '1-Click Download URL', type: 'string', required: true },
+      ],
+    },
+    {
+      id: 'query_dataset',
+      name: 'Query Saved Vault Files',
+      description: 'Search and query files stored in local vault storage by name, extension, or content keywords.',
+      type: 'action',
+      inputs: [
+        { key: 'query', label: 'Search Query Keywords', type: 'string', required: false },
+        { key: 'fileType', label: 'File Extension Filter (e.g. html, csv, json, pdf)', type: 'string', required: false },
+        { key: 'limit', label: 'Max Records Limit (Default 50)', type: 'number', required: false },
+      ],
+      outputs: [
+        { key: 'items', label: 'Matching Vault Files', type: 'json', required: true },
+        { key: 'totalCount', label: 'Total Count', type: 'number', required: true },
+      ],
+    },
+    {
+      id: 'create_version_snapshot',
+      name: 'Create Versioned Snapshot',
+      description: 'Creates a timestamped snapshot backup copy of an existing vault file.',
+      type: 'action',
+      inputs: [
+        { key: 'fileName', label: 'Source File Name to Snapshot', type: 'string', required: true },
+        { key: 'snapshotLabel', label: 'Snapshot Label / Tag (Optional)', type: 'string', required: false },
+      ],
+      outputs: [
+        { key: 'snapshotFileName', label: 'Snapshot File Name', type: 'string', required: true },
+        { key: 'originalFileName', label: 'Original File Name', type: 'string', required: true },
+        { key: 'downloadUrl', label: '1-Click Download URL', type: 'string', required: true },
       ],
     },
     {
@@ -280,6 +345,82 @@ export class DataVaultConnector extends BaseConnector {
               viewUrl,
               savedAt: new Date().toISOString(),
               summary: `🎉 Successfully exported ${rawRecords.length} dataset records to '${fileName}'.`,
+            },
+          };
+        }
+
+        case 'append_csv_dataset': {
+          let baseName = (inputs.datasetName || inputs.fileName || 'dataset_export.csv').trim();
+          if (!baseName.toLowerCase().endsWith('.csv')) baseName += '.csv';
+          const targetPath = path.join(vaultDir, baseName);
+
+          let rawRecords = inputs.records || inputs.items || inputs.data;
+          if (typeof rawRecords === 'string') {
+            try { rawRecords = JSON.parse(rawRecords); } catch { rawRecords = [{ raw: rawRecords }]; }
+          }
+          if (!Array.isArray(rawRecords)) rawRecords = [rawRecords];
+
+          const csvData = jsonToCsv(rawRecords);
+          const fileExists = fs.existsSync(targetPath);
+
+          if (fileExists) {
+            const lines = csvData.split('\n');
+            const dataLines = lines.slice(1).join('\n');
+            if (dataLines.trim()) {
+              fs.appendFileSync(targetPath, '\n' + dataLines, 'utf-8');
+            }
+          } else {
+            fs.writeFileSync(targetPath, csvData, 'utf-8');
+          }
+
+          const stat = fs.statSync(targetPath);
+          const encodedName = encodeURIComponent(baseName);
+          return {
+            success: true,
+            data: {
+              fileName: baseName,
+              recordsAppended: rawRecords.length,
+              totalSize: stat.size,
+              downloadUrl: `${serverBaseUrl}/api/v2/vault/download/${encodedName}`,
+              viewUrl: `${serverBaseUrl}/api/v2/vault/view/${encodedName}`,
+              savedAt: new Date().toISOString(),
+              summary: `Appended ${rawRecords.length} rows to '${baseName}' in Data Vault.`,
+            },
+          };
+        }
+
+        case 'query_dataset': {
+          return this.executeAction('get_all', context);
+        }
+
+        case 'create_version_snapshot': {
+          const sourceName = path.basename(inputs.fileName || '');
+          const sourcePath = path.join(vaultDir, sourceName);
+
+          if (!fs.existsSync(sourcePath)) {
+            return { success: false, data: {}, error: `Source file '${sourceName}' not found in Data Vault.` };
+          }
+
+          const label = (inputs.snapshotLabel || 'snapshot').replace(/[^a-zA-Z0-9_-]/g, '_');
+          const ext = path.extname(sourceName);
+          const base = path.basename(sourceName, ext);
+          const snapshotName = `${base}_${label}_${Date.now()}${ext}`;
+          const snapshotPath = path.join(vaultDir, snapshotName);
+
+          fs.copyFileSync(sourcePath, snapshotPath);
+          const stat = fs.statSync(snapshotPath);
+          const encodedName = encodeURIComponent(snapshotName);
+
+          return {
+            success: true,
+            data: {
+              snapshotFileName: snapshotName,
+              originalFileName: sourceName,
+              fileSize: stat.size,
+              downloadUrl: `${serverBaseUrl}/api/v2/vault/download/${encodedName}`,
+              viewUrl: `${serverBaseUrl}/api/v2/vault/view/${encodedName}`,
+              createdAt: new Date().toISOString(),
+              summary: `Created snapshot '${snapshotName}' for '${sourceName}'.`,
             },
           };
         }
