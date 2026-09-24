@@ -36,3 +36,5 @@ export function runAdapterRegistryTests() {
 
   console.log('✅ AIAdapterRegistry unit tests passed successfully!');
 }
+
+runAdapterRegistryTests();
