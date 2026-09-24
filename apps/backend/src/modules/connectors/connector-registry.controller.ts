@@ -3,6 +3,26 @@ import { manifestRegistry } from '@automation/connector-sdk';
 
 export class ConnectorRegistryController {
   /**
+   * GET /api/v1/connectors/registry/categories
+   */
+  static async getCategories(req: Request, res: Response) {
+    try {
+      const manifests = manifestRegistry.getAllManifests();
+      const categoriesSet = new Set<string>();
+      manifests.forEach((m) => {
+        if (m.category) categoriesSet.add(m.category);
+      });
+      const categories = ['All', ...Array.from(categoriesSet).sort()];
+      return res.status(200).json({
+        success: true,
+        data: categories,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  /**
    * GET /api/v1/connectors/registry/manifests
    * Query params: category
    */

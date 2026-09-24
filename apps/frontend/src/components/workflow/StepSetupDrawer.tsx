@@ -5,8 +5,10 @@ import { DataTreePicker } from './DataTreePicker';
 import { ConnectionSelector } from './ConnectionSelector';
 import { AccountConnectModal } from './AccountConnectModal';
 import { DatabaseConnectModal } from '@/components/connectors/DatabaseConnectModal';
+import { DynamicFieldWidget } from '@/components/connectors/DynamicFieldWidget';
+import { DynamicResponseVisualizer } from '@/components/connectors/DynamicResponseVisualizer';
 import { apiClient } from '@/lib/api-client';
-import { ALL_50_CONNECTOR_MANIFESTS, getActionOrTriggerSchema, getManifestById } from '@/lib/connector-manifests';
+import { ALL_50_CONNECTOR_MANIFESTS, fetchCategories, getActionOrTriggerSchema, getManifestById, getV2InputSchema, getV2OutputSchema } from '@/lib/connector-manifests';
 import { toast } from 'sonner';
 
 interface StepSetupDrawerProps {
@@ -47,6 +49,33 @@ export function StepSetupDrawer({
   const [userConnections, setUserConnections] = useState<any[]>(externalConnections);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [appSearch, setAppSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [categoriesList, setCategoriesList] = useState<string[]>(['All', 'Jobs & Recruitment', 'Google Suite', 'Communication', 'AI', 'Databases', 'CRM', 'Utilities']);
+  const [showPayloadPreview, setShowPayloadPreview] = useState(false);
+
+  useEffect(() => {
+    fetchCategories().then((cats) => {
+      if (cats && Array.isArray(cats) && cats.length > 0) {
+        setCategoriesList(cats);
+      }
+    });
+  }, []);
+
+  const PROVIDER_DOC_LINKS: Record<string, { title: string; url: string; authType: string }> = {
+    gmail: { title: 'Google Cloud Console Credentials', url: 'https://console.cloud.google.com/apis/credentials', authType: 'OAuth 2.0 / App Password' },
+    'google-sheets': { title: 'Google Service Account Keys', url: 'https://console.cloud.google.com/iam-admin/serviceaccounts', authType: 'OAuth 2.0 / Service Account' },
+    'google-drive': { title: 'Google Cloud Console', url: 'https://console.cloud.google.com/apis/credentials', authType: 'OAuth 2.0' },
+    'google-calendar': { title: 'Google Cloud Developer Settings', url: 'https://console.cloud.google.com/apis/credentials', authType: 'OAuth 2.0' },
+    github: { title: 'GitHub Personal Access Tokens', url: 'https://github.com/settings/tokens', authType: 'PAT / OAuth 2.0' },
+    stripe: { title: 'Stripe API Keys Dashboard', url: 'https://dashboard.stripe.com/apikeys', authType: 'Secret API Key' },
+    slack: { title: 'Slack Apps & OAuth Tokens', url: 'https://api.slack.com/apps', authType: 'OAuth 2.0 Bot Token' },
+    notion: { title: 'Notion My Integrations', url: 'https://www.notion.so/my-integrations', authType: 'Internal Integration Token' },
+    hubspot: { title: 'HubSpot Private Apps', url: 'https://app.hubspot.com/l/integrations-settings', authType: 'Private App Access Token' },
+    greenhouse: { title: 'Greenhouse Dev Center', url: 'https://app.greenhouse.io/configure/dev_center/credentials', authType: 'Harvest API Key' },
+    lever: { title: 'Lever Integration Settings', url: 'https://hire.lever.co/settings/integrations', authType: 'API Key / OAuth 2.0' },
+    postgresql: { title: 'PostgreSQL Connection Docs', url: 'https://www.postgresql.org/docs/', authType: 'Connection URI / Credentials' },
+    mongodb: { title: 'MongoDB Atlas Connection UI', url: 'https://cloud.mongodb.com/', authType: 'Atlas Connection URI' },
+  };
 
   // Sync drawer state whenever a new node is selected/clicked on the canvas
   useEffect(() => {
@@ -98,7 +127,7 @@ export function StepSetupDrawer({
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [connectorId]);
 
   // 2. DYNAMICALLY RESOLVE MANIFEST SCHEMA FOR THIS CONNECTOR AND ACTION
@@ -110,13 +139,25 @@ export function StepSetupDrawer({
   const isAccountConnected = Boolean(connectionId);
 
   // Derive dynamic input fields for this specific connector & action
+  const v2InputSchema = getV2InputSchema(connectorId, operationId);
+  const schemaProperties = v2InputSchema?.properties || {};
+  const uiProperties = currentActionSchema?.uiSchema || {};
+  const requiredFields: string[] = v2InputSchema?.required || [];
+
   const declaredInputs = currentActionSchema?.inputs || [];
-  const inputFieldKeys = declaredInputs.map((i: any) => ({
-    key: i.key,
-    label: i.label || i.key,
-    type: i.type || 'string',
-    required: i.required,
-  }));
+  const inputFieldKeys = Object.keys(schemaProperties).length > 0
+    ? Object.entries(schemaProperties).map(([k, meta]: [string, any]) => ({
+      key: k,
+      label: meta.title || k,
+      type: meta.type || 'string',
+      required: requiredFields.includes(k),
+    }))
+    : declaredInputs.map((i: any) => ({
+      key: i.key,
+      label: i.label || i.key,
+      type: i.type || 'string',
+      required: i.required,
+    }));
 
   // 3. DYNAMICALLY COLLECT PREVIOUS STEP OUTPUT SOURCES FOR DATATREEPICKER
   const previousNodes = allNodes.filter((n) => n.id !== node.id);
@@ -126,17 +167,17 @@ export function StepSetupDrawer({
 
     const fields = declaredOutputs.length > 0
       ? declaredOutputs.map((o: any) => ({
-          key: o.key,
-          label: o.label || o.key,
-          path: `${n.id === 'trigger' ? 'trigger' : n.id}.${o.key}`,
-          sampleValue: o.key === 'email' ? 'alex@example.com' : o.key === 'id' ? '1001' : 'sample_data',
-        }))
+        key: o.key,
+        label: o.label || o.key,
+        path: `${n.id === 'trigger' ? 'trigger' : n.id}.${o.key}`,
+        sampleValue: o.key === 'email' ? 'alex@example.com' : o.key === 'id' ? '1001' : 'sample_data',
+      }))
       : [
-          { key: 'id', label: 'ID', path: `${n.id === 'trigger' ? 'trigger' : n.id}.id`, sampleValue: '1001' },
-          { key: 'email', label: 'Email', path: `${n.id === 'trigger' ? 'trigger' : n.id}.email`, sampleValue: 'alex@example.com' },
-          { key: 'name', label: 'Name', path: `${n.id === 'trigger' ? 'trigger' : n.id}.name`, sampleValue: 'Alex Johnson' },
-          { key: 'status', label: 'Status', path: `${n.id === 'trigger' ? 'trigger' : n.id}.status`, sampleValue: 'active' },
-        ];
+        { key: 'id', label: 'ID', path: `${n.id === 'trigger' ? 'trigger' : n.id}.id`, sampleValue: '1001' },
+        { key: 'email', label: 'Email', path: `${n.id === 'trigger' ? 'trigger' : n.id}.email`, sampleValue: 'alex@example.com' },
+        { key: 'name', label: 'Name', path: `${n.id === 'trigger' ? 'trigger' : n.id}.name`, sampleValue: 'Alex Johnson' },
+        { key: 'status', label: 'Status', path: `${n.id === 'trigger' ? 'trigger' : n.id}.status`, sampleValue: 'active' },
+      ];
 
     return {
       stepId: n.id,
@@ -192,7 +233,7 @@ export function StepSetupDrawer({
             setDynamicChoices((prev) => ({ ...prev, [connectorId]: res.data.data.choices }));
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [connectionId, connectorId, operationId]);
 
@@ -239,12 +280,15 @@ export function StepSetupDrawer({
     onClose();
   };
 
-  const filteredManifests = ALL_50_CONNECTOR_MANIFESTS.filter(
-    (m) =>
-      m.name.toLowerCase().includes(appSearch.toLowerCase()) ||
+  const filteredManifests = ALL_50_CONNECTOR_MANIFESTS.filter((m) => {
+    const matchesCategory = selectedCategory === 'All' ||
+      m.category?.toLowerCase() === selectedCategory.toLowerCase() ||
+      (selectedCategory === 'Jobs & Recruitment' && ['Jobs & Recruitment', 'HR & ATS', 'Recruitment'].includes(m.category));
+    const matchesSearch = m.name.toLowerCase().includes(appSearch.toLowerCase()) ||
       m.category.toLowerCase().includes(appSearch.toLowerCase()) ||
-      m.id.toLowerCase().includes(appSearch.toLowerCase())
-  );
+      m.id.toLowerCase().includes(appSearch.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const handleAutoMapFields = () => {
     if (dataSources.length === 0) {
@@ -339,13 +383,12 @@ export function StepSetupDrawer({
               key={tab.id}
               disabled={isLocked}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`py-3 flex-1 flex items-center justify-center gap-1.5 border-b-2 font-semibold transition-all ${
-                isActive
+              className={`py-3 flex-1 flex items-center justify-center gap-1.5 border-b-2 font-semibold transition-all ${isActive
                   ? 'border-indigo-500 text-indigo-400 bg-white/[0.02]'
                   : isLocked
-                  ? 'border-transparent text-gray-600 cursor-not-allowed opacity-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-300'
-              }`}
+                    ? 'border-transparent text-gray-600 cursor-not-allowed opacity-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
             >
               {isLocked ? <Lock size={12} className="text-gray-600" /> : <Icon size={13} />}
               <span>{tab.label}</span>
@@ -371,6 +414,25 @@ export function StepSetupDrawer({
 
             <div>
               <label className="block font-semibold text-gray-300 mb-1.5">Search & Select Integration App</label>
+              
+              {/* Category Pills Navigation */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 no-scrollbar">
+                {categoriesList.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
+                      selectedCategory === cat
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
               <div className="relative mb-2">
                 <Search size={14} className="absolute left-3 top-3 text-gray-500" />
                 <input
@@ -408,22 +470,66 @@ export function StepSetupDrawer({
 
             <div>
               <label className="block font-semibold text-gray-300 mb-1.5">Select Action or Trigger Event</label>
-              <select
-                value={operationId}
-                onChange={(e) => handleSelectAction(e.target.value)}
-                className="w-full bg-[#111827] border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-              >
-                {(currentManifest?.actions || []).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    Action: {a.name} — {a.description}
-                  </option>
-                ))}
-                {(currentManifest?.triggers || []).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    Trigger: {t.name} — {t.description}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {/* Triggers Group */}
+                {(currentManifest?.triggers || []).map((t) => {
+                  const isSelected = operationId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleSelectAction(t.id)}
+                      className={`w-full p-3 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                        isSelected
+                          ? 'bg-purple-500/15 border-purple-500 text-white ring-1 ring-purple-500/50'
+                          : 'bg-white/3 border-white/6 text-gray-300 hover:bg-white/6'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs flex items-center gap-1.5 text-purple-300">
+                          <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-mono font-bold">⚡ TRIGGER</span>
+                          {t.name}
+                        </span>
+                        <span className="text-[9px] font-mono text-gray-400 bg-white/5 px-2 py-0.5 rounded">
+                          V2 Schema Ready
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">{t.description}</p>
+                    </button>
+                  );
+                })}
+
+                {/* Actions Group */}
+                {(currentManifest?.actions || []).map((a) => {
+                  const isSelected = operationId === a.id;
+                  const schema = getActionOrTriggerSchema(connectorId, a.id);
+                  const fieldCount = Object.keys(schema?.inputSchema?.properties || {}).length;
+
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => handleSelectAction(a.id)}
+                      className={`w-full p-3 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                        isSelected
+                          ? 'bg-indigo-500/15 border-indigo-500 text-white ring-1 ring-indigo-500/50'
+                          : 'bg-white/3 border-white/6 text-gray-300 hover:bg-white/6'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs flex items-center gap-1.5 text-indigo-300">
+                          <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-mono font-bold">⚙️ ACTION</span>
+                          {a.name}
+                        </span>
+                        <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                          {fieldCount > 0 ? `${fieldCount} Input Fields` : 'Dynamic V2'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">{a.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-between text-indigo-300">
@@ -451,6 +557,27 @@ export function StepSetupDrawer({
               }}
               onAddNewAccount={() => setShowConnectModal(true)}
             />
+
+            {/* Provider Developer Portal Guide */}
+            {PROVIDER_DOC_LINKS[connectorId] && (
+              <div className="p-3 bg-[#111827] border border-white/10 rounded-xl space-y-1.5 text-xs">
+                <div className="flex items-center justify-between text-indigo-300 font-bold text-[11px]">
+                  <span>🔐 {currentManifest?.name || connectorId} Setup Guide</span>
+                  <span className="text-[10px] text-gray-400 font-mono">{PROVIDER_DOC_LINKS[connectorId].authType}</span>
+                </div>
+                <p className="text-gray-300 text-[11px] leading-relaxed">
+                  Need OAuth keys or API credentials? Access the official developer settings console below:
+                </p>
+                <a
+                  href={PROVIDER_DOC_LINKS[connectorId].url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-indigo-400 hover:text-indigo-300 underline font-semibold text-[11px]"
+                >
+                  Open {PROVIDER_DOC_LINKS[connectorId].title} ↗
+                </a>
+              </div>
+            )}
 
             {isAccountConnected && (
               <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between text-emerald-300">
@@ -537,62 +664,42 @@ export function StepSetupDrawer({
                 ) : (
                   inputFieldKeys.map((field) => {
                     const fieldName = field.key;
-                    const fieldLabel = field.label;
-                    const value = config[fieldName] || '';
-                    const choices = dynamicChoices[connectorId] || [];
+                    const propMeta = schemaProperties[fieldName] || { title: field.label, type: field.type };
+                    const uiMeta = uiProperties[fieldName] || {};
+                    const value = config[fieldName] !== undefined ? config[fieldName] : (uiMeta.defaultTestValue || '');
 
                     return (
                       <div
                         key={fieldName}
-                        className={`space-y-1.5 bg-[#111827] p-3.5 rounded-xl border transition-all ${
-                          activeInputKey === fieldName
+                        className={`space-y-1.5 bg-[#111827] p-3.5 rounded-xl border transition-all ${activeInputKey === fieldName
                             ? 'border-indigo-500 ring-1 ring-indigo-500/50 bg-indigo-950/20'
                             : 'border-white/6 hover:border-white/10'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between">
-                          <label className="font-semibold text-gray-200 text-xs flex items-center gap-1">
-                            <span>{fieldLabel}</span>
-                            {field.required ? (
-                              <span className="text-rose-400 font-bold text-[10px]" title="Required field">*</span>
-                            ) : (
-                              <span className="text-[9px] text-gray-500 font-normal">(optional)</span>
-                            )}
-                          </label>
                           <button
+                            type="button"
                             onClick={() => setActiveInputKey(activeInputKey === fieldName ? null : fieldName)}
-                            className={`text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-all ${
-                              activeInputKey === fieldName
+                            className={`text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-all ${activeInputKey === fieldName
                                 ? 'bg-indigo-500 text-white font-medium'
                                 : 'bg-white/5 hover:bg-white/10 text-indigo-300'
-                            }`}
+                              }`}
                           >
                             <Database size={10} />
                             {activeInputKey === fieldName ? 'Close Data Picker' : 'Insert Step Data'}
                           </button>
                         </div>
 
-                        {/* Dropdown choices or Input text area */}
-                        {choices.length > 0 && (fieldName === 'channel' || fieldName === 'spreadsheetId') ? (
-                          <select
-                            value={value}
-                            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                            className="w-full bg-[#0b0f19] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                          >
-                            <option value="">-- Select Choice --</option>
-                            {choices.map((c) => (
-                              <option key={c.value} value={c.value}>{c.label}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <textarea
-                            rows={2}
-                            value={value}
-                            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                            placeholder={`Enter ${fieldLabel} or click "Insert Step Data" to map variables...`}
-                            className="w-full bg-[#0b0f19] border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-indigo-500/60 transition-all resize-none"
-                          />
-                        )}
+                        <DynamicFieldWidget
+                          propKey={fieldName}
+                          propMeta={propMeta}
+                          uiMeta={uiMeta}
+                          isRequired={field.required}
+                          value={value}
+                          onChange={(val) => handleFieldChange(fieldName, val)}
+                          connectorId={connectorId}
+                          actionId={operationId}
+                        />
 
                         {/* Inline Data Tree Picker */}
                         {activeInputKey === fieldName && (
@@ -654,6 +761,22 @@ export function StepSetupDrawer({
                   <p className="text-gray-300 text-xs leading-relaxed">
                     Execute a live test run for <strong className="text-white">{name}</strong> using resolved input mappings.
                   </p>
+
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowPayloadPreview(!showPayloadPreview)}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 font-mono flex items-center gap-1 font-semibold mb-2"
+                    >
+                      <span>{showPayloadPreview ? '▼ Hide Resolved Request Payload JSON' : '▶ View Resolved Request Payload JSON'}</span>
+                    </button>
+                    {showPayloadPreview && (
+                      <pre className="p-3 bg-black/50 border border-white/10 rounded-xl text-[10px] font-mono text-emerald-300 overflow-x-auto max-h-40 mb-3">
+                        {JSON.stringify({ connectorId, operationId, connectionId, config, fieldMapping }, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+
                   <button
                     onClick={handleRunTest}
                     disabled={isTesting}
@@ -673,16 +796,11 @@ export function StepSetupDrawer({
 
                 {testResult && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-emerald-400 font-semibold text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 size={14} />
-                        <span>Test Step Executed Successfully</span>
-                      </div>
-                      <span className="text-[10px] text-gray-400 font-mono">200 OK</span>
-                    </div>
-                    <pre className="p-3 bg-black/40 border border-white/10 rounded-xl text-[11px] font-mono text-emerald-300 overflow-x-auto max-h-[220px]">
-                      {JSON.stringify(testResult, null, 2)}
-                    </pre>
+                    <DynamicResponseVisualizer
+                      data={testResult}
+                      actionId={operationId}
+                      connectorId={connectorId}
+                    />
                   </div>
                 )}
               </>

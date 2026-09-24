@@ -19,6 +19,7 @@ router.use(authMiddleware as any);
 router.get('/oauth/authorize/:connectorId', ConnectorController.authorizeOAuth as any);
 
 // Registry endpoints (Phase 2)
+router.get('/registry/categories', ConnectorRegistryController.getCategories as any);
 router.get('/registry/search', ConnectorRegistryController.searchConnectors as any);
 router.get('/registry/manifests', ConnectorRegistryController.getAllManifests as any);
 router.get('/registry/manifests/:appId', ConnectorRegistryController.getManifestById as any);

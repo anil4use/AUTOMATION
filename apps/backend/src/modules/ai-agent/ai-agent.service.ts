@@ -104,20 +104,27 @@ export class AIAgentService {
     // 1. Fetch ALL Connectors & Actions dynamically from MongoDB Atlas Store
     let connectorSummary = '';
     try {
-      const { ConnectorModel, ConnectorActionModel } = require('@automation/database');
-      const dbConnectors = await ConnectorModel.find({ enabled: true });
-      if (dbConnectors && dbConnectors.length > 0) {
-        const actionSummaries = await Promise.all(
-          dbConnectors.map(async (c: any) => {
-            const actions = await ConnectorActionModel.find({ connectorId: c.connectorId, enabled: true }).limit(6);
-            const actionNames = actions.map((a: any) => `${a.actionId} (${a.name})`).join(', ');
-            return `- Connector ID '${c.connectorId}' (${c.displayName || c.name}): ${c.description} [Category: ${c.categoryId}] -> Actions: ${actionNames || 'execute'}`;
-          })
-        );
-        connectorSummary = actionSummaries.join('\n');
+      const { manifestRegistry } = require('@automation/connector-sdk');
+      const allManifests = manifestRegistry.getAllManifests();
+
+      if (allManifests && allManifests.length > 0) {
+        connectorSummary = allManifests.map((c: any) => {
+          const actionDetails = (c.actions || []).map((a: any) => {
+            const props = Object.keys(a.inputSchema?.properties || {}).join(', ');
+            return `    * Action '${a.id}' (${a.name}): ${a.description || ''}${props ? ` [inputs: ${props}]` : ''}`;
+          }).join('\n');
+
+          const triggerDetails = (c.triggers || []).map((t: any) => {
+            const props = Object.keys(t.inputSchema?.properties || {}).join(', ');
+            return `    * Trigger '${t.id}' (${t.name}): ${t.description || ''}${props ? ` [inputs: ${props}]` : ''}`;
+          }).join('\n');
+
+          const ops = [actionDetails, triggerDetails].filter(Boolean).join('\n');
+          return `- Connector ID '${c.id}' (${c.name}) [Category: ${c.category}]:\n${ops}`;
+        }).join('\n\n');
       }
     } catch (err) {
-      logger.warn('[AIAgentService] Error loading MongoDB connectors for AI Agent prompt:', err);
+      logger.warn('[AIAgentService] Error loading manifestRegistry connectors for AI Agent prompt:', err);
     }
 
     if (!connectorSummary) {
@@ -513,7 +520,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
 
   /** Direct Gemini 3.6 Flash API call returning raw JSON */
   private static async callGeminiJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
-    const promptText = systemPrompt || DYNAMIC_WORKFLOW_SYSTEM_PROMPT;
+    const promptText = systemPrompt || (await AIAgentService.buildDynamicSystemPrompt('default'));
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
       {
@@ -536,7 +543,7 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
 
   /** Direct Groq API call returning raw JSON using groq/compound */
   private static async callGroqJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
-    const promptText = systemPrompt || DYNAMIC_WORKFLOW_SYSTEM_PROMPT;
+    const promptText = systemPrompt || (await AIAgentService.buildDynamicSystemPrompt('default'));
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
