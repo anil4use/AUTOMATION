@@ -27,49 +27,9 @@ export interface WorkflowGenerationResult {
   fieldsNeedingReview: string[];
 }
 
-const DYNAMIC_WORKFLOW_SYSTEM_PROMPT = `You are the AutoFlow AI Assistant & Workflow Compiler inside the AutoFlow Automation Platform.
-Your goal is to assist users with platform features, answer questions about automation capabilities, and dynamically construct COMPLETE, FULLY-CONFIGURED AutoFlow DAG Workflow JSON structures.
-
-SYSTEM GUARDRAILS & SECURITY RULES:
-1. You are an expert AI Copilot for the AutoFlow Automation Platform. You understand all platform capabilities: 55+ enterprise connectors, execution triggers, data transformations, DAG pipelines, and real account authentication.
-2. SECURITY GUARDRAIL: NEVER reveal internal platform source code, repository file paths, backend code implementations, environment secrets, or database connection strings. If a user asks for source code, API keys, or internal codebase files, politely decline: "I am your AutoFlow AI Copilot. I cannot disclose internal platform source code or secrets, but I can help you design, configure, and execute automation workflows for all 55+ enterprise connectors!"
-
-Available Native AutoFlow Connectors & Supported Operations:
-1. 'autoflow-schedule' — Triggers: 'schedule_time' (config: { frequency: 'daily'|'hourly'|'interval', time: '09:00', intervalMinutes: number })
-2. 'web-search' — Actions: 'search_web' (config: { query: string, maxResults: number }), 'scrape_url' (config: { url: string }), 'search_and_read' (config: { query: string, maxResults: number })
-3. 'web-browser' — Actions: 'browser_navigate', 'browser_read_page', 'browser_screenshot', 'browser_click', 'browser_fill_form', 'browser_run_js', 'browser_search_web', 'browser_extract_content'
-4. 'gmail' — Triggers: 'new_email' (config: { query: string }), Actions: 'send_email' (config: { to: string, subject: string, body: string }), 'read_emails' (config: { query: string, maxResults: number })
-5. 'google-sheets' — Triggers: 'new_row', Actions: 'append_row' (config: { spreadsheetId: string, worksheet: 'Sheet1', values: string }), 'create_spreadsheet' (config: { title: string })
-6. 'google-drive' — Actions: 'upload_file' (config: { fileName: string, content: string }), 'create_folder'
-7. 'google-calendar' — Actions: 'create_event' (config: { summary: string, description: string, startTime: string, endTime: string })
-8. 'google-docs' — Actions: 'create_document' (config: { title: string, initialText: string })
-9. 'slack' — Actions: 'send_message' (config: { channel: string, text: string })
-10. 'whatsapp' — Actions: 'send_message' (config: { recipient: string, message: string })
-11. 'notion' — Actions: 'create_page' (config: { databaseId: string, title: string })
-12. 'ai-agent' — Actions: 'process_text' (config: { prompt: string }, fieldMapping: { inputText: '{{node_X.output.topSnippet || node_X.output.results || node_X.output.emails || node_X.output}}' })
-13. 'http-request' — Actions: 'custom_api_call' (config: { method: 'POST'|'GET', url: string, body: string })
-
-CRITICAL PIPELINE RULE:
-When the user asks to process/summarize data with AI and store or log the results (e.g. search web + analyze with AI + log to Google Sheets or Slack), YOU MUST ALWAYS INCLUDE ALL 4 PIPELINE STAGES IN THE 'nodes' ARRAY:
-- Step 1: 'autoflow-schedule' (Schedule Trigger)
-- Step 2: Data Source ('web-search' or 'gmail')
-- Step 3: 'ai-agent' (AI Job & Web Analyst)
-- Step 4: Destination Action ('google-sheets' or 'slack')
-
-NEVER stop after Step 2! ALWAYS include Step 3 ('ai-agent') and Step 4 ('google-sheets' or 'slack') whenever AI analysis and spreadsheet/notification logging are mentionIMPORTANT INTENT DISCRIMINATION RULE:
-1. IF THE USER IS ASKING A QUESTION, GREETING, OR GENERAL INQUIRY (e.g., "hello", "hi", "what connectors do you support?", "how do I connect MongoDB Atlas?", "explain how triggers work"):
-   Set "workflowDraft": null, "suggestedConnectors": [].
-   In "replyMessage", provide a comprehensive, friendly, and helpful answer in Markdown!
-2. ONLY include a non-null "workflowDraft" object IF the user is explicitly requesting to build, generate, schedule, or automate a workflow pipeline!
-
-CRITICAL INSTRUCTION:
-Return ONLY a single valid JSON object (no markdown fences, no \`\`\` json, no extra text):
-{
-  "replyMessage": "Markdown string answering the question or describing the generated workflow steps clearly.",
-  "suggestedConnectors": ["autoflow-schedule", "web-search", "ai-agent", "google-sheets"],
-  "workflowDraft": null
-}
-`;
+// NOTE: The system prompt is built dynamically at runtime by AIAgentService.buildDynamicSystemPrompt()
+// It injects live connector manifests, active user connections, and recent execution diagnostics.
+// There is NO static DYNAMIC_WORKFLOW_SYSTEM_PROMPT — all prompt content comes from the AI Control Plane.
 
 export class AIAgentService {
   /**
@@ -283,26 +243,27 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
           const connectorsList: string[] = Array.from(new Set(nodes.map((n: any) => n.connectorId)));
 
           const userConnectionsStatus = connectorsList.map((cid: string) => {
-            const realCid = cid === 'gmail-read' ? 'gmail' : cid;
+            // Normalize connector ID aliases (e.g. gmail-read -> gmail)
+            const normalizedCid = cid.replace(/-read$/, '').replace(/-write$/, '');
+
+            // Dynamic name resolution from manifest registry
+            let displayName = normalizedCid.charAt(0).toUpperCase() + normalizedCid.slice(1);
+            try {
+              const { manifestRegistry } = require('@automation/connector-sdk');
+              const manifest = manifestRegistry.getManifest(normalizedCid)
+                || manifestRegistry.getManifest(normalizedCid.replace(/-/g, '_'));
+              if (manifest?.name) displayName = manifest.name;
+            } catch {
+              // manifest registry unavailable — use ID-based name
+            }
+
+            // Built-in system connectors that never require user auth
+            const SYSTEM_CONNECTOR_IDS = new Set(['autoflow-schedule', 'ai-agent', 'web-search', 'web-browser', 'http-request']);
+
             return {
-              connectorId: realCid,
-              name:
-                realCid === 'autoflow-schedule'
-                  ? 'AutoFlow Schedule Trigger'
-                  : realCid === 'ai-agent'
-                  ? 'AI Processor Node'
-                  : realCid === 'web-search'
-                  ? 'Web Search & Scraper'
-                  : realCid === 'google-sheets'
-                  ? 'Google Sheets'
-                  : realCid.charAt(0).toUpperCase() + realCid.slice(1),
-              isConnected:
-                realCid === 'autoflow-schedule' ||
-                realCid === 'ai-agent' ||
-                realCid === 'web-search' ||
-                connectedIds.has(realCid) ||
-                connectedIds.has('gmail') ||
-                connectedIds.has('google-sheets'),
+              connectorId: normalizedCid,
+              name: displayName,
+              isConnected: SYSTEM_CONNECTOR_IDS.has(normalizedCid) || connectedIds.has(normalizedCid),
             };
           });
 
@@ -433,48 +394,81 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
       let config: Record<string, any> = {};
       let fieldMapping: Record<string, any> = {};
 
+      // Universal dynamic node builder — reads config from manifest registry
+      let manifest: any = null;
+      try {
+        const { manifestRegistry } = require('@automation/connector-sdk');
+        manifest = manifestRegistry.getManifest(cid) || manifestRegistry.getManifest(cid.replace(/-/g, '_'));
+      } catch {}
+
+      // Determine normalized connector ID (resolve aliases like gmail-read -> gmail)
+      const normalizedCid = cid.replace(/-read$/, '').replace(/-write$/, '');
+
       if (cid === 'autoflow-schedule') {
-        operationId = 'schedule_time';
-        name = 'Schedule Trigger (Hourly)';
+        operationId = manifest?.triggers?.[0]?.id || 'schedule_time';
+        name = manifest?.name ? `${manifest.name} (Daily)` : 'Schedule Trigger (Daily)';
         config = { time: '09:00', frequency: 'daily' };
-      } else if (cid === 'web-search') {
-        operationId = 'search_web';
-        name = 'Web Search & Scraper';
-        const searchQuery = lower.includes('react') ? 'React developer jobs' : lastUserMessage;
-        config = { query: searchQuery, maxResults };
-        fieldMapping = { query: searchQuery, maxResults };
-      } else if (cid === 'whatsapp') {
-        operationId = 'send_message';
-        name = 'WhatsApp — Send Message Notification';
-        config = { recipient: '+1234567890', message: 'Scheduled AutoFlow Daily Message' };
-        fieldMapping = { recipient: '+1234567890', message: 'Scheduled AutoFlow Daily Message' };
-      } else if (cid === 'github') {
-        operationId = 'get_commits';
-        name = 'GitHub — Fetch Repository Commits';
-        config = { repo: 'octocat/Hello-World', branch: 'main' };
-        fieldMapping = { repo: 'octocat/Hello-World', branch: 'main' };
-      } else if (cid === 'gmail-read') {
-        operationId = 'read_emails';
-        name = 'Gmail — Read Inbox Emails';
-        config = { query: 'is:unread label:INBOX', maxResults: 5 };
       } else if (cid === 'ai-agent') {
-        operationId = 'process_text';
-        name = isWebSearch ? 'AI Job & Web Analyst' : 'AI Email Summarizer';
+        operationId = manifest?.actions?.[0]?.id || 'process_text';
+        name = manifest?.name ? `${manifest.name} — Analyzer` : 'AI Analyst';
         config = { prompt: `Analyze output data and extract top ${maxResults} structured items with all relevant details:` };
         const prevId = `node_${idx}`;
         fieldMapping = { inputText: `{{${prevId}.output.topSnippet || ${prevId}.output.results || ${prevId}.output.emails || ${prevId}.output}}` };
-      } else if (cid === 'google-sheets') {
-        operationId = 'append_row';
-        name = 'Google Sheets — Log Summary Row';
-        const rowValueStr = `["{{trigger.output.triggeredAt}}", "Data Digest", "{{node_${idx}.output.summary || node_${idx}.output.result}}"]`;
-        config = { spreadsheetId, worksheet: 'Sheet1', values: rowValueStr };
-        fieldMapping = { spreadsheetId, worksheet: 'Sheet1', values: rowValueStr };
+      } else if (manifest) {
+        // Fully dynamic: use first available action from manifest
+        const firstAction = manifest.actions?.[0];
+        const firstTrigger = manifest.triggers?.[0];
+        const op = firstAction || firstTrigger;
+        operationId = op?.id || 'execute';
+        name = `${manifest.name} — ${op?.name || operationId}`;
+
+        // Build config from manifest input schema defaults
+        if (op?.inputs) {
+          op.inputs.forEach((inp: any) => {
+            if (inp.key === 'query' || inp.key === 'search' || inp.key === 'q') {
+              config[inp.key] = lastUserMessage.replace(/^(search|find|look up|web search for)\s+/i, '').trim() || 'AutoFlow automation news';
+              fieldMapping[inp.key] = config[inp.key];
+            } else if (inp.key === 'maxResults' || inp.key === 'limit') {
+              config[inp.key] = maxResults;
+              fieldMapping[inp.key] = maxResults;
+            } else if (inp.key === 'worksheet' || inp.key === 'sheetName') {
+              config[inp.key] = 'Sheet1';
+              fieldMapping[inp.key] = 'Sheet1';
+            } else if (inp.key === 'spreadsheetId') {
+              config[inp.key] = spreadsheetId;
+              fieldMapping[inp.key] = spreadsheetId;
+            } else if ((inp.key === 'values' || inp.key === 'rows') && normalizedCid.includes('sheet')) {
+              const prevId = idx > 0 ? `node_${idx}` : 'node_1';
+              const rowVal = `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevId}.output.summary || ${prevId}.output.result}}"]`;
+              config[inp.key] = rowVal;
+              fieldMapping[inp.key] = rowVal;
+            } else if (inp.key === 'prompt' || inp.key === 'text') {
+              config[inp.key] = `Analyze and summarize the following data for: ${lastUserMessage.slice(0, 80)}`;
+            } else if (inp.key === 'frequency') {
+              config[inp.key] = 'daily';
+            } else if (inp.key === 'time') {
+              config[inp.key] = '09:00';
+            } else if (inp.key === 'channel') {
+              config[inp.key] = '#general';
+              fieldMapping[inp.key] = '#general';
+            } else if (inp.key === 'message' || inp.key === 'text' || inp.key === 'body') {
+              const prevId = idx > 0 ? `node_${idx}` : 'node_1';
+              config[inp.key] = `{{${prevId}.output.summary || ${prevId}.output.result}}`;
+              fieldMapping[inp.key] = config[inp.key];
+            }
+          });
+        }
+      } else {
+        // Unknown connector with no manifest: generic fallback
+        operationId = 'execute';
+        name = `${cid.charAt(0).toUpperCase() + cid.slice(1)} Step`;
+        config = {};
       }
 
       nodes.push({
         id: nodeId,
         type: idx === 0 ? 'trigger' : cid === 'ai-agent' ? 'ai-agent' : 'action',
-        connectorId: cid === 'gmail-read' ? 'gmail' : cid,
+        connectorId: normalizedCid,
         operationId,
         name,
         config,
@@ -605,50 +599,86 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
       const prevId = nodes.length > 0 ? nodes[nodes.length - 1].id : 'node_1';
       const newId = `node_${nextIdx}`;
 
-      if (isSheets) {
-        const quotedMatch = userPrompt.match(/["']([A-Za-z0-9_\-\s]{2,60})["']/);
-        const spreadsheetId = quotedMatch ? quotedMatch[1].trim().replace(/\s+/g, '_') : 'React_Developer_Jobs_Log';
+      // Universal dynamic connector node builder via manifest registry
+      let targetManifest: any = null;
+      let targetCid = '';
+
+      // Determine which connector to add based on user intent keywords
+      try {
+        const { manifestRegistry } = require('@automation/connector-sdk');
+        const allManifests = manifestRegistry.getAllManifests() || [];
+
+        // Score each manifest by keyword overlap with the user prompt
+        let bestScore = 0;
+        for (const m of allManifests) {
+          const candidateId = (m.id || '').toLowerCase();
+          const keywords = [
+            candidateId,
+            (m.name || '').toLowerCase(),
+            (m.category || '').toLowerCase(),
+            ...(m.keywords || []).map((k: string) => k.toLowerCase()),
+            ...(m.tags || []).map((t: string) => t.toLowerCase()),
+          ].filter(Boolean);
+
+          const score = keywords.reduce((s, kw) => s + (lower.includes(kw) ? kw.length : 0), 0);
+          if (score > bestScore) {
+            bestScore = score;
+            targetManifest = m;
+            targetCid = candidateId;
+          }
+        }
+      } catch {}
+
+      if (targetManifest && targetCid) {
+        const firstAction = targetManifest.actions?.[0];
+        const op = firstAction || targetManifest.triggers?.[0];
+        const opId = op?.id || 'execute';
+        const nodeName = `${targetManifest.name} — ${op?.name || opId}`;
+        const newConfig: Record<string, any> = {};
+        const newFieldMapping: Record<string, any> = {};
+
+        // Build config from manifest input schema
+        if (op?.inputs) {
+          op.inputs.forEach((inp: any) => {
+            if (inp.key === 'worksheet' || inp.key === 'sheetName') {
+              newConfig[inp.key] = 'Sheet1';
+              newFieldMapping[inp.key] = 'Sheet1';
+            } else if (inp.key === 'spreadsheetId') {
+              const quotedMatch = userPrompt.match(/["']([A-Za-z0-9_\-\s]{2,60})["']/);
+              newConfig[inp.key] = quotedMatch ? quotedMatch[1].trim().replace(/\s+/g, '_') : 'AutoFlow_Execution_Log';
+              newFieldMapping[inp.key] = newConfig[inp.key];
+            } else if ((inp.key === 'values' || inp.key === 'rows') && targetCid.includes('sheet')) {
+              const rowVal = `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevId}.output.summary || ${prevId}.output.result}}"]`;
+              newConfig[inp.key] = rowVal;
+              newFieldMapping[inp.key] = rowVal;
+            } else if (inp.key === 'channel') {
+              newConfig[inp.key] = '#general';
+              newFieldMapping[inp.key] = '#general';
+            } else if (inp.key === 'message' || inp.key === 'text' || inp.key === 'body') {
+              newConfig[inp.key] = `{{${prevId}.output.summary || ${prevId}.output.result}}`;
+              newFieldMapping[inp.key] = newConfig[inp.key];
+            } else if (inp.key === 'prompt') {
+              newConfig[inp.key] = 'Analyze and format input payload data into key structured highlights:';
+            } else if (inp.key === 'inputText') {
+              newFieldMapping[inp.key] = `{{${prevId}.output.topSnippet || ${prevId}.output.results || ${prevId}.output.emails || ${prevId}.output}}`;
+            }
+          });
+        }
+
+        const nodeType = targetCid === 'ai-agent' ? 'ai-agent' : 'action';
         nodes.push({
           id: newId,
-          type: 'action',
-          connectorId: 'google-sheets',
-          operationId: 'append_row',
-          name: 'Google Sheets — Log Summary Row',
-          config: { spreadsheetId, worksheet: 'Sheet1', values: `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevId}.output.summary || ${prevId}.output.result}}"]` },
-          fieldMapping: { spreadsheetId, worksheet: 'Sheet1', values: `["{{trigger.output.triggeredAt}}", "Data Digest", "{{${prevId}.output.summary || ${prevId}.output.result}}"]` },
+          type: nodeType,
+          connectorId: targetCid,
+          operationId: opId,
+          name: nodeName,
+          config: newConfig,
+          fieldMapping: newFieldMapping,
           position: { x: 250, y: 80 + (nextIdx - 1) * 180 },
         });
         if (prevId) edges.push({ id: `e_${prevId}_${newId}`, source: prevId, target: newId });
-        changesSummary.push(`Added Google Sheets step (Sheet: ${spreadsheetId})`);
-        replyMessage = `✨ Added Step ${nextIdx}: Google Sheets (Sheet: "${spreadsheetId}") to canvas!`;
-      } else if (isSlack) {
-        nodes.push({
-          id: newId,
-          type: 'action',
-          connectorId: 'slack',
-          operationId: 'send_message',
-          name: 'Slack — Post Message',
-          config: { channel: '#general', text: `{{${prevId}.output.summary || ${prevId}.output.result}}` },
-          fieldMapping: { channel: '#general', text: `{{${prevId}.output.summary || ${prevId}.output.result}}` },
-          position: { x: 250, y: 80 + (nextIdx - 1) * 180 },
-        });
-        if (prevId) edges.push({ id: `e_${prevId}_${newId}`, source: prevId, target: newId });
-        changesSummary.push('Added Slack Post Message step');
-        replyMessage = `✨ Added Step ${nextIdx}: Slack Post Message to channel #general!`;
-      } else if (isAi) {
-        nodes.push({
-          id: newId,
-          type: 'ai-agent',
-          connectorId: 'ai-agent',
-          operationId: 'process_text',
-          name: 'AI Processor Analyst',
-          config: { prompt: 'Analyze and format input payload data into key structured highlights:' },
-          fieldMapping: { inputText: `{{${prevId}.output.topSnippet || ${prevId}.output.results || ${prevId}.output.emails || ${prevId}.output}}` },
-          position: { x: 250, y: 80 + (nextIdx - 1) * 180 },
-        });
-        if (prevId) edges.push({ id: `e_${prevId}_${newId}`, source: prevId, target: newId });
-        changesSummary.push('Added AI Processor Analyst step');
-        replyMessage = `✨ Added Step ${nextIdx}: AI Processor Analyst step to canvas!`;
+        changesSummary.push(`Added ${targetManifest.name} step`);
+        replyMessage = `✨ Added Step ${nextIdx}: ${nodeName} to canvas!`;
       }
     } else if (lower.includes('sheet') || lower.includes('google')) {
       // Sheet name update request
@@ -741,41 +771,48 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     }
 
     // Generate Context-Aware Smart AI Suggestions dynamically based on current canvas state
-    const aiSuggestions = [];
+    const aiSuggestions: Array<{ label: string; prompt: string }> = [];
 
-    const hasSheets = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('sheet'));
-    const hasSearch = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('search'));
-    const hasAi = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('ai'));
-    const hasSlack = nodes.some((n) => (n.connectorId || '').toLowerCase().includes('slack'));
+    // Identify connector categories already on canvas
+    const canvasConnectorIds = new Set(nodes.map((n) => (n.connectorId || '').toLowerCase()));
 
-    const sheetsNode = nodes.find((n) => (n.connectorId || '').toLowerCase().includes('sheet'));
-    const currentSheetName = sheetsNode?.config?.spreadsheetId || 'React_Jobs';
+    // Suggest adding connectors that are NOT yet on the canvas (using manifest registry)
+    try {
+      const { manifestRegistry } = require('@automation/connector-sdk');
+      const allManifests = manifestRegistry.getAllManifests() || [];
 
-    if (hasSheets) {
-      if (currentSheetName === 'Production_Sheet') {
-        aiSuggestions.push({ label: '📊 Change Sheet to "React_Jobs_Digest"', prompt: 'Change Google Sheet name to React_Jobs_Digest' });
-      } else {
-        aiSuggestions.push({ label: '📊 Change Sheet to "Production_Sheet"', prompt: 'Change Google Sheet name to Production_Sheet' });
+      // Priority suggestions: suggest storage/notification connectors if missing
+      const PRIORITY_CATEGORIES = ['storage', 'communication', 'database', 'productivity'];
+      const suggested = new Set<string>();
+
+      for (const category of PRIORITY_CATEGORIES) {
+        const categoryManifests = allManifests.filter(
+          (m: any) => (m.category || '').toLowerCase() === category && !canvasConnectorIds.has(m.id)
+        );
+        if (categoryManifests.length > 0 && suggested.size < 4) {
+          const m = categoryManifests[0];
+          aiSuggestions.push({
+            label: `📊 Add ${m.name} Step`,
+            prompt: `Add ${m.name} step to the workflow`,
+          });
+          suggested.add(m.id);
+        }
       }
-    } else {
-      aiSuggestions.push({ label: '📊 Add Google Sheets Step ("Production_Sheet")', prompt: 'Add Google Sheets step for spreadsheet Production_Sheet' });
-    }
 
-    if (hasSearch) {
-      aiSuggestions.push({ label: '🔍 Search "React developer jobs"', prompt: 'Set Web Search query to React developer jobs' });
-    } else {
-      aiSuggestions.push({ label: '🔍 Add Web Search Step', prompt: 'Add Web Search step for React developer jobs' });
-    }
+      // Always suggest schedule change if trigger exists
+      if (nodes.some((n) => n.type === 'trigger')) {
+        aiSuggestions.push({ label: '⏱️ Change Schedule to Hourly', prompt: 'Change schedule frequency to hourly every 1 hour' });
+      }
 
-    if (!hasAi) {
+      // Suggest AI analyst if missing
+      if (!canvasConnectorIds.has('ai-agent')) {
+        aiSuggestions.push({ label: '🤖 Insert AI Analyst Step', prompt: 'Insert an AI Processor Analyst step' });
+      }
+    } catch {
+      // Manifest registry unavailable — provide generic suggestions
+      aiSuggestions.push({ label: '⏱️ Change Schedule to Hourly', prompt: 'Change schedule frequency to hourly every 1 hour' });
       aiSuggestions.push({ label: '🤖 Insert AI Analyst Step', prompt: 'Insert an AI Processor Analyst step' });
     }
-
-    if (!hasSlack) {
-      aiSuggestions.push({ label: '💬 Add Slack Alert Step', prompt: 'Add Slack post message step at the end' });
-    }
-
-    aiSuggestions.push({ label: '⏱️ Change Schedule to Hourly', prompt: 'Change schedule frequency to hourly every 1 hour' });
 
     // Re-layout all nodes with clean, non-overlapping 270px vertical spacing
     nodes = nodes.map((n, idx) => ({

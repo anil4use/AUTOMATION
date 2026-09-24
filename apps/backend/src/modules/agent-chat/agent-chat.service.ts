@@ -820,7 +820,10 @@ async function assembleConversationalResult(
     logger.warn('[AgentChatService] AI Runtime synthesis failed:', err);
   }
 
-  return reply || stepsExecuted.map((s) => `${s.success ? '✅' : '❌'} ${s.description}: ${JSON.stringify(s.output || s.error).slice(0, 200)}`).join('\n');
+  if (reply) return reply;
+
+  const rawStepSummary = stepsExecuted.map((s) => `${s.success ? '✅' : '❌'} **${s.description}**: ${JSON.stringify(s.output || s.error).slice(0, 300)}`).join('\n\n');
+  return `${rawStepSummary}\n\n> ⚠️ **AI Control Plane Notice:** No active AI LLM Provider is currently enabled. Please visit [AI Control Plane → Providers](/ai-control-plane/providers) and enable at least one provider to unlock AI response synthesis and intelligent reasoning.`;
 }
 
 // ─── Main Agent Chat Service ──────────────────────────────────────────────────
@@ -858,49 +861,63 @@ export class AgentChatService {
     else await r.del(lockKey);
   }
 
-  /** Generate clean AI-driven conversation titles */
+  /** Generate clean AI-driven conversation titles — fully dynamic via manifest registry */
   static generateAiTitle(userMessage: string): string {
     if (!userMessage || !userMessage.trim()) return 'New Agent Session';
 
-    let text = userMessage.trim().replace(/^["']|["']$/g, '');
+    const text = userMessage.trim().replace(/^["']|["']$/g, '');
     const lower = text.toLowerCase();
 
-    if (lower.includes('mongodb') || lower.includes('mongo')) {
-      if (lower.includes('count') || lower.includes('how many')) return 'MongoDB User Count';
-      if (lower.includes('insert') || lower.includes('create')) return 'MongoDB Document Creation';
-      return 'MongoDB Database Query';
-    }
-    if (lower.includes('gmail') || lower.includes('email') || lower.includes('mail')) {
-      if (lower.includes('send')) return 'Gmail Email Dispatch';
-      if (lower.includes('read') || lower.includes('inbox') || lower.includes('sender')) return 'Gmail Inbox Lookup';
-      return 'Gmail Integration Task';
-    }
-    if (lower.includes('slack')) {
-      if (lower.includes('channel') || lower.includes('#')) return 'Slack Channel Post';
-      return 'Slack Team Notification';
-    }
-    if (lower.includes('github')) {
-      if (lower.includes('issue') || lower.includes('pr')) return 'GitHub Issues & PRs';
-      return 'GitHub Repository Insights';
-    }
-    if (lower.includes('sheet') || lower.includes('google sheets')) {
-      return 'Google Sheets Sync';
-    }
-    if (lower.includes('postgres') || lower.includes('sql')) {
-      return 'PostgreSQL Query Task';
-    }
-    if (lower.includes('whatsapp')) {
-      return 'WhatsApp Messaging Task';
-    }
-    if (lower.includes('linkedin') || lower.includes('job') || lower.includes('hiring') || lower.includes('recruiting')) {
-      if (lower.includes('search') || lower.includes('find')) return 'LinkedIn Job Search';
-      if (lower.includes('post') || lower.includes('publish')) return 'LinkedIn Job Posting';
-      return 'LinkedIn Recruitment Task';
-    }
-    if (lower.includes('web') || lower.includes('search') || lower.includes('news')) {
-      return 'Web Search & Intelligence';
+    // Intent verb detection (dynamic)
+    const intentVerbs: Array<{ patterns: string[]; label: string }> = [
+      { patterns: ['count', 'how many'], label: 'Count' },
+      { patterns: ['insert', 'create', 'add', 'new'], label: 'Creation' },
+      { patterns: ['send', 'dispatch', 'notify'], label: 'Dispatch' },
+      { patterns: ['read', 'fetch', 'get', 'list', 'inbox'], label: 'Lookup' },
+      { patterns: ['delete', 'remove', 'drop'], label: 'Deletion' },
+      { patterns: ['search', 'find', 'look up', 'news', 'web'], label: 'Search' },
+      { patterns: ['update', 'edit', 'modify'], label: 'Update' },
+      { patterns: ['schedule', 'automate', 'trigger'], label: 'Automation' },
+    ];
+
+    let detectedIntent = 'Task';
+    for (const { patterns, label } of intentVerbs) {
+      if (patterns.some((p) => lower.includes(p))) {
+        detectedIntent = label;
+        break;
+      }
     }
 
+    // Dynamic connector name resolution via manifest registry
+    try {
+      const { manifestRegistry } = require('@automation/connector-sdk');
+      const allManifests = manifestRegistry.getAllManifests() || [];
+
+      // Score each manifest by keyword overlap with the user message
+      let bestMatch: { name: string; score: number } | null = null;
+      for (const manifest of allManifests) {
+        const keywords: string[] = [
+          manifest.id?.toLowerCase() || '',
+          manifest.name?.toLowerCase() || '',
+          (manifest.category || '').toLowerCase(),
+          ...(manifest.keywords || []).map((k: string) => k.toLowerCase()),
+          ...(manifest.tags || []).map((t: string) => t.toLowerCase()),
+        ].filter(Boolean);
+
+        const score = keywords.reduce((s, kw) => s + (lower.includes(kw) ? kw.length : 0), 0);
+        if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+          bestMatch = { name: manifest.name || manifest.id, score };
+        }
+      }
+
+      if (bestMatch) {
+        return `${bestMatch.name} ${detectedIntent}`.slice(0, 50);
+      }
+    } catch {
+      // manifest registry unavailable — fall through to generic title
+    }
+
+    // Generic title from cleaned message words
     const cleaned = text
       .replace(/^(can you|please|i want to|help me|how to|send a|read|get|fetch|find|search|show me)\s+/i, '')
       .replace(/[^\w\s-]/g, '')
