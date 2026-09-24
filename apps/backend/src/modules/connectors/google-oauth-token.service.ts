@@ -26,9 +26,22 @@ export async function getValidGoogleAccessToken(
   connectionId: string,
   requiredConnectorId: string = 'gmail'
 ): Promise<string> {
-  const connection = await ConnectionModelDoc.findById(connectionId);
+  let connection: any = null;
+  if (connectionId && connectionId.length === 24) {
+    try {
+      connection = await ConnectionModelDoc.findById(connectionId);
+    } catch {}
+  }
+
   if (!connection) {
-    throw new GoogleOAuthTokenError(`Connection '${connectionId}' not found`, 'CONNECTION_NOT_FOUND', connectionId);
+    connection = await ConnectionModelDoc.findOne({
+      connectorId: { $in: [connectionId, requiredConnectorId, 'gmail'] },
+      status: 'connected',
+    }).sort({ updatedAt: -1 });
+  }
+
+  if (!connection) {
+    throw new GoogleOAuthTokenError(`No active connected account found for '${connectionId}'`, 'CONNECTION_NOT_FOUND', connectionId);
   }
 
   let creds: Record<string, any> = {};
@@ -48,7 +61,7 @@ export async function getValidGoogleAccessToken(
   // Check if current token is valid and dummy check
   const isDummyToken = !currentAccessToken || currentAccessToken.startsWith('default_access_token_') || currentAccessToken.includes('dummy');
 
-  if (!isDummyToken && (tokenExpiresAt > now + bufferMs || !rawExpiresAt)) {
+  if (!isDummyToken && tokenExpiresAt > now + bufferMs) {
     return currentAccessToken;
   }
 

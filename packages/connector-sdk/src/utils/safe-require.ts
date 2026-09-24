@@ -7,9 +7,16 @@ export function safeRequire(moduleName: string): any {
     return null;
   }
   try {
-    const getReq = new Function('name', 'return require(name)');
-    return getReq(moduleName);
-  } catch {
-    return null;
+    // eval('require') hides the require call from Webpack while retaining access to the CommonJS require function in Node.js
+    const req = eval('require');
+    return req(moduleName);
+  } catch (err) {
+    try {
+      // Fallback for some environments
+      const getReq = new Function('name', 'return require(name)');
+      return getReq(moduleName);
+    } catch {
+      return null;
+    }
   }
 }

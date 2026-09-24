@@ -281,28 +281,140 @@ export class StepExecutor {
     return result.data;
   }
 
-  static async resolveCredentials(connectorId: string, orgId?: string): Promise<Record<string, any>> {
+  static async resolveCredentials(connectorId: string, orgId?: string, connectionId?: string): Promise<Record<string, any>> {
     let credentials: Record<string, any> = {};
+    let savedConn: any = null;
 
     try {
       const dbMod = safeRequire('@automation/database');
       const ConnectionModel = dbMod?.ConnectionModel;
-      if (!ConnectionModel) return credentials;
-      let query: any = { connectorId, status: 'connected' };
-      if (orgId) query.organizationId = orgId;
+      if (ConnectionModel) {
+        if (connectionId) {
+          if (connectionId.length === 24) {
+            try {
+              savedConn = await ConnectionModel.findById(connectionId);
+            } catch {}
+          }
+          if (!savedConn) {
+            try {
+              savedConn = await ConnectionModel.findOne({
+                $or: [{ _id: connectionId }, { connectionId }, { name: connectionId }],
+              });
+            } catch {}
+          }
+        }
 
-      const savedConn = await ConnectionModel.findOne(query).sort({ updatedAt: -1 });
-      if (savedConn && savedConn.encryptedCredentials) {
-        credentials = StepExecutor.parseCredentials(savedConn.encryptedCredentials);
-      } else if (orgId) {
-        // Fallback: search across organization if specific orgId didn't match
-        const anyConn = await ConnectionModel.findOne({ connectorId, status: 'connected' }).sort({ updatedAt: -1 });
-        if (anyConn && anyConn.encryptedCredentials) {
-          credentials = StepExecutor.parseCredentials(anyConn.encryptedCredentials);
+        const isGoogleRelated = connectorId.startsWith('google') || connectorId.startsWith('gmail');
+        const searchConnectorIds = [connectorId];
+        if (connectorId === 'gmail-read') searchConnectorIds.push('gmail');
+        if (isGoogleRelated) searchConnectorIds.push('google');
+
+        if (!savedConn) {
+          const query: any = { connectorId: { $in: searchConnectorIds }, status: { $in: ['connected', 'active', 'verified', 'pending_auth'] } };
+          if (orgId) query.organizationId = orgId;
+          savedConn = await ConnectionModel.findOne(query).sort({ updatedAt: -1 });
+        }
+
+        if (!savedConn && orgId) {
+          savedConn = await ConnectionModel.findOne({ connectorId: { $in: searchConnectorIds } }).sort({ updatedAt: -1 });
+        }
+
+        if (!savedConn) {
+          savedConn = await ConnectionModel.findOne({ connectorId: { $in: searchConnectorIds } }).sort({ updatedAt: -1 });
+        }
+
+        if (savedConn && savedConn.encryptedCredentials) {
+          credentials = StepExecutor.parseCredentials(savedConn.encryptedCredentials);
+        }
+
+        const hasTokens = Boolean(credentials.accessToken || credentials.access_token || credentials.refreshToken || credentials.refresh_token || credentials.apiKey);
+        if (!hasTokens) {
+          const candidateConns = await ConnectionModel.find({ connectorId: { $in: searchConnectorIds } }).sort({ updatedAt: -1 });
+          for (const cand of candidateConns) {
+            if (cand.encryptedCredentials) {
+              const candCreds = StepExecutor.parseCredentials(cand.encryptedCredentials);
+              if (candCreds.accessToken || candCreds.access_token || candCreds.refreshToken || candCreds.refresh_token || candCreds.apiKey) {
+                savedConn = cand;
+                credentials = candCreds;
+                break;
+              }
+            }
+          }
         }
       }
     } catch (err) {
       console.warn(`[StepExecutor] Database connection query warning for ${connectorId}:`, err);
+    }
+
+    // Google OAuth Refresh Token Handler
+    const cidLower = connectorId.toLowerCase();
+    const isGoogle = cidLower.startsWith('google') || cidLower.startsWith('gmail');
+
+    if (isGoogle && savedConn) {
+      const targetConnId = savedConn._id?.toString() || savedConn.id || connectionId;
+
+      // 1. Attempt to invoke the backend's getValidGoogleAccessToken directly
+      try {
+        const pathMod = safeRequire('path');
+        if (pathMod) {
+          const pathsToTry = [
+            pathMod.resolve(process.cwd(), 'apps/backend/src/modules/connectors/google-oauth-token.service'),
+            pathMod.resolve(process.cwd(), 'src/modules/connectors/google-oauth-token.service'),
+            pathMod.resolve(process.cwd(), 'dist/modules/connectors/google-oauth-token.service'),
+            pathMod.resolve(process.cwd(), '../backend/src/modules/connectors/google-oauth-token.service'),
+            pathMod.resolve(__dirname, '../../../../../apps/backend/src/modules/connectors/google-oauth-token.service')
+          ];
+          
+          let googleService;
+          for (const servicePath of pathsToTry) {
+            googleService = safeRequire(servicePath);
+            if (googleService && typeof googleService.getValidGoogleAccessToken === 'function') {
+              break;
+            }
+          }
+
+          if (googleService && typeof googleService.getValidGoogleAccessToken === 'function' && targetConnId) {
+            const activeToken = await googleService.getValidGoogleAccessToken(targetConnId, cidLower);
+            if (activeToken) {
+              credentials.accessToken = activeToken;
+              credentials.access_token = activeToken;
+            }
+          }
+        }
+      } catch (svcErr) {
+        console.warn(`[StepExecutor] Direct Google token service call warning:`, svcErr);
+      }
+
+      // 2. Inline token refresh if accessToken is missing or expired
+      let currentToken = credentials.accessToken || credentials.access_token;
+      if (!currentToken || currentToken.startsWith('default_access_token_') || currentToken.includes('dummy')) {
+        const refreshToken = credentials.refreshToken || credentials.refresh_token || (savedConn as any)?.refreshToken;
+        if (refreshToken && !refreshToken.startsWith('refresh_token_') && !refreshToken.includes('dummy')) {
+          try {
+            const bodyParams = new URLSearchParams({
+              grant_type: 'refresh_token',
+              refresh_token: refreshToken,
+            });
+            const clientId = process.env.GOOGLE_CLIENT_ID || '';
+            const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+            if (clientId) bodyParams.append('client_id', clientId);
+            if (clientSecret) bodyParams.append('client_secret', clientSecret);
+
+            const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: bodyParams.toString(),
+            });
+            const tokenData: any = await tokenRes.json();
+            if (tokenData && tokenData.access_token) {
+              credentials.accessToken = tokenData.access_token;
+              credentials.access_token = tokenData.access_token;
+            }
+          } catch (inlineErr) {
+            console.warn(`[StepExecutor] Inline Google token refresh failed:`, inlineErr);
+          }
+        }
+      }
     }
 
     // Auto-inject environmental AI keys for AI Native connectors
@@ -319,7 +431,13 @@ export class StepExecutor {
     // Real Production Safeguard: If no credentials exist for an authenticated service, THROW REAL ERROR!
     if (!Object.keys(credentials).length) {
       throw new Error(
-        `Connector '${connectorId}' is not connected. Please go to http://localhost:3000/connectors to connect your real account.`
+        `Connector '${connectorId}' is not connected. Please connect your real account.`
+      );
+    }
+
+    if (isGoogle && !credentials.accessToken && !credentials.access_token) {
+      throw new Error(
+        `Gmail access token is missing or expired. Please re-authenticate your Google account.`
       );
     }
 

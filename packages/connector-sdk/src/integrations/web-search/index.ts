@@ -147,7 +147,7 @@ export class EnhancedWebSearchConnector extends BaseConnector {
     let browserToolService: any = (globalThis as any).browserToolService || null;
     if (!browserToolService && typeof window === 'undefined') {
       try {
-        const safeReq = new Function('name', 'return require(name)');
+        const safeReq = eval('require');
         const mod = safeReq('../../../../apps/backend/src/services/browser-tool.service') || safeReq('../../../../../apps/backend/src/services/browser-tool.service');
         browserToolService = mod?.browserToolService || null;
       } catch {}

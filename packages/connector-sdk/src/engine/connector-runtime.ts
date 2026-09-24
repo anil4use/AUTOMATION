@@ -1,4 +1,5 @@
 import { connectorRegistry, StepExecutor } from './step-executor';
+import { safeRequire } from '../utils/safe-require';
 
 export interface ConnectorRuntimeExecutionParams {
   connectorId: string;
@@ -28,19 +29,18 @@ export class ConnectorRuntime {
    */
   public static async execute(params: ConnectorRuntimeExecutionParams): Promise<ConnectorRuntimeResult> {
     const startTime = Date.now();
-    const { connectorId, actionId, input, organizationId } = params;
+    const { connectorId, actionId, input, organizationId, connectionId } = params;
 
     try {
       // 1. Resolve connection credentials (AES-256 decrypted)
-      const credentials = await StepExecutor.resolveCredentials(connectorId, organizationId);
+      const credentials = await StepExecutor.resolveCredentials(connectorId, organizationId, connectionId);
 
       // 2. Check for V2 DB metadata (if database is accessible)
       let dbConnector: any = null;
       let dbAction: any = null;
 
       try {
-        const safeReq = new Function('name', 'return require(name)');
-        const dbMod = safeReq('@automation/database');
+        const dbMod = safeRequire('@automation/database');
         if (dbMod?.ConnectorModel && dbMod?.ConnectorActionModel) {
           dbConnector = await dbMod.ConnectorModel.findOne({ connectorId, enabled: true });
           if (dbConnector) {
@@ -61,19 +61,32 @@ export class ConnectorRuntime {
         // V1 Adapter Execution Fallback
         const v1Connector = connectorRegistry[connectorId];
         if (v1Connector && typeof v1Connector.executeAction === 'function') {
-          const result = await v1Connector.executeAction(actionId, {
+          let result = await v1Connector.executeAction(actionId, {
             connectionCredentials: credentials,
             stepInput: input,
           });
 
-          if (!result.success) {
+          if ((!result || !result.success || (typeof result.error === 'string' && result.error.includes('Unsupported'))) && (actionId === 'get_all' || actionId === 'list_all')) {
+            const primaryListAction = v1Connector.manifest?.actions?.find((a: any) => {
+              const id = a.id.toLowerCase();
+              return (id.startsWith('list_') || id.startsWith('read_') || id.startsWith('search_') || id.startsWith('get_')) && id !== 'get_all';
+            });
+            if (primaryListAction) {
+              result = await v1Connector.executeAction(primaryListAction.id, {
+                connectionCredentials: credentials,
+                stepInput: input,
+              });
+            }
+          }
+
+          if (!result || !result.success) {
             return {
               success: false,
               executionTimeMs: Date.now() - startTime,
               error: {
-                code: result.error?.code || 'PROVIDER_ERROR',
-                message: result.error?.message || result.error || 'V1 Action execution failed',
-                details: result.error,
+                code: result?.error?.code || 'PROVIDER_ERROR',
+                message: result?.error?.message || result?.error || 'V1 Action execution failed',
+                details: result?.error,
               },
             };
           }
@@ -124,12 +137,26 @@ export class ConnectorRuntime {
   ): Promise<any> {
     const v1Connector = connectorRegistry[connector.connectorId];
     if (v1Connector && typeof v1Connector.executeAction === 'function') {
-      const result = await v1Connector.executeAction(action.actionId, {
+      let result = await v1Connector.executeAction(action.actionId, {
         connectionCredentials: credentials,
         stepInput: input,
       });
-      if (!result.success) {
-        throw new Error(result.error?.message || result.error || `Execution failed for ${action.actionId}`);
+
+      if ((!result || !result.success || (typeof result.error === 'string' && result.error.includes('Unsupported'))) && (action.actionId === 'get_all' || action.actionId === 'list_all')) {
+        const primaryListAction = v1Connector.manifest?.actions?.find((a: any) => {
+          const id = a.id.toLowerCase();
+          return (id.startsWith('list_') || id.startsWith('read_') || id.startsWith('search_') || id.startsWith('get_')) && id !== 'get_all';
+        });
+        if (primaryListAction) {
+          result = await v1Connector.executeAction(primaryListAction.id, {
+            connectionCredentials: credentials,
+            stepInput: input,
+          });
+        }
+      }
+
+      if (!result || !result.success) {
+        throw new Error(result?.error?.message || result?.error || `Execution failed for ${action.actionId}`);
       }
       return result.data;
     }

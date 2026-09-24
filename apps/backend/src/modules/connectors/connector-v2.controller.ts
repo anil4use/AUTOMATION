@@ -155,7 +155,7 @@ export class ConnectorV2Controller {
   public static async testAction(req: Request, res: Response): Promise<void> {
     try {
       const { connectorId } = req.params;
-      const { actionId, input } = req.body;
+      const { actionId, input, connectionId } = req.body;
       const orgId = (req as any).user?.organizationId || (req as any).user?.orgId;
 
       if (!actionId) {
@@ -168,6 +168,7 @@ export class ConnectorV2Controller {
         actionId,
         input: input || {},
         organizationId: orgId,
+        connectionId,
       });
 
       res.json(result);

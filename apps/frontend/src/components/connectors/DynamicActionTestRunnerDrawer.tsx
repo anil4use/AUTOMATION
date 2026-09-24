@@ -7,6 +7,9 @@ import { getConnectorBrandSpec } from '@/lib/connector-brand-utils';
 import { DynamicFieldWidget } from '@/components/connectors/DynamicFieldWidget';
 import { DynamicResponseVisualizer } from '@/components/connectors/DynamicResponseVisualizer';
 
+import { ConnectionSelector } from '@/components/workflow/ConnectionSelector';
+import { AccountConnectModal } from '@/components/workflow/AccountConnectModal';
+
 interface DynamicActionTestRunnerDrawerProps {
   connectorId: string;
   connectorName?: string;
@@ -41,6 +44,9 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
   const [selectedActionId, setSelectedActionId] = useState<string>('');
   const [selectedAction, setSelectedAction] = useState<any>(null);
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
+  const [userConnections, setUserConnections] = useState<any[]>([]);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string>('');
+  const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
@@ -53,7 +59,9 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
       setSelectedAction(null);
       setInputValues({});
       setTestResult(null);
+      setSelectedConnectionId('');
       fetchConnectorActions();
+      fetchUserConnections();
     } else if (!isOpen) {
       setActions([]);
       setSelectedActionId('');
@@ -62,6 +70,23 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
       setTestResult(null);
     }
   }, [isOpen, connectorId]);
+
+  const fetchUserConnections = async () => {
+    try {
+      const res = await apiClient.get('/v1/connectors/connections');
+      if (res.data?.data) {
+        const conns = res.data.data;
+        setUserConnections(conns);
+        const matching = conns.find((c: any) =>
+          (c.connectorId === connectorId || connectorId.includes(c.connectorId) || (c.connectorId && c.connectorId.includes(connectorId))) &&
+          (c.status === 'connected' || c.status === 'active' || c.status === 'verified')
+        ) || conns.find((c: any) => c.connectorId === connectorId || connectorId.includes(c.connectorId) || (c.connectorId && c.connectorId.includes(connectorId)));
+        if (matching) {
+          setSelectedConnectionId(matching._id || matching.id);
+        }
+      }
+    } catch (err) {}
+  };
 
   const initializeDefaultsForAction = (act: any) => {
     if (!act) return {};
@@ -138,6 +163,7 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
 
       const res = await apiClient.post(`/v2/connectors/${connectorId}/test`, {
         actionId: selectedActionId,
+        connectionId: selectedConnectionId,
         input: cleanInput,
       });
 
@@ -222,6 +248,16 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
             </div>
           ) : (
             <>
+              {/* Account Connection Selector */}
+              <ConnectionSelector
+                connectorId={connectorId}
+                selectedConnectionId={selectedConnectionId}
+                connections={userConnections}
+                onSelectConnection={(id) => setSelectedConnectionId(id)}
+                onAddNewAccount={() => setShowConnectModal(true)}
+                onRefreshConnections={fetchUserConnections}
+              />
+
               {/* Operation Selection */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
@@ -395,6 +431,18 @@ export const DynamicActionTestRunnerDrawer: React.FC<DynamicActionTestRunnerDraw
           )}
         </div>
       </div>
+
+      {showConnectModal && (
+        <AccountConnectModal
+          connectorId={connectorId}
+          onSuccess={(newId) => {
+            setSelectedConnectionId(newId);
+            fetchUserConnections();
+            setShowConnectModal(false);
+          }}
+          onClose={() => setShowConnectModal(false)}
+        />
+      )}
     </div>
   );
 };

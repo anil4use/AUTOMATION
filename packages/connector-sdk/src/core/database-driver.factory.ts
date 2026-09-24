@@ -63,7 +63,7 @@ function safeRequire(moduleName: string): any {
     throw new Error(`Database driver '${moduleName}' cannot be executed in the browser.`);
   }
   try {
-    const getReq = new Function('name', 'return require(name)');
+    const getReq = eval('require');
     return getReq(moduleName);
   } catch (err: any) {
     throw new Error(`Failed to load database driver '${moduleName}': ${err?.message || err}`);

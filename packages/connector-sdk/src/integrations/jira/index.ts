@@ -696,7 +696,7 @@ export class JiraConnector extends BaseConnector {
         }
 
         case 'add_attachment': {
-          const safeReq = new Function('name', 'return require(name)');
+          const safeReq = eval('require');
           const FormDataMod = safeReq('form-data');
           if (!FormDataMod) throw new Error('form-data module not available');
           const formData = new FormDataMod();

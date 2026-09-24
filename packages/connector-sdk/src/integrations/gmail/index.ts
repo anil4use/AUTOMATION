@@ -663,12 +663,14 @@ export class GmailConnector extends BaseConnector {
           return { success: true, data: { messageId: data.id, threadId: data.threadId } };
         }
 
+        case 'get_all':
+        case 'list_all':
         case 'list_messages':
         case 'list_emails':
         case 'get_messages':
         case 'search_emails':
         case 'read_emails': {
-          const max = inputs.maxResults || inputs.limit || 5;
+          const max = Number(inputs.maxResults || inputs.limit) || 5;
           const queryParam = inputs.query || inputs.q || inputs.searchQuery || undefined;
           const { data: listData } = await api.get('/messages', { params: { q: queryParam, maxResults: max } });
           const messages = listData.messages || [];

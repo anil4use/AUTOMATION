@@ -578,7 +578,7 @@ export class OpenAIConnector extends BaseConnector {
 
         case 'count_tokens': {
           try {
-            const safeReq = new Function('name', 'return require(name)');
+            const safeReq = eval('require');
             const tiktokenMod = safeReq('js-tiktoken');
             if (tiktokenMod && tiktokenMod.encodingForModel) {
               const model = (inputs.model || 'gpt-4o') as any;
