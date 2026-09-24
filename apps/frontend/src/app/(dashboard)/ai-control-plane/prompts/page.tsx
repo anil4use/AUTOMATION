@@ -90,6 +90,12 @@ export default function PromptsPage() {
   const [testModelId, setTestModelId] = useState('');
   const [testUserMessage, setTestUserMessage] = useState('');
 
+  // AI Response Analyzer & Formatter State
+  const [outputViewMode, setOutputViewMode] = useState<'formatted' | 'raw'>('formatted');
+  const [formattedResponse, setFormattedResponse] = useState<string>('');
+  const [isFormattingResponse, setIsFormattingResponse] = useState<boolean>(false);
+  const [requestedVaultFormat, setRequestedVaultFormat] = useState<'auto' | 'summary' | 'pdf' | 'table' | 'csv' | 'json'>('auto');
+
   // Selected step index in Multi-Step Flow Pipeline Visualizer
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
 
@@ -132,23 +138,16 @@ export default function PromptsPage() {
       const authedIds = new Set<string>(userConns.map((uc: any) => uc.connectorId));
       const systemIds = new Set(['web-search', 'web-browser', 'http-request', 'autoflow-schedule', 'ai-agent', 'data-vault', 'local-storage']);
 
-      const processedConnectors = rawConnectors.map((c) => ({
-        ...c,
-        isConnected: authedIds.has(c.connectorId) || systemIds.has(c.connectorId),
-      }));
-
-      // Sort so authed/connected connectors appear at the top
-      processedConnectors.sort((a, b) => (b.isConnected ? 1 : 0) - (a.isConnected ? 1 : 0));
+      // Strictly filter ONLY connectors that are authenticated or system-configured
+      const processedConnectors = rawConnectors
+        .filter((c) => authedIds.has(c.connectorId) || systemIds.has(c.connectorId))
+        .map((c) => ({
+          ...c,
+          isConnected: true,
+        }));
 
       setDbConnectors(processedConnectors);
-
-      // Default selection to authed/connected connectors
-      const authedConnectors = processedConnectors.filter((c) => c.isConnected);
-      if (authedConnectors.length > 0) {
-        setSelectedConnectorIds(authedConnectors.map((c) => c.connectorId));
-      } else if (processedConnectors.length > 0) {
-        setSelectedConnectorIds(processedConnectors.slice(0, 5).map((c) => c.connectorId));
-      }
+      setSelectedConnectorIds(processedConnectors.map((c) => c.connectorId));
 
       if (provRes.data.length > 0) setTestProviderId(provRes.data[0].providerId);
       if (modRes.data.length > 0) setTestModelId(modRes.data[0].modelId);
@@ -217,18 +216,19 @@ export default function PromptsPage() {
 
     setIsSavingToVault(true);
     try {
-      const isJson = typeof payloadToSave === 'object' || (typeof payloadToSave === 'string' && (payloadToSave.trim().startsWith('{') || payloadToSave.trim().startsWith('[')));
       const res = await apiClient.post('/v1/ai-control-plane/save-to-vault', {
         title: selectedPrompt?.name || 'AI Playground Output',
         promptKey: selectedPrompt?.promptKey || 'playground',
         providerId: testProviderId,
         modelId: testModelId,
-        type: isJson ? 'json' : 'text',
+        userInstruction: testUserMessage || selectedPrompt?.name,
+        requestedFormat: requestedVaultFormat,
         content: payloadToSave,
       });
 
+      const formatLabel = res.data.formatted?.formatType ? res.data.formatted.formatType.toUpperCase() : 'HUMAN-READABLE';
       toast.success(
-        `📦 Saved to Data Vault! (storage/data-vault/ai-playground-outputs/${res.data.fileName})`,
+        `📦 Saved to Data Vault in ${formatLabel} format! (${res.data.fileName})`,
         { duration: 5000 }
       );
     } catch (err: any) {
@@ -238,12 +238,37 @@ export default function PromptsPage() {
     }
   };
 
-  // When selected prompt changes, trigger AI payload generator
+  // Re-format AI response on requested format change
+  const reFormatResponse = async (fmt: 'auto' | 'summary' | 'pdf' | 'table' | 'csv' | 'json') => {
+    setRequestedVaultFormat(fmt);
+    if (!testResponse?.content) return;
+    setIsFormattingResponse(true);
+    try {
+      const fmtRes = await apiClient.post('/v1/ai-control-plane/format-response', {
+        rawResponse: testResponse.content,
+        userInstruction: testUserMessage || selectedPrompt?.name,
+        requestedFormat: fmt,
+        providerId: testProviderId,
+        modelId: testModelId,
+      });
+      if (fmtRes.data?.formattedContent) {
+        setFormattedResponse(fmtRes.data.formattedContent);
+      }
+    } catch {
+      toast.error('Format conversion failed');
+    } finally {
+      setIsFormattingResponse(false);
+    }
+  };
+
+  // When selected prompt changes, reset selection and trigger AI payload generator
   useEffect(() => {
     if (selectedPrompt) {
       setEditTemplate(selectedPrompt.template);
-      handleGenerateAiTestPayload();
+      setSelectedConnectorIds([]);
       setTestResponse(null);
+      setFormattedResponse('');
+      handleGenerateAiTestPayload();
     }
   }, [selectedPrompt]);
 
@@ -388,6 +413,7 @@ export default function PromptsPage() {
     if (!selectedPrompt) return;
     setIsTesting(true);
     setTestResponse(null);
+    setFormattedResponse('');
     setActiveStepIndex(0);
     try {
       const payload = {
@@ -400,6 +426,27 @@ export default function PromptsPage() {
       const res = await apiClient.post('/v1/ai-control-plane/test-prompt', payload);
       setTestResponse(res.data);
       toast.success('Prompt execution completed!');
+
+      // Automatically normalize & format technical output into human-readable representation
+      if (res.data?.content) {
+        setIsFormattingResponse(true);
+        try {
+          const fmtRes = await apiClient.post('/v1/ai-control-plane/format-response', {
+            rawResponse: res.data.content,
+            userInstruction: testUserMessage || selectedPrompt.name,
+            requestedFormat: requestedVaultFormat,
+            providerId: testProviderId,
+            modelId: testModelId,
+          });
+          if (fmtRes.data?.formattedContent) {
+            setFormattedResponse(fmtRes.data.formattedContent);
+          }
+        } catch {
+          setFormattedResponse(res.data.content);
+        } finally {
+          setIsFormattingResponse(false);
+        }
+      }
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message;
       toast.error('Playground test failed');
@@ -1048,6 +1095,23 @@ export default function PromptsPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
+                    {/* Format selector for saving to Data Vault */}
+                    <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2 py-1 rounded-xl">
+                      <span className="text-[10px] text-textMuted font-mono">Format:</span>
+                      <select
+                        value={requestedVaultFormat}
+                        onChange={(e) => reFormatResponse(e.target.value as any)}
+                        className="bg-transparent text-white text-[11px] font-mono focus:outline-none cursor-pointer"
+                      >
+                        <option value="auto" className="bg-[#1a1a1a]">Auto Format</option>
+                        <option value="summary" className="bg-[#1a1a1a]">Markdown Summary</option>
+                        <option value="pdf" className="bg-[#1a1a1a]">PDF Document</option>
+                        <option value="table" className="bg-[#1a1a1a]">Markdown Table</option>
+                        <option value="csv" className="bg-[#1a1a1a]">CSV Spreadsheet</option>
+                        <option value="json" className="bg-[#1a1a1a]">Clean JSON</option>
+                      </select>
+                    </div>
+
                     {testResponse?.content && (
                       <button
                         onClick={() => handleSaveToVault()}
@@ -1071,8 +1135,35 @@ export default function PromptsPage() {
                   </div>
                 </div>
 
-                {/* Multi-Step Execution Flow Pipeline Visualizer */}
-                {parsedExecutionPlan && parsedExecutionPlan.length > 0 && (
+                {/* View Mode Toggle: Human Response vs Technical Workflow Plan */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => setOutputViewMode('formatted')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      outputViewMode === 'formatted'
+                        ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-md'
+                        : 'bg-white/5 border border-white/10 text-textMuted hover:text-white'
+                    }`}
+                  >
+                    <Sparkles size={13} className="text-amber-400" />
+                    <span>✨ AI Formatted Human Response</span>
+                  </button>
+
+                  <button
+                    onClick={() => setOutputViewMode('raw')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      outputViewMode === 'raw'
+                        ? 'bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 shadow-md'
+                        : 'bg-white/5 border border-white/10 text-textMuted hover:text-white'
+                    }`}
+                  >
+                    <Code2 size={13} className="text-indigo-400" />
+                    <span>⚙️ Technical Plan & Raw Output</span>
+                  </button>
+                </div>
+
+                {/* Multi-Step Execution Flow Pipeline Visualizer (Shown in Raw or Formatted mode when steps exist) */}
+                {outputViewMode === 'raw' && parsedExecutionPlan && parsedExecutionPlan.length > 0 && (
                   <div className="mb-4 bg-white/[0.02] border border-white/10 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-bold text-white tracking-tight flex items-center gap-2">
@@ -1141,15 +1232,19 @@ export default function PromptsPage() {
                   </div>
                 )}
 
-                {/* Raw AI Output / Response */}
+                {/* Main AI Output Content Box */}
                 <div className="flex-1 bg-black/50 border border-white/10 rounded-xl p-5 text-xs text-gray-200 font-mono whitespace-pre-wrap overflow-y-auto custom-scrollbar leading-relaxed">
-                  {isTesting ? (
+                  {isTesting || isFormattingResponse ? (
                     <div className="flex flex-col items-center justify-center h-full text-textMuted gap-3">
                       <Loader2 className="animate-spin text-indigo-400" size={32} />
-                      <span>Generating execution plan across target LLM...</span>
+                      <span>{isTesting ? 'Executing prompt across LLM...' : 'AI Normalizing & Formatting Response for User...'}</span>
                     </div>
                   ) : testResponse ? (
-                    testResponse.content
+                    outputViewMode === 'formatted' ? (
+                      formattedResponse || testResponse.content
+                    ) : (
+                      testResponse.content
+                    )
                   ) : (
                     <div className="flex items-center justify-center h-full text-textMuted italic">
                       Click "Run Execution Test" to execute prompt against active LLM model.

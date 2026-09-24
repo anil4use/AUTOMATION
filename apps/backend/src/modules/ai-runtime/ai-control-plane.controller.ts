@@ -261,34 +261,54 @@ export class AIControlPlaneController {
         ConnectorModel.find({ enabled: true }).lean().catch(() => []),
       ]);
 
-      const authedConnectorIds = new Set((userConns || []).map((c: any) => c.connectorId));
+      const systemConfiguredIds = new Set([
+        'data-vault',
+        'local-storage',
+        'web-search',
+        'web-browser',
+        'http-request',
+        'autoflow-schedule',
+        'autoflow-condition',
+        'ai-agent',
+      ]);
+
+      const authedUserConnIds = new Set((userConns || []).map((c: any) => c.connectorId));
+
+      // Strictly filter ONLY SDK connectors that are authenticated by user OR system-configured
+      const validAuthedOrSystemConnectors = dbConnectors.filter((c: any) =>
+        authedUserConnIds.has(c.connectorId) || systemConfiguredIds.has(c.connectorId)
+      );
+
+      // Append any active user connections not present in dbConnectors list
+      for (const uc of userConns || []) {
+        if (!validAuthedOrSystemConnectors.some((c: any) => c.connectorId === uc.connectorId)) {
+          validAuthedOrSystemConnectors.push({
+            connectorId: uc.connectorId,
+            name: uc.name || uc.connectorId,
+            displayName: uc.name || uc.connectorId,
+            actions: uc.actions || ['execute'],
+          });
+        }
+      }
 
       let targetConnectors: any[] = [];
 
       if (Array.isArray(selectedConnectorIds) && selectedConnectorIds.length > 0) {
-        // Filter DB connectors or userConns matching user's explicit selection
-        targetConnectors = dbConnectors.filter((c: any) => selectedConnectorIds.includes(c.connectorId));
-        if (targetConnectors.length === 0 && userConns.length > 0) {
-          targetConnectors = userConns.filter((c: any) => selectedConnectorIds.includes(c.connectorId));
-        }
+        // Filter ONLY valid authed or system-configured connectors matching user's selection
+        targetConnectors = validAuthedOrSystemConnectors.filter((c: any) => selectedConnectorIds.includes(c.connectorId));
       }
 
       if (targetConnectors.length === 0) {
-        // Fallback to active authed/connected connectors or top DB connectors
-        targetConnectors = dbConnectors.filter((c: any) =>
-          authedConnectorIds.has(c.connectorId) ||
-          ['web-search', 'web-browser', 'http-request', 'autoflow-schedule', 'ai-agent', 'data-vault', 'local-storage'].includes(c.connectorId)
-        );
-        if (targetConnectors.length === 0) {
-          targetConnectors = dbConnectors.slice(0, 5);
-        }
+        // Use ALL valid authed or system configured connectors
+        targetConnectors = validAuthedOrSystemConnectors;
       }
 
       const realConnectorContextStr = JSON.stringify(
         targetConnectors.map((c: any) => ({
           id: c.connectorId || c._id,
           name: c.displayName || c.name || c.connectorId,
-          status: authedConnectorIds.has(c.connectorId) || ['web-search', 'web-browser', 'http-request', 'autoflow-schedule', 'ai-agent', 'data-vault', 'local-storage'].includes(c.connectorId) ? 'connected' : 'available',
+          status: 'connected',
+          authStatus: authedUserConnIds.has(c.connectorId) ? 'user_authenticated' : 'system_configured',
           actions: (c.actions || []).map((a: any) => a.id || a.actionId || 'execute'),
         })),
         null,
@@ -362,34 +382,70 @@ Return ONLY a valid JSON object matching key-value pairs for variables, plus "us
     }
   }
 
+  public static async formatResponse(req: Request, res: Response) {
+    try {
+      const { rawResponse, userInstruction, requestedFormat, providerId, modelId } = req.body;
+      const { AIResponseFormatterService } = require('./ai-response-formatter.service');
+
+      const result = await AIResponseFormatterService.format({
+        rawResponse,
+        userInstruction,
+        requestedFormat,
+        providerId,
+        modelId,
+      });
+
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Response formatting failed' });
+    }
+  }
+
   public static async saveToVault(req: Request, res: Response) {
     try {
-      const { title, promptKey, content, type, providerId, modelId } = req.body;
+      const { title, promptKey, content, userInstruction, requestedFormat, type, providerId, modelId } = req.body;
       const { VaultController } = require('../vault/vault.controller');
+      const { AIResponseFormatterService } = require('./ai-response-formatter.service');
+
+      // Sanitize, normalize, and format AI response according to user requested output format
+      const formattedResult = await AIResponseFormatterService.format({
+        rawResponse: content,
+        userInstruction: userInstruction || title || promptKey,
+        requestedFormat: requestedFormat || (type === 'json' ? 'json' : 'auto'),
+        providerId,
+        modelId,
+      });
 
       const timestamp = Date.now();
       const safeKey = (promptKey || 'ai_output').replace(/[:/]/g, '_');
-      const fileName = `ai_response_${safeKey}_${timestamp}.${type === 'json' ? 'json' : 'txt'}`;
+      const targetExt =
+        formattedResult.formatType === 'json'
+          ? 'json'
+          : formattedResult.formatType === 'csv'
+          ? 'csv'
+          : formattedResult.formatType === 'pdf'
+          ? 'pdf'
+          : 'md';
 
-      let fileData: any = content;
-      if (typeof content === 'string' && (content.trim().startsWith('{') || content.trim().startsWith('['))) {
+      const fileName = `ai_response_${safeKey}_${timestamp}.${targetExt}`;
+
+      let filePayload: any = formattedResult.formattedContent;
+      if (formattedResult.formatType === 'json') {
         try {
-          fileData = JSON.parse(content);
-        } catch {}
+          filePayload = JSON.parse(formattedResult.formattedContent);
+        } catch {
+          filePayload = formattedResult.formattedContent;
+        }
       }
 
       const uploadReq = {
         body: {
           fileName,
           subfolder: 'ai-playground-outputs',
-          content: {
-            title: title || 'AI Output Response',
-            promptKey: promptKey || 'playground',
-            providerId: providerId || 'unknown',
-            modelId: modelId || 'unknown',
-            savedAt: new Date().toISOString(),
-            output: fileData,
-          },
+          content: filePayload,
         },
       } as any;
 
@@ -408,6 +464,7 @@ Return ONLY a valid JSON object matching key-value pairs for variables, plus "us
         fileName,
         subfolder: 'ai-playground-outputs',
         vaultPath: `storage/data-vault/ai-playground-outputs/${fileName}`,
+        formatted: formattedResult,
         savedResult,
       });
     } catch (err: any) {
