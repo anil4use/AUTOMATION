@@ -135,13 +135,12 @@ function buildProviderDefs(): ProviderSeedDef[] {
       apiKeyValue: env.groqApiKey,
       isOpenAICompatible: false,
       credentials: { apiKey: env.groqApiKey },
-      defaultModel: 'llama-3.1-70b-versatile',
+      defaultModel: 'openai/gpt-oss-120b',
       models: [
-        { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B Versatile', contextWindow: 128000, isFree: true, recommended: true },
-        { id: 'llama3-70b-8192', label: 'Llama 3 70B', contextWindow: 8192, isFree: true },
-        { id: 'llama3-8b-8192', label: 'Llama 3 8B', contextWindow: 8192, isFree: true },
-        { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B', contextWindow: 32768, isFree: true },
-        { id: 'gemma2-9b-it', label: 'Gemma 2 9B', contextWindow: 8192, isFree: true },
+        { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B (Groq)', contextWindow: 128000, isFree: true, recommended: true },
+        { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B (Groq)', contextWindow: 128000, isFree: true, recommended: true },
+        { id: 'qwen/qwen3.8-27b', label: 'Qwen 3.8 27B (Groq)', contextWindow: 131072, isFree: true },
+        { id: 'allam-2-7b', label: 'ALLaM 2 7B (Groq)', contextWindow: 4096, isFree: true },
       ],
     });
   }
@@ -156,11 +155,11 @@ function buildProviderDefs(): ProviderSeedDef[] {
       apiKeyValue: env.geminiApiKey,
       isOpenAICompatible: false,
       credentials: { apiKey: env.geminiApiKey },
-      defaultModel: 'gemini-2.0-flash',
+      defaultModel: 'gemini-3.5-flash-lite',
       models: [
-        { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', contextWindow: 1048576, isFree: true, recommended: true },
-        { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', contextWindow: 1048576, isFree: true },
-        { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', contextWindow: 2097152, isFree: false },
+        { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', contextWindow: 1048576, isFree: true, recommended: true },
+        { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', contextWindow: 1048576, isFree: true },
+        { id: 'gemma-4-26b-a4b-it', label: 'Google Gemma 4 26B', contextWindow: 131072, isFree: true },
       ],
     });
   }

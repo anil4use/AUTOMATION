@@ -65,8 +65,50 @@ export class AIControlPlaneController {
 
   public static async listModels(req: Request, res: Response) {
     try {
-      const models = await AIModelModel.find().sort({ providerId: 1, priority: -1 }).lean();
-      res.json(models);
+      const rawModels = await AIModelModel.find().sort({ providerId: 1, priority: -1 }).lean();
+
+      const enrichedModels = await Promise.all(
+        rawModels.map(async (m: any) => {
+          const logs = await AIExecutionLogModel.find({
+            provider: m.providerId,
+            llmModel: m.modelId,
+          })
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .lean();
+
+          let avgLatencyMs = 0;
+          let successRate = 100;
+          let totalExecutions = logs.length;
+
+          if (logs.length > 0) {
+            const sumLatency = logs.reduce((acc, curr) => acc + (curr.latencyMs || 0), 0);
+            avgLatencyMs = Math.round(sumLatency / logs.length);
+
+            const successCount = logs.filter((l) => l.success).length;
+            successRate = Math.round((successCount / logs.length) * 100);
+          }
+
+          // Dynamic App-Fit Use-Case Recommendation Tag
+          let recommendedUseCase = 'General Intent Parsing';
+          if (m.modelId.includes('code') || m.modelId.includes('coder')) recommendedUseCase = 'TypeScript & Code Automation';
+          else if (m.modelId.includes('reasoning') || m.supportsReasoning) recommendedUseCase = 'Complex Logic & Reasoning';
+          else if (m.modelId.includes('nemotron-3-super')) recommendedUseCase = 'Workflow Intent Planner (Best Fit)';
+          else if (m.modelId.includes('lightning') || m.contextWindow >= 1000000) recommendedUseCase = 'Large Context & Document Parsing';
+          else if (m.providerId === 'groq') recommendedUseCase = 'Ultra-Fast Realtime Response';
+          else if (m.providerId === 'gemini') recommendedUseCase = 'Multimodal & Vision Tasks';
+
+          return {
+            ...m,
+            avgLatencyMs,
+            successRate,
+            totalExecutions,
+            recommendedUseCase,
+          };
+        })
+      );
+
+      res.json(enrichedModels);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -190,7 +232,7 @@ export class AIControlPlaneController {
       const { providerId, modelId, template, variables, userMessage } = req.body;
       const { AIRuntimeService } = require('./ai-runtime.service');
       
-      const content = await AIRuntimeService.testPrompt(
+      const result = await AIRuntimeService.testPrompt(
         providerId,
         modelId,
         template,
@@ -198,9 +240,9 @@ export class AIControlPlaneController {
         userMessage
       );
 
-      res.json({ content });
+      res.json(result);
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message || 'Execution Error' });
     }
   }
 

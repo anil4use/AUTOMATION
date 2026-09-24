@@ -84,7 +84,7 @@ export class AIRuntimeService {
 
   /**
    * Used strictly by the AI Control Plane Playground to test a prompt template live.
-   * Writes to execution log tagged as a playground test.
+   * Writes to execution log tagged as a playground test and returns detailed metrics.
    */
   static async testPrompt(
     providerId: string,
@@ -92,7 +92,14 @@ export class AIRuntimeService {
     template: string,
     variables: Record<string, any>,
     userMessage?: string
-  ): Promise<string> {
+  ): Promise<{
+    content: string;
+    latencyMs: number;
+    inputTokens: number;
+    outputTokens: number;
+    tokensPerSec: number;
+    success: boolean;
+  }> {
     const startTime = Date.now();
     let systemPrompt = '';
     let success = false;
@@ -124,7 +131,19 @@ export class AIRuntimeService {
       inputTokens = result.inputTokens || 0;
       outputTokens = result.outputTokens || 0;
       success = true;
-      return content;
+
+      const latencyMs = Date.now() - startTime;
+      const seconds = Math.max(latencyMs / 1000, 0.1);
+      const tokensPerSec = Math.round((outputTokens || (content.length / 4)) / seconds);
+
+      return {
+        content,
+        latencyMs,
+        inputTokens,
+        outputTokens,
+        tokensPerSec,
+        success: true,
+      };
     } catch (err: any) {
       errorMessage = err.message || 'Execution Error';
       throw err;
