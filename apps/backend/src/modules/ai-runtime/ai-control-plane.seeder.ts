@@ -404,7 +404,7 @@ export class AIControlPlaneSeeder {
           credentials: def.credentials,
           availableModels: def.models,
           defaultModel: def.defaultModel,
-          enabled: isDefault,
+          enabled: true,
           setupComplete: true,
         });
         logger.info(`[AIControlPlaneSeeder] ✅ New Provider created: ${def.name} (${def.providerId})`);
@@ -413,10 +413,11 @@ export class AIControlPlaneSeeder {
         const updateData: any = {
           availableModels: def.models,
           defaultModel: def.defaultModel,
+          enabled: true,
+          setupComplete: true,
         };
         if (def.credentials?.apiKey) {
           updateData.credentials = def.credentials;
-          updateData.setupComplete = true;
         }
         await AIProviderModel.updateOne(
           { providerId: def.providerId },

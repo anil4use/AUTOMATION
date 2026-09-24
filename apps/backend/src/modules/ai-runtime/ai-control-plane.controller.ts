@@ -246,6 +246,209 @@ export class AIControlPlaneController {
     }
   }
 
+  public static async generateTestPayload(req: Request, res: Response) {
+    try {
+      const { template, promptKey, variables, providerId, modelId, selectedConnectorIds } = req.body;
+      const { AIRuntimeService } = require('./ai-runtime.service');
+      const { ConnectorModel } = require('@automation/database');
+      const { ConnectorService } = require('../connectors/connector.service');
+
+      const orgId = (req as any).user?.organizationId || 'default-org';
+
+      // 1. Fetch active user connections and all enabled DB connectors
+      const [userConns, dbConnectors] = await Promise.all([
+        ConnectorService.getUserConnections(orgId).catch(() => []),
+        ConnectorModel.find({ enabled: true }).lean().catch(() => []),
+      ]);
+
+      const authedConnectorIds = new Set((userConns || []).map((c: any) => c.connectorId));
+
+      let targetConnectors: any[] = [];
+
+      if (Array.isArray(selectedConnectorIds) && selectedConnectorIds.length > 0) {
+        // Filter DB connectors or userConns matching user's explicit selection
+        targetConnectors = dbConnectors.filter((c: any) => selectedConnectorIds.includes(c.connectorId));
+        if (targetConnectors.length === 0 && userConns.length > 0) {
+          targetConnectors = userConns.filter((c: any) => selectedConnectorIds.includes(c.connectorId));
+        }
+      }
+
+      if (targetConnectors.length === 0) {
+        // Fallback to active authed/connected connectors or top DB connectors
+        targetConnectors = dbConnectors.filter((c: any) =>
+          authedConnectorIds.has(c.connectorId) ||
+          ['web-search', 'web-browser', 'http-request', 'autoflow-schedule', 'ai-agent', 'data-vault', 'local-storage'].includes(c.connectorId)
+        );
+        if (targetConnectors.length === 0) {
+          targetConnectors = dbConnectors.slice(0, 5);
+        }
+      }
+
+      const realConnectorContextStr = JSON.stringify(
+        targetConnectors.map((c: any) => ({
+          id: c.connectorId || c._id,
+          name: c.displayName || c.name || c.connectorId,
+          status: authedConnectorIds.has(c.connectorId) || ['web-search', 'web-browser', 'http-request', 'autoflow-schedule', 'ai-agent', 'data-vault', 'local-storage'].includes(c.connectorId) ? 'connected' : 'available',
+          actions: (c.actions || []).map((a: any) => a.id || a.actionId || 'execute'),
+        })),
+        null,
+        2
+      );
+
+      // 2. Use AI to generate contextually perfect test payload for all requested variables
+      const systemPrompt = `You are a test payload generation engine for the AutoFlow AI Platform.
+Given a prompt template and expected variable names, generate a JSON object containing realistic, contextually matching test values for each variable.
+
+Rules:
+- If a variable name is "connectorContext", return the provided real connector JSON array string: ${JSON.stringify(realConnectorContextStr)}
+- If a variable name is "historyContext", return a realistic 2-3 sentence execution history log of previous automated steps.
+- For any other variable (e.g. userMessage, sourceData, targetSchema, agentPersonality, etc.), produce realistic sample data that fits the prompt context.
+- Also include a key "userMessage" with a realistic, clear user instruction prompt matching the prompt key.
+
+Return ONLY a valid JSON object matching key-value pairs for variables, plus "userMessage". No markdown, no commentary.`;
+
+      const userPrompt = `Prompt Key: ${promptKey}\nVariables requested: ${JSON.stringify(variables)}\nTemplate snippet: ${template.slice(0, 500)}`;
+
+      let generatedJsonStr = '';
+      try {
+        const prov = providerId || 'groq';
+        const mod = modelId || 'openai/gpt-oss-120b';
+        const aiResult = await AIRuntimeService.testPrompt(prov, mod, systemPrompt, {}, userPrompt);
+        generatedJsonStr = aiResult.content;
+      } catch {
+        try {
+          const aiResult = await AIRuntimeService.testPrompt('gemini', 'gemini-3.5-flash-lite', systemPrompt, {}, userPrompt);
+          generatedJsonStr = aiResult.content;
+        } catch {}
+      }
+
+      let parsedPayload: Record<string, any> = {};
+      if (generatedJsonStr) {
+        try {
+          let cleaned = generatedJsonStr.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+          if (match) cleaned = match[1].trim();
+          const start = cleaned.indexOf('{');
+          const end = cleaned.lastIndexOf('}');
+          if (start !== -1 && end > start) cleaned = cleaned.substring(start, end + 1);
+          parsedPayload = JSON.parse(cleaned);
+        } catch {}
+      }
+
+      // Ensure connectorContext and historyContext are populated even if LLM omitted them
+      if (!parsedPayload.connectorContext || parsedPayload.connectorContext === '[]' || parsedPayload.connectorContext === '""') {
+        parsedPayload.connectorContext = realConnectorContextStr;
+      }
+      if (!parsedPayload.historyContext) {
+        parsedPayload.historyContext = 'User previously executed: "Fetch unread emails". Last step: Gmail search retrieved 3 sales lead messages.';
+      }
+      if (!parsedPayload.userMessage) {
+        parsedPayload.userMessage = 'Read unread lead emails from Gmail, insert into Google Sheets, and send a Slack notification';
+      }
+
+      const formattedVariables: Record<string, string> = {};
+      for (const [k, v] of Object.entries(parsedPayload)) {
+        if (k === 'userMessage') continue;
+        formattedVariables[k] = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
+      }
+
+      res.json({
+        success: true,
+        variables: formattedVariables,
+        userMessage: parsedPayload.userMessage || '',
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'AI Generation Failed' });
+    }
+  }
+
+  public static async saveToVault(req: Request, res: Response) {
+    try {
+      const { title, promptKey, content, type, providerId, modelId } = req.body;
+      const { VaultController } = require('../vault/vault.controller');
+
+      const timestamp = Date.now();
+      const safeKey = (promptKey || 'ai_output').replace(/[:/]/g, '_');
+      const fileName = `ai_response_${safeKey}_${timestamp}.${type === 'json' ? 'json' : 'txt'}`;
+
+      let fileData: any = content;
+      if (typeof content === 'string' && (content.trim().startsWith('{') || content.trim().startsWith('['))) {
+        try {
+          fileData = JSON.parse(content);
+        } catch {}
+      }
+
+      const uploadReq = {
+        body: {
+          fileName,
+          subfolder: 'ai-playground-outputs',
+          content: {
+            title: title || 'AI Output Response',
+            promptKey: promptKey || 'playground',
+            providerId: providerId || 'unknown',
+            modelId: modelId || 'unknown',
+            savedAt: new Date().toISOString(),
+            output: fileData,
+          },
+        },
+      } as any;
+
+      let savedResult: any = null;
+      const mockRes = {
+        status: () => mockRes,
+        json: (data: any) => {
+          savedResult = data;
+          return mockRes;
+        },
+      } as any;
+
+      await VaultController.uploadFile(uploadReq, mockRes);
+      res.json({
+        success: true,
+        fileName,
+        subfolder: 'ai-playground-outputs',
+        vaultPath: `storage/data-vault/ai-playground-outputs/${fileName}`,
+        savedResult,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to save to Data Vault' });
+    }
+  }
+
+  public static async getPromptHistory(req: Request, res: Response) {
+    try {
+      const { feature, promptKey } = req.params;
+      const history = await AIPromptModel.find({ feature, promptKey })
+        .sort({ version: -1 })
+        .lean();
+      res.json(history);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+
+  public static async activatePromptVersion(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const targetPrompt = await AIPromptModel.findById(id);
+      if (!targetPrompt) return res.status(404).json({ error: 'Prompt version not found' });
+
+      // Archive current active versions for this feature + key
+      await AIPromptModel.updateMany(
+        { feature: targetPrompt.feature, promptKey: targetPrompt.promptKey },
+        { $set: { status: 'archived' } }
+      );
+
+      // Activate selected version
+      targetPrompt.status = 'active';
+      await targetPrompt.save();
+
+      res.json({ success: true, prompt: targetPrompt });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+
   // --- Task Configs ---
 
   public static async listTaskConfigs(req: Request, res: Response) {
@@ -281,6 +484,60 @@ export class AIControlPlaneController {
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  }
+
+  public static async simulateTaskRoute(req: Request, res: Response) {
+    try {
+      const { feature, task, testPrompt } = req.body;
+      const config: any = await AITaskConfigModel.findOne({ feature, task }).lean();
+      if (!config) return res.status(404).json({ error: 'Task config not found' });
+
+      const { AIRuntimeService } = require('./ai-runtime.service');
+      const startTime = Date.now();
+
+      let activeProvider = config.primaryProvider;
+      let activeModel = config.primaryModel;
+      let usedFallback = false;
+      let result = null;
+
+      try {
+        result = await AIRuntimeService.testPrompt(
+          config.primaryProvider,
+          config.primaryModel,
+          testPrompt || 'Routing test verification prompt',
+          {},
+          'Test execution'
+        );
+      } catch (primaryErr: any) {
+        if (config.fallbackProvider && config.fallbackModel) {
+          usedFallback = true;
+          activeProvider = config.fallbackProvider;
+          activeModel = config.fallbackModel;
+          result = await AIRuntimeService.testPrompt(
+            config.fallbackProvider,
+            config.fallbackModel,
+            testPrompt || 'Routing test verification prompt',
+            {},
+            'Test execution'
+          );
+        } else {
+          throw primaryErr;
+        }
+      }
+
+      res.json({
+        success: true,
+        feature,
+        task,
+        routingStrategy: config.routingStrategy,
+        selectedProvider: activeProvider,
+        selectedModel: activeModel,
+        usedFallback,
+        result,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Routing Simulation Failed' });
     }
   }
 

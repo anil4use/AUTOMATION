@@ -24,11 +24,16 @@ router.get('/providers/:providerId/models', AIControlPlaneController.getModelsBy
 router.get('/prompts', AIControlPlaneController.listPrompts);
 router.post('/prompts', AIControlPlaneController.createPromptVersion);
 router.post('/test-prompt', AIControlPlaneController.testPrompt);
+router.post('/generate-test-payload', AIControlPlaneController.generateTestPayload);
+router.post('/save-to-vault', AIControlPlaneController.saveToVault);
+router.get('/prompts/history/:feature/:promptKey', AIControlPlaneController.getPromptHistory);
+router.put('/prompts/activate/:id', AIControlPlaneController.activatePromptVersion);
 router.get('/prompts/:id', AIControlPlaneController.getPrompt);
 router.get('/prompts/:feature/:promptKey/active', AIControlPlaneController.getActivePromptVersions);
 
 // Task Configs
 router.get('/tasks', AIControlPlaneController.listTaskConfigs);
+router.post('/tasks/simulate-route', AIControlPlaneController.simulateTaskRoute);
 router.get('/tasks/:feature/:task', AIControlPlaneController.getTaskConfig);
 router.put('/tasks/:feature/:task', AIControlPlaneController.updateTaskConfig);
 

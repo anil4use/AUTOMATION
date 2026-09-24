@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
+import { LocalStorageFileModel } from '@automation/database';
 
 const getVaultDirectory = (): string => {
   let rootDir = process.cwd();
@@ -196,7 +197,33 @@ export class VaultController {
 
       const stat = fs.statSync(targetPath);
       const serverBaseUrl = `${req.protocol}://${req.get('host')}`;
-      const encoded = encodeURIComponent(cleanName.replace(/\\/g, '/'));
+      const normalizedPath = cleanName.replace(/\\/g, '/');
+      const encoded = encodeURIComponent(normalizedPath);
+      const orgId = (req as any).user?.organizationId || 'default-org';
+      const ext = path.extname(cleanName).toLowerCase().replace(/^\./, '') || 'json';
+
+      // Sync with MongoDB LocalStorageFileModel for immediate frontend visibility
+      try {
+        const now = new Date();
+        await LocalStorageFileModel.findOneAndUpdate(
+          { fileName: normalizedPath },
+          {
+            organizationId: orgId,
+            fileName: normalizedPath,
+            format: ext,
+            mimeType: getMimeType(cleanName),
+            sizeBytes: stat.size,
+            fileContent: typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2),
+            storagePath: normalizedPath,
+            version: 'v1.0',
+            metadata: { source: 'VaultController.uploadFile', subfolder },
+            updatedAt: now,
+          },
+          { upsert: true, new: true }
+        );
+      } catch (dbErr) {
+        console.error('Failed to update LocalStorageFileModel in uploadFile:', dbErr);
+      }
 
       res.status(200).json({
         success: true,
@@ -226,9 +253,24 @@ export class VaultController {
       }
 
       fs.unlinkSync(filePath);
+
+      const normalizedPath = decodedName.replace(/\\/g, '/');
+      try {
+        await LocalStorageFileModel.deleteMany({
+          $or: [
+            { fileName: normalizedPath },
+            { storagePath: normalizedPath },
+            { fileName: path.basename(normalizedPath) },
+          ],
+        });
+      } catch (dbErr) {
+        console.error('Failed to delete from LocalStorageFileModel:', dbErr);
+      }
+
       res.status(200).json({ success: true, message: `File '${decodedName}' deleted successfully.` });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Failed to delete file' });
     }
   }
 }
+
