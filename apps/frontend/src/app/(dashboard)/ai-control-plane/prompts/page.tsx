@@ -97,7 +97,7 @@ export default function PromptsPage() {
       };
       await apiClient.post('/v1/ai-control-plane/prompts', payload);
       toast.success('New version saved and activated!');
-      fetchPrompts();
+      fetchData();
     } catch (err: any) {
       toast.error('Failed to save version');
     }

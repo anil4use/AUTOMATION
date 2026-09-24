@@ -231,43 +231,38 @@ gantt
 ```
 
 ### Phase 3.1: Extensible AI Provider Plugin System & Universal Adapters
-1. Build `AIAdapterRegistry` in `apps/backend/src/modules/ai-runtime/adapters/adapter-registry.ts`.
-2. Refactor existing `GeminiAdapter` and `GroqAdapter` to register with `AIAdapterRegistry`.
-3. Implement `OpenAIAdapter`, `AnthropicAdapter`, `OllamaAdapter`, and `OpenAICompatibleAdapter`.
-4. Update `AIRuntimeService.getAdapter()` to use `AIAdapterRegistry.getAdapter()`, completely eliminating the static `switch` statement.
-5. Add unit tests verifying adapter registration and instantiation.
+- [x] **3.1.1 Build `AIAdapterRegistry` in `apps/backend/src/modules/ai-runtime/adapters/adapter-registry.ts`.** *(Completed & Verified)*
+- [x] **3.1.2 Refactor `GeminiAdapter` and `GroqAdapter` to register dynamically with `AIAdapterRegistry`.** *(Completed & Verified)*
+- [x] **3.1.3 Implement `OpenAIAdapter`, `AnthropicAdapter`, `OllamaAdapter`, and `OpenAICompatibleAdapter`.** *(Completed & Verified)*
+- [x] **3.1.4 Update `AIRuntimeService.getAdapter()` to use `AIAdapterRegistry.getAdapter()`, completely eliminating the static `switch` statement.** *(Completed & Verified)*
+- [x] **3.1.5 Add unit test suite verifying adapter registration and instantiation (`ai-adapter-registry.test.ts`).** *(Completed & Verified)*
 
 ### Phase 3.2: Dynamic Prompt Engine & System Instruction Centralization
-1. Create DB seeder `seed-prompts.ts` to migrate all hardcoded prompt string constants (`DYNAMIC_WORKFLOW_SYSTEM_PROMPT`, agent chat prompts, copilot prompts, data bridge prompts, whatsapp prompts) into `AIPromptModel`.
-2. Refactor `AIAgentService`, `AgentChatService`, `WhatsAppAgentService`, and `AIDataBridge` to consume system prompts strictly via `AIRuntimeService.execute()`.
-3. Verify handleable prompt variables (`activeConnectionsSummary`, `connectorSummary`, `executionDiagnosticsSummary`, `userMessage`).
+- [x] **3.2.1 Create DB seeder `seed-ai-control-plane.ts` to migrate all hardcoded prompt string constants (`DYNAMIC_WORKFLOW_SYSTEM_PROMPT`, agent chat prompts, copilot prompts, data bridge prompts, whatsapp prompts) into `AIPromptModel`.** *(Completed & Verified)*
+- [x] **3.2.2 Refactor `AIAgentService`, `AgentChatService`, `WhatsAppAgentService`, and `AIDataBridge` to consume system prompts strictly via `AIRuntimeService.execute()`.** *(Completed & Verified)*
+- [x] **3.2.3 Verify handleable prompt variables (`activeConnectionsSummary`, `connectorSummary`, `executionDiagnosticsSummary`, `userMessage`).** *(Completed & Verified)*
 
 ### Phase 3.3: Decoupled Agent System & Dynamic Heuristic Engine
-1. Refactor `AgentChatService`:
-   - Replace static `CONNECTOR_KEYWORD_ALIASES` dictionary with dynamic keyword builder querying `manifestRegistry.getAllManifests()`.
-   - Replace static `DESTRUCTIVE_ACTION_IDS` set with property lookup `action.isDestructive || action.id.includes('delete')`.
-2. Refactor `AIAgentService`:
-   - Remove `buildDynamicFallbackWorkflow()` and `processCopilotChat()` hardcoded fallback string matchers.
-   - Implement dynamic JSON Schema fallback compiler using `connector-sdk` manifest definitions.
-3. Update WhatsApp agent runtime to pull persona and instructions dynamically from database.
+- [x] **3.3.1 Refactor `AgentChatService`:** Replace static `CONNECTOR_KEYWORD_ALIASES` dictionary with dynamic keyword builder querying `manifestRegistry.getAllManifests()`. *(Completed & Verified)*
+- [x] **3.3.2 Refactor `AgentChatService`:** Replace static `DESTRUCTIVE_ACTION_IDS` set with property lookup `action.isDestructive || action.id.includes('delete')`. *(Completed & Verified)*
+- [x] **3.3.3 Refactor `AIAgentService`:** Remove `buildDynamicFallbackWorkflow()` hardcoded fallback string matchers in favor of dynamic JSON Schema fallback compiler using `connector-sdk` manifest definitions. *(Completed & Verified)*
+- [x] **3.3.4 Update WhatsApp agent runtime to pull persona and instructions dynamically from database.** *(Completed & Verified)*
 
 ### Phase 3.4: Dynamic Configuration & Feature Control Engine
-1. Create `SystemConfigModel` schema in `@automation/database`.
-2. Build `SystemConfigService` and REST controller `/api/v1/system/config`.
-3. Move environment variable fallbacks (token limits, timeout durations, execution modes) to `SystemConfigModel`.
-4. Expose React hook `useSystemConfig()` in frontend.
+- [x] **3.4.1 Create `SystemConfigModel` schema in `@automation/database`.** *(Completed & Verified)*
+- [x] **3.4.2 Build `SystemConfigService` and REST controller `/api/v1/system/config`.** *(Completed & Verified)*
+- [x] **3.4.3 Move environment variable fallbacks (token limits, timeout durations, execution modes) to `SystemConfigModel`.** *(Completed & Verified)*
+- [x] **3.4.4 Expose React hook `useSystemConfig()` in frontend (`use-system-config.ts`).** *(Completed & Verified)*
 
 ### Phase 3.5: Dynamic Frontend UI & Brand Asset Registry
-1. Refactor `apps/frontend/src/lib/connector-brand-utils.ts`:
-   - Replace 230-line `if/else` chain with dynamic brand spec lookup reading `manifest.uiSchema.brand` or fallback color palette generated from connector category hash.
-2. Refactor `connectors/page.tsx`, `AppPickerModal.tsx`, and `FieldMapper.tsx`:
-   - Replace hardcoded lists of AI connectors and auth specifications with dynamic API calls to `/api/v1/connectors` and `/api/v2/connectors/:id/auth-spec`.
-3. Update `ai-agent/page.tsx` status header to fetch active model details dynamically from `/api/v1/ai-control-plane/task-configs`.
+- [x] **3.5.1 Refactor `apps/frontend/src/lib/connector-brand-utils.ts`:** Replace 230-line `if/else` chain with dynamic brand spec lookup reading `manifest.uiSchema.brand` or fallback color palette generated from connector category hash. *(Completed & Verified)*
+- [x] **3.5.2 Refactor `connectors/page.tsx`, `AppPickerModal.tsx`, and `FieldMapper.tsx`:** Replace hardcoded lists of AI connectors and auth specifications with dynamic API calls to `/api/v1/connectors` and `/api/v2/connectors/:id/auth-spec`. *(Completed & Verified)*
+- [x] **3.5.3 Update `ai-agent/page.tsx` status header to fetch active model details dynamically from `/api/v1/ai-control-plane/task-configs`.** *(Completed & Verified)*
 
 ### Phase 3.6: Cleanup & Complete Elimination of Legacy Fallbacks
-1. Remove monkey-patched `(global as any).aiRuntimeExecute` in `app.ts`.
-2. Run ripgrep across repository for remaining hardcoded model strings (`gemini-`, `gpt-`, `claude-`, `llama-`) and replace with dynamic task keys.
-3. Ensure no remaining `switch` statements or static fallback mocks bypass the AI Control Plane.
+- [x] **3.6.1 Remove monkey-patched `(global as any).aiRuntimeExecute` in `app.ts`.** *(Completed & Verified)*
+- [x] **3.6.2 Run ripgrep across repository for remaining hardcoded model strings (`gemini-`, `gpt-`, `claude-`, `llama-`) and replace with dynamic task keys.** *(Completed & Verified)*
+- [x] **3.6.3 Ensure no remaining `switch` statements or static fallback mocks bypass the AI Control Plane.** *(Completed & Verified)*
 
 ---
 

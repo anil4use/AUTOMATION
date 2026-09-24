@@ -108,6 +108,20 @@ export default function AIAgentPage() {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [activeModelInfo, setActiveModelInfo] = useState<string>('AI Control Plane Active');
+
+  useEffect(() => {
+    async function loadActiveTaskConfig() {
+      try {
+        const res = await apiClient.get('/v1/ai-control-plane/task-configs');
+        if (res.data && res.data.length > 0) {
+          const copilotTask = res.data.find((t: any) => t.feature === 'ai-copilot') || res.data[0];
+          setActiveModelInfo(`${copilotTask.primaryProvider.toUpperCase()}: ${copilotTask.primaryModel}`);
+        }
+      } catch {}
+    }
+    loadActiveTaskConfig();
+  }, []);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const initialSentRef = useRef(false);
@@ -234,7 +248,7 @@ export default function AIAgentPage() {
               </Heading>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-accentEmerald flex items-center gap-1.5 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Gemini 3.6 Flash / Groq Active</span>
+                <span>{activeModelInfo}</span>
               </span>
             </div>
             <Text variant="secondary" className="text-[11px]">

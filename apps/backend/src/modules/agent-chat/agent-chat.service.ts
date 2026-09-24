@@ -15,7 +15,45 @@ const DESTRUCTIVE_ACTION_IDS = new Set([
   'flush_db', 'delete_repo', 'delete_branch', 'delete_file', 'execute_query'
 ]);
 
-// ─── Connector Keyword Aliases for Two-Tier Token Budget ────────────────────
+// ─── Dynamic Connector Keyword Builder ──────────────────────────────────────────
+function getDynamicConnectorKeywords(connectorId: string, manifest?: any): string[] {
+  const keywords = new Set<string>();
+  const cid = connectorId.toLowerCase();
+  keywords.add(cid);
+
+  // Fallback static aliases if available
+  const staticAliases = CONNECTOR_KEYWORD_ALIASES[cid] || [];
+  staticAliases.forEach((alias) => keywords.add(alias.toLowerCase()));
+
+  if (manifest) {
+    if (manifest.name) keywords.add(manifest.name.toLowerCase());
+    if (manifest.category) keywords.add(manifest.category.toLowerCase());
+    if (Array.isArray(manifest.keywords)) {
+      manifest.keywords.forEach((k: string) => keywords.add(k.toLowerCase()));
+    }
+    if (Array.isArray(manifest.tags)) {
+      manifest.tags.forEach((t: string) => keywords.add(t.toLowerCase()));
+    }
+    if (Array.isArray(manifest.actions)) {
+      manifest.actions.forEach((act: any) => {
+        if (act.id) keywords.add(act.id.toLowerCase().replace(/_/g, ' '));
+        if (act.name) keywords.add(act.name.toLowerCase());
+      });
+    }
+  }
+
+  return Array.from(keywords);
+}
+
+// ─── Dynamic Destructive Action Checker ────────────────────────────────────────
+function isActionDestructive(actionId: string, actionManifest?: any): boolean {
+  if (actionManifest?.isDestructive) return true;
+  const aid = actionId.toLowerCase();
+  if (DESTRUCTIVE_ACTION_IDS.has(aid)) return true;
+  return DESTRUCTIVE_KEYWORDS.some((kw) => aid.includes(kw));
+}
+
+// ─── Connector Keyword Aliases Registry ────────────────────────────────────────
 const CONNECTOR_KEYWORD_ALIASES: Record<string, string[]> = {
   mongodb: ['mongo', 'mongodb', 'collection', 'document', 'database', 'db', 'nosql'],
   postgresql: ['postgres', 'postgresql', 'pg', 'sql', 'database', 'table', 'query'],
@@ -115,13 +153,17 @@ async function buildTieredConnectorContext(
   const lower = userMessage.toLowerCase();
   const matchedTier1: string[] = [];
 
-  for (const [connId, aliases] of Object.entries(CONNECTOR_KEYWORD_ALIASES)) {
-    if (aliases.some((alias) => lower.includes(alias))) {
-      matchedTier1.push(connId);
+  try {
+    const { manifestRegistry } = require('@automation/connector-sdk');
+    for (const conn of connectedApps) {
+      const manifest = manifestRegistry.getManifest(conn.connectorId);
+      const keywords = getDynamicConnectorKeywords(conn.connectorId, manifest);
+      if (keywords.some((alias) => lower.includes(alias))) {
+        matchedTier1.push(conn.connectorId);
+      }
     }
-  }
+  } catch {}
 
-  // If keywords match specific connectors, prioritize them; otherwise include all connected apps
   const tier1Set = new Set(matchedTier1);
   let fullSchemaSection = '';
   let stubSection = '';

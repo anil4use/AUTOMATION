@@ -6,9 +6,8 @@ import {
   AIProviderModel,
   AIExecutionLogModel,
 } from '@automation/database';
-import { GeminiAdapter } from './adapters/gemini.adapter';
-import { GroqAdapter } from './adapters/groq.adapter';
 import { BaseAIAdapter } from './adapters/base.adapter';
+import { AIAdapterRegistry } from './adapters/adapter-registry';
 
 export interface AIRuntimeExecutionArgs {
   feature: string;
@@ -216,13 +215,6 @@ export class AIRuntimeService {
   }
 
   private static getAdapter(providerDoc: any): BaseAIAdapter {
-    switch (providerDoc.providerId) {
-      case 'gemini':
-        return new GeminiAdapter(providerDoc.providerId, providerDoc.baseUrl, providerDoc.credentials || {});
-      case 'groq':
-        return new GroqAdapter(providerDoc.providerId, providerDoc.baseUrl, providerDoc.credentials || {});
-      default:
-        throw new Error(`AI Control Plane: No adapter implemented for provider ${providerDoc.providerId}`);
-    }
+    return AIAdapterRegistry.getAdapter(providerDoc);
   }
 }

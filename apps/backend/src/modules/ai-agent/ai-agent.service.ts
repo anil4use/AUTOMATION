@@ -381,40 +381,47 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
       };
     }
 
-    const isWhatsApp = lower.includes('whatsapp');
-    const isGithub = lower.includes('git') || lower.includes('repo');
-    const isWebSearch = lower.includes('search') || lower.includes('scraper') || lower.includes('job') || lower.includes('web');
-    const isSlack = lower.includes('slack');
-    const isGmail = (lower.includes('gmail') || lower.includes('inbox') || lower.includes('read email') || lower.includes('send email')) && !lower.includes('contact email');
-    const isSheets = lower.includes('sheet') || lower.includes('excel') || lower.includes('spreadsheet');
+    // Dynamic Connector Discovery via SDK Manifest Registry
+    const matchedConnectors: string[] = ['autoflow-schedule'];
+    try {
+      const { manifestRegistry } = require('@automation/connector-sdk');
+      const allManifests = manifestRegistry.getAllManifests() || [];
+
+      for (const m of allManifests) {
+        if (m.id === 'autoflow-schedule') continue;
+        const keywords = [
+          m.id.toLowerCase(),
+          m.name.toLowerCase(),
+          (m.category || '').toLowerCase(),
+          ...(m.keywords || []),
+          ...(m.tags || []),
+        ];
+        if (keywords.some((k: string) => k && lower.includes(k))) {
+          matchedConnectors.push(m.id);
+        }
+      }
+    } catch {}
+
+    // Ensure AI processor step is included if user prompt asks to summarize/analyze/extract/AI
+    if ((lower.includes('ai') || lower.includes('summariz') || lower.includes('analys') || lower.includes('extract')) && !matchedConnectors.includes('ai-agent')) {
+      matchedConnectors.push('ai-agent');
+    }
 
     const limitMatch = lastUserMessage.match(/\b(\d+)\s*(?:jobs|results|listings)?\b/i);
     const maxResults = limitMatch ? Math.min(parseInt(limitMatch[1]), 25) : 20;
+    const isWebSearch = lower.includes('search') || lower.includes('scraper') || lower.includes('job') || lower.includes('web');
 
     const quotedMatch = lastUserMessage.match(/["']([A-Za-z0-9_\-\s]{2,60})["']/);
     const namedMatch = lastUserMessage.match(/named\s+["']?([A-Za-z0-9_\-]+)["']?/i) || lastUserMessage.match(/spreadsheet\s+["']?([A-Za-z0-9_\-]+)["']?/i);
-    let spreadsheetId = isGithub ? 'GitHub_Repo_Summaries' : isWebSearch ? 'React_Developer_Jobs_Log' : 'Daily_Email_Summaries_Log';
+    let spreadsheetId = 'AutoFlow_Execution_Log';
     if (quotedMatch && quotedMatch[1] && quotedMatch[1].toLowerCase() !== 'named' && quotedMatch[1].length > 2) {
       spreadsheetId = quotedMatch[1].trim().replace(/\s+/g, '_');
     } else if (namedMatch && namedMatch[1] && namedMatch[1].toLowerCase() !== 'named') {
       spreadsheetId = namedMatch[1].trim();
     }
 
-    const suggestedConnectors: string[] = ['autoflow-schedule'];
-    if (isWhatsApp) {
-      suggestedConnectors.push('whatsapp');
-    } else {
-      if (isGithub) suggestedConnectors.push('github');
-      else if (isWebSearch) suggestedConnectors.push('web-search');
-      else if (isGmail) suggestedConnectors.push('gmail-read');
-      else suggestedConnectors.push('web-search');
-
-      suggestedConnectors.push('ai-agent');
-
-      if (isSheets) suggestedConnectors.push('google-sheets');
-      else if (isSlack) suggestedConnectors.push('slack');
-      else suggestedConnectors.push('google-sheets');
-    }
+    // Default fallback if no specific connectors matched
+    const suggestedConnectors: string[] = matchedConnectors.length > 1 ? matchedConnectors : ['autoflow-schedule', 'web-search', 'ai-agent', 'google-sheets'];
 
     const nodes: any[] = [];
     const edges: any[] = [];

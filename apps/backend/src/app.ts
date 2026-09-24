@@ -20,15 +20,13 @@ import connectorV2Routes from './modules/connectors/connector-v2.routes';
 import storageRoutes from './modules/storage/storage.routes';
 import vaultRoutes from './modules/vault/vault.routes';
 import { aiControlPlaneRoutes } from './modules/ai-runtime/ai-control-plane.routes';
+import { systemConfigRouter } from './modules/system-config/system-config.controller';
 import { AIRuntimeService } from './modules/ai-runtime/ai-runtime.service';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
 export function createApp() {
   const app = express();
-
-  // Inject AI Runtime globally for shared packages (e.g. data-bridge in connector-sdk)
-  (global as any).aiRuntimeExecute = AIRuntimeService.execute;
 
   app.use(
     cors({
@@ -74,6 +72,7 @@ export function createApp() {
 
   // Universal AI Control Plane
   app.use('/api/v1/ai-control-plane', aiControlPlaneRoutes);
+  app.use('/api/v1/system/config', systemConfigRouter);
 
   app.use(errorMiddleware as any);
 

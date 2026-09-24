@@ -34,3 +34,4 @@ export * from './models/local-storage-file.model';
 
 // AI Control Plane Orchestration
 export * from './models/ai-control-plane.models';
+export * from './models/system-config.model';
