@@ -1,6 +1,7 @@
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
 import { AgentContext } from './whatsapp-agent.types';
+import { AIRuntimeService } from '../ai-runtime/ai-runtime.service';
 
 /**
  * AgentRuntimeService — the core conversational AI engine.
@@ -19,30 +20,29 @@ export class AgentRuntimeService {
       `[AgentRuntime] Generating reply for user ${context.externalUserId} on automation ${context.automationId}`
     );
 
-    const systemPrompt = AgentRuntimeService.buildSystemPrompt(context);
+    const { profileSection, factsSection } = AgentRuntimeService.extractContextSections(context);
     const conversationMessages = AgentRuntimeService.buildConversationMessages(context);
+    const userMessageStr = conversationMessages.map(m => `${m.role}: ${m.content}`).join('\n');
 
     let reply = '';
 
-    // 1. Try Gemini models if key is configured
-    if (env.geminiApiKey && env.geminiApiKey !== 'AIzaSy_your_free_gemini_api_key') {
-      try {
-        reply = await AgentRuntimeService.callGemini(systemPrompt, conversationMessages);
-      } catch (err: any) {
-        logger.warn(`[AgentRuntime] Gemini API error: ${err?.message || err}. Trying Groq...`);
-      }
+    try {
+      reply = await AIRuntimeService.execute({
+        feature: 'whatsapp-agent',
+        task: 'conversational_reply',
+        variables: {
+          agentPersonality: context.agentPersonality,
+          profileSection,
+          factsSection,
+          currentDateTime: new Date().toLocaleString('en-US', { timeZone: context.userProfile?.timezone || 'UTC' })
+        },
+        userMessage: userMessageStr,
+      });
+    } catch (err: any) {
+      logger.warn(`[AgentRuntime] AI Control Plane execution failed: ${err?.message || err}.`);
     }
 
-    // 2. Try Groq models if key is configured
-    if (!reply && env.groqApiKey && env.groqApiKey !== 'gsk_your_free_groq_api_key') {
-      try {
-        reply = await AgentRuntimeService.callGroq(systemPrompt, conversationMessages);
-      } catch (err: any) {
-        logger.warn(`[AgentRuntime] Groq API error: ${err?.message || err}.`);
-      }
-    }
-
-    // 3. Smart Conversational Engine fallback (guarantees a 100% human-like response even without API keys)
+    // Smart Conversational Engine fallback (guarantees a 100% human-like response even without API keys)
     if (!reply) {
       logger.info('[AgentRuntime] Running Smart Conversational Engine fallback...');
       reply = AgentRuntimeService.generateSmartFallbackReply(context);
@@ -53,171 +53,6 @@ export class AgentRuntimeService {
 
     logger.info(`[AgentRuntime] Reply generated (${reply.length} chars)`);
     return reply;
-  }
-
-  // ── System Prompt Assembly ──────────────────────────────────────────────────
-
-  private static buildSystemPrompt(context: AgentContext): string {
-    const { profileSection, factsSection } = AgentRuntimeService.extractContextSections(context);
-
-    return `${context.agentPersonality}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-USER PROFILE
-━━━━━━━━━━━━━━━━━━━━━━━━
-${profileSection}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-WHAT YOU KNOW ABOUT THIS USER (Long-Term Memory)
-━━━━━━━━━━━━━━━━━━━━━━━━
-${factsSection}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-CONVERSATION RULES
-━━━━━━━━━━━━━━━━━━━━━━━━
-- You are chatting via WhatsApp. Keep messages SHORT (2-4 sentences max).
-- Never use markdown formatting like **bold** or bullet lists — plain text only.
-- Ask only ONE follow-up question at a time.
-- Do not repeat what the user just said back to them.
-- If the user gives a short reply (yes/no/ok), acknowledge and continue naturally.
-- If the user changes the topic, follow their lead.
-- Use the user's name if you know it.
-- Current date/time context: ${new Date().toLocaleString('en-US', { timeZone: context.userProfile?.timezone || 'UTC' })}`;
-  }
-
-  private static buildConversationMessages(
-    context: AgentContext
-  ): Array<{ role: 'user' | 'assistant'; content: string }> {
-    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
-
-    for (const msg of context.conversationHistory) {
-      messages.push({
-        role: msg.role === 'agent' ? 'assistant' : 'user',
-        content: msg.content,
-      });
-    }
-
-    const lastHistoryMsg = context.conversationHistory[context.conversationHistory.length - 1];
-    if (!lastHistoryMsg || lastHistoryMsg.role !== 'user' || lastHistoryMsg.content !== context.currentMessage) {
-      messages.push({ role: 'user', content: context.currentMessage });
-    }
-
-    return messages;
-  }
-
-  private static extractContextSections(context: AgentContext) {
-    const profile = context.userProfile || {};
-    const profileLines: string[] = [];
-
-    if (context.userName || profile.name) {
-      profileLines.push(`Name: ${context.userName || profile.name}`);
-    }
-    if (profile.timezone) profileLines.push(`Timezone: ${profile.timezone}`);
-    if (profile.language) profileLines.push(`Language: ${profile.language}`);
-
-    for (const [key, val] of Object.entries(profile)) {
-      if (!['name', 'timezone', 'language'].includes(key) && val !== undefined) {
-        const label = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-        profileLines.push(`${label}: ${val}`);
-      }
-    }
-
-    const factLines = (context.longTermMemory || [])
-      .filter((f) => f.confidence >= 0.6)
-      .map((f) => {
-        const label = f.key.replace(/_/g, ' ').replace(/\./g, ' → ');
-        return `- ${label}: ${typeof f.value === 'object' ? JSON.stringify(f.value) : f.value}`;
-      });
-
-    return {
-      profileSection: profileLines.length > 0 ? profileLines.join('\n') : 'No profile data yet.',
-      factsSection:
-        factLines.length > 0
-          ? factLines.join('\n')
-          : 'No long-term memory about this user yet. Learn from this conversation.',
-    };
-  }
-
-  // ── LLM API Callers ────────────────────────────────────────────────────────
-
-  private static async callGemini(
-    systemPrompt: string,
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>
-  ): Promise<string> {
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-
-    for (const model of models) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemPrompt }] },
-              contents: messages.map((m) => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }],
-              })),
-              generationConfig: {
-                temperature: 0.85,
-                maxOutputTokens: 512,
-                topP: 0.95,
-              },
-            }),
-          }
-        );
-
-        const data = await response.json();
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          return data.candidates[0].content.parts[0].text;
-        }
-        if (data.error) {
-          logger.warn(`[AgentRuntime] Gemini model ${model} error: ${data.error.message || JSON.stringify(data.error)}`);
-        }
-      } catch (e: any) {
-        logger.warn(`[AgentRuntime] Gemini model ${model} fetch failed: ${e?.message || e}`);
-      }
-    }
-
-    throw new Error('All Gemini model endpoints failed');
-  }
-
-  private static async callGroq(
-    systemPrompt: string,
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>
-  ): Promise<string> {
-    const models = ['groq/compound', 'groq/compound-mini', 'qwen/qwen3.6-27b', 'openai/gpt-oss-20b'];
-
-    for (const model of models) {
-      try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${env.groqApiKey}`,
-          },
-          body: JSON.stringify({
-            model,
-            temperature: 0.85,
-            max_tokens: 512,
-            messages: [{ role: 'system', content: systemPrompt }, ...messages],
-          }),
-        });
-
-        const data = await response.json();
-        if (data.choices?.[0]?.message?.content) {
-          return data.choices[0].message.content;
-        }
-        if (data.error) {
-          logger.warn(`[AgentRuntime] Groq model ${model} error: ${data.error.message || JSON.stringify(data.error)}`);
-        }
-      } catch (e: any) {
-        logger.warn(`[AgentRuntime] Groq model ${model} fetch failed: ${e?.message || e}`);
-      }
-    }
-
-    throw new Error('All Groq model endpoints failed');
   }
 
   // ── Smart Conversational Fallback Engine ───────────────────────────────────
@@ -323,5 +158,31 @@ CONVERSATION RULES
       .replace(/_(.+?)_/g, '$1')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  private static extractContextSections(context: AgentContext) {
+    let profileSection = '';
+    if (context.userProfile) {
+      profileSection = `User Profile:\n- Name: ${context.userProfile.name || 'Unknown'}\n- Phone: ${context.userProfile.phone}\n- Timezone: ${context.userProfile.timezone || 'UTC'}\n- Default Language: ${context.userProfile.defaultLanguage || 'en'}`;
+    }
+
+    let factsSection = '';
+    if (context.longTermMemory && context.longTermMemory.length > 0) {
+      factsSection = `Long-Term Memory Facts:\n` + context.longTermMemory.map(f => `- ${f.key}: ${f.value}`).join('\n');
+    }
+    return { profileSection, factsSection };
+  }
+
+  private static buildConversationMessages(context: AgentContext) {
+    const msgs = [];
+    if (context.conversationHistory) {
+      for (const h of context.conversationHistory) {
+        msgs.push({ role: h.role, content: h.content });
+      }
+    }
+    msgs.push({ role: 'user', content: context.currentMessage });
+    return msgs;
   }
 }

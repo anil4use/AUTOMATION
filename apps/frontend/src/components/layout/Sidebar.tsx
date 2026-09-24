@@ -2,10 +2,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Workflow, Cpu, Activity, Sparkles, Settings, Terminal, MessageCircle, Bot, FolderDown } from 'lucide-react';
+import { LayoutDashboard, Workflow, Cpu, Activity, Sparkles, Settings, Terminal, MessageCircle, Bot, FolderDown, BrainCircuit } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/ai-control-plane', label: 'AI Control Plane', icon: BrainCircuit },
   { href: '/workflows', label: 'Workflows', icon: Workflow },
   { href: '/ai-agent', label: 'AI Agent Generator', icon: Sparkles },
   { href: '/agent-chat', label: 'Agent Chat', icon: Bot },

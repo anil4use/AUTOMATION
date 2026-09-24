@@ -5,6 +5,10 @@ import { processWorkflowJob } from './processors/workflow.processor';
 
 async function startWorker() {
   try {
+    // Inject AI Runtime globally for shared packages
+    const { AIRuntimeService } = require('../../backend/src/modules/ai-runtime/ai-runtime.service');
+    (global as any).aiRuntimeExecute = AIRuntimeService.execute;
+
     await connectDatabase(workerConfig.mongoUri);
 
     const worker = new Worker('workflow-execution-queue', processWorkflowJob, {

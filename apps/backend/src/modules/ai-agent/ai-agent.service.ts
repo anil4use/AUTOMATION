@@ -4,6 +4,7 @@ import { logger } from '../../config/logger';
 import { manifestRegistry } from '@automation/connector-sdk';
 import { validateWorkflow, WorkflowNode, WorkflowEdge } from './ai-agent.workflow-validator';
 import { autoMapNodeInputs } from './ai-agent.io-mapper';
+import { AIRuntimeService } from '../ai-runtime/ai-runtime.service';
 
 export interface ChatMessage {
   id?: string;
@@ -247,20 +248,19 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
 
     let llmJsonText = '';
 
-    if (env.geminiApiKey) {
-      try {
-        llmJsonText = await AIAgentService.callGeminiJSON(messages, systemPrompt);
-      } catch (err) {
-        logger.warn('[AIAgentService] Gemini JSON generation failed, trying Groq:', err);
-      }
-    }
-
-    if (!llmJsonText && env.groqApiKey) {
-      try {
-        llmJsonText = await AIAgentService.callGroqJSON(messages, systemPrompt);
-      } catch (err) {
-        logger.warn('[AIAgentService] Groq JSON generation failed:', err);
-      }
+    try {
+      llmJsonText = await AIRuntimeService.execute({
+        feature: 'ai-copilot',
+        task: 'workflow_compiler',
+        variables: {
+          activeConnectionsSummary: systemPrompt.includes("USER'S ACTIVE CONNECTED ACCOUNTS IN MONGODB ATLAS ===") ? systemPrompt.split("USER'S ACTIVE CONNECTED ACCOUNTS IN MONGODB ATLAS ===")[1].split("=== RECENT WORKFLOW EXECUTION DIAGNOSTICS")[0].trim() : '',
+          executionDiagnosticsSummary: systemPrompt.includes("=== RECENT WORKFLOW EXECUTION DIAGNOSTICS & ERROR TRACES ===") ? systemPrompt.split("=== RECENT WORKFLOW EXECUTION DIAGNOSTICS & ERROR TRACES ===")[1].split("=== ALL 55+ ENTERPRISE NATIVE CONNECTORS REGISTRY ===")[0].trim() : '',
+          connectorSummary: systemPrompt.includes("=== ALL 55+ ENTERPRISE NATIVE CONNECTORS REGISTRY ===") ? systemPrompt.split("=== ALL 55+ ENTERPRISE NATIVE CONNECTORS REGISTRY ===")[1].split("SECURITY & SYSTEM GUARDRAILS:")[0].trim() : '',
+        },
+        userMessage: `${messages.map((m) => `${m.role}: ${m.content}`).join('\n')}`
+      });
+    } catch (err) {
+      logger.warn('[AIAgentService] AI Runtime JSON generation failed:', err);
     }
 
     let responseData: any = null;
@@ -518,51 +518,8 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     }
   }
 
-  /** Direct Gemini 3.6 Flash API call returning raw JSON */
-  private static async callGeminiJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
-    const promptText = systemPrompt || (await AIAgentService.buildDynamicSystemPrompt('default'));
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: promptText }] },
-          contents: messages.map((m) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }],
-          })),
-          generationConfig: { responseMimeType: 'application/json' },
-        }),
-      }
-    );
-    const data: any = await response.json();
-    if (data.error) throw new Error(`Gemini API error: ${data.error.message}`);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  }
-
-  /** Direct Groq API call returning raw JSON using groq/compound */
-  private static async callGroqJSON(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
-    const promptText = systemPrompt || (await AIAgentService.buildDynamicSystemPrompt('default'));
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'groq/compound',
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: promptText },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-        ],
-      }),
-    });
-    const data: any = await response.json();
-    if (data.error) throw new Error(`Groq API error: ${data.error.message}`);
-    return data.choices?.[0]?.message?.content || '';
-  }
+  /** Direct Gemini 3.6 Flash API call returning raw JSON - Removed, using AIRuntime */
+  /** Direct Groq API call returning raw JSON using groq/compound - Removed, using AIRuntime */
 
   /**
    * In-Canvas AI Co-Pilot Assistant method
@@ -572,85 +529,25 @@ RETURN ONLY VALID JSON (no markdown fences, no \`\`\` json, no extra text):
     logger.info(`[AIAgentService] Processing In-Canvas Co-Pilot request: "${userPrompt}" with ${currentNodes.length} nodes`);
 
     const lower = userPrompt.trim().toLowerCase();
-
+    
     // Fetch Live Runtime Context (55+ SDK Manifests, Active Connected Accounts, Recent Execution Logs)
     const baseDynamicContext = await AIAgentService.buildDynamicSystemPrompt(orgId);
 
-    // System prompt for In-Canvas Co-Pilot
-    const COPILOT_SYSTEM_PROMPT = `${baseDynamicContext}
-
-IN-CANVAS WORKFLOW MUTATOR ROLE:
-You are the In-Canvas AutoFlow AI Co-Pilot Assistant.
-Your job is to analyze the user's current workflow canvas nodes and edges, process their modification request, and return the UPDATED workflow canvas JSON.
-
-CURRENT CANVAS STATE:
-Nodes: ${JSON.stringify(currentNodes, null, 2)}
-Edges: ${JSON.stringify(currentEdges, null, 2)}
-
-USER REQUEST: "${userPrompt}"
-
-RULES FOR CANVAS MUTATION:
-1. If user asks to ADD a step (e.g. Google Sheets, Slack, Web Search, AI Analyst, WhatsApp, Postgres): select appropriate connector from the 55+ registry, insert the node at the right position, and connect edges sequentially.
-2. If user asks to DELETE a step (e.g. "delete step 3"): remove the node and re-wire edges between adjacent nodes.
-3. If user asks to UPDATE/CONFIGURE a step (e.g. "change sheet name to React_Jobs", "set maxResults to 20"): update that node's config and fieldMapping properties.
-4. Return ONLY a single raw valid JSON object (no markdown code fences):
-{
-  "replyMessage": "Markdown text describing changes made (e.g. '✨ Added Step 4: Google Sheets, configured spreadsheetId to React_Jobs').",
-  "changesSummary": ["Added Google Sheets step", "Updated sheet name to React_Jobs"],
-  "nodes": [ ... updated nodes array ... ],
-  "edges": [ ... updated edges array ... ]
-}
-`;
-
     let llmJsonText = '';
 
-    if (env.geminiApiKey) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: COPILOT_SYSTEM_PROMPT }] },
-              contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-              generationConfig: { responseMimeType: 'application/json' },
-            }),
-          }
-        );
-        const data: any = await response.json();
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          llmJsonText = data.candidates[0].content.parts[0].text;
+    try {
+      llmJsonText = await AIRuntimeService.execute({
+        feature: 'ai-copilot',
+        task: 'canvas_mutator',
+        variables: {
+          baseDynamicContext,
+          currentNodesStr: JSON.stringify(currentNodes, null, 2),
+          currentEdgesStr: JSON.stringify(currentEdges, null, 2),
+          userPrompt
         }
-      } catch (err) {
-        logger.warn('[AIAgentService] Gemini Co-Pilot call error:', err);
-      }
-    }
-
-    if (!llmJsonText && env.groqApiKey) {
-      try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${env.groqApiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'groq/compound',
-            response_format: { type: 'json_object' },
-            messages: [
-              { role: 'system', content: COPILOT_SYSTEM_PROMPT },
-              { role: 'user', content: userPrompt },
-            ],
-          }),
-        });
-        const data: any = await response.json();
-        if (data.choices?.[0]?.message?.content) {
-          llmJsonText = data.choices[0].message.content;
-        }
-      } catch (err) {
-        logger.warn('[AIAgentService] Groq Co-Pilot call error:', err);
-      }
+      });
+    } catch (err) {
+      logger.warn('[AIAgentService] AI Runtime Co-Pilot generation failed:', err);
     }
 
     if (llmJsonText) {

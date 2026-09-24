@@ -32,5 +32,5 @@ export * from './models/connector-coercion-rules.model';
 export * from './models/connector-synonym-groups.model';
 export * from './models/local-storage-file.model';
 
-
-
+// AI Control Plane Orchestration
+export * from './models/ai-control-plane.models';

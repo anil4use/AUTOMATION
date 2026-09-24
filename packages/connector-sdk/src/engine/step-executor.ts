@@ -196,7 +196,16 @@ export class StepExecutor {
           targetConnectorId: node.connectorId,
           targetOperationId: node.operationId || (node as any).actionId || 'execute',
           targetInputSchema,
-          userConfiguredMapping: resolvedInputs
+          userConfiguredMapping: resolvedInputs,
+          llmProvider: typeof (global as any).aiRuntimeExecute === 'function' ? async (sys: string, usr: string) => {
+            const res = await (global as any).aiRuntimeExecute({
+              feature: 'data-bridge',
+              task: 'data_mapper',
+              variables: {},
+              userMessage: usr,
+            });
+            return res.text;
+          } : undefined
         });
 
         if (bridgeResult.inputPayload) {

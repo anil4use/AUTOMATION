@@ -19,11 +19,16 @@ import browserSessionRoutes from './modules/connectors/browser-session.routes';
 import connectorV2Routes from './modules/connectors/connector-v2.routes';
 import storageRoutes from './modules/storage/storage.routes';
 import vaultRoutes from './modules/vault/vault.routes';
+import { aiControlPlaneRoutes } from './modules/ai-runtime/ai-control-plane.routes';
+import { AIRuntimeService } from './modules/ai-runtime/ai-runtime.service';
 
 import { errorMiddleware } from './middleware/error.middleware';
 
 export function createApp() {
   const app = express();
+
+  // Inject AI Runtime globally for shared packages (e.g. data-bridge in connector-sdk)
+  (global as any).aiRuntimeExecute = AIRuntimeService.execute;
 
   app.use(
     cors({
@@ -66,6 +71,9 @@ export function createApp() {
 
   // Dynamic Agent Chat — Connected Apps Natural Language Executor
   app.use('/api/v1/agent-chat', agentChatRoutes);
+
+  // Universal AI Control Plane
+  app.use('/api/v1/ai-control-plane', aiControlPlaneRoutes);
 
   app.use(errorMiddleware as any);
 

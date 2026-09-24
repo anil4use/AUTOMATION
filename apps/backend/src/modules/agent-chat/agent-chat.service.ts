@@ -559,6 +559,8 @@ async function executeStep(
   }
 }
 
+import { AIRuntimeService } from '../ai-runtime/ai-runtime.service';
+
 // ─── LLM Intent Parser ────────────────────────────────────────────────────────
 async function parseIntentFromLLM(
   userMessage: string,
@@ -567,89 +569,20 @@ async function parseIntentFromLLM(
   conversationHistory: any[],
   activeConnections: any[] = []
 ): Promise<ExecutionPlan> {
-  const systemPrompt = `You are the AutoFlow Dynamic Agent — a live AI executor that directly operates the user's connected applications.
-
-${connectorContext}
-
-${historyContext}
-
-RULES:
-1. Parse the user's request and return a precise execution plan using ONLY the connected apps listed above.
-2. Use {{step_N.output.field}} syntax to chain data between steps. E.g. {{step_1.output.spreadsheetId}}.
-3. For destructive operations (delete, drop, truncate, flush, remove), set requiresConfirmation: true.
-4. forEach: set to a variable expression when iterating over arrays, e.g. "{{step_1.output.documents}}".
-5. Maximum 20 steps per plan.
-6. Never fabricate connection IDs — use exactly the connectionId values from the context above.
-7. If the request cannot be fulfilled with available apps, return an empty plan and explain in a conversational message.
-8. If the request is ambiguous, return an empty plan and ask a clarifying question in message.
-9. FOR DATABASE CONNECTORS (mongodb, postgresql, mysql): Always include "database" in inputs if known or mentioned in request/schema (e.g. inputs: { "database": "automation_platform", "collection": "users" }). If database is unknown, pass database from connected credentials or common app DB name.
-10. FOLLOW-UPS & CONVERSATIONAL CONTINUITY: If user asks a follow-up (e.g., "what are their names?", "export to sheets", "count them"), check the "Previous execution results" section to reuse exact connectionId, database, collection, or entity context from prior steps.
-11. RESOURCE CREATION LINKS: google-sheets.create_spreadsheet outputs both spreadsheetId AND spreadsheetUrl. google-docs.create_document outputs documentId AND documentUrl. Never invent non-existent helper actions like get_spreadsheet_url or get_doc_link.
-12. LOOP TEMPLATE VARIABLES: When using forEach over an array (e.g. forEach: "{{step_1.output.documents}}"), reference properties using {{item.field}} (e.g., values: ["{{item.name}}", "{{item.email}}"] or inputs: { "to": "{{item.email}}", "body": "Hello {{item.name}}" }).
-
-RESPOND WITH VALID JSON ONLY — no markdown fences, no extra text:
-{
-  "plan": [
-    {
-      "stepId": "step_1",
-      "connectorId": "mongodb",
-      "connectionId": "conn_abc123",
-      "actionId": "find_documents",
-      "description": "Find all users with role Admin",
-      "inputs": { "collection": "users", "filter": { "role": "Admin" }, "limit": 100 }
-    }
-  ],
-  "requiresConfirmation": false,
-  "confirmationMessage": null,
-  "conversationalMessage": "I'll query MongoDB for Admin users now..."
-}`;
-
-  const messages = [
-    ...conversationHistory.slice(-6).map((m: any) => ({ role: m.role === 'agent' ? 'assistant' : 'user', content: m.content })),
-    { role: 'user', content: userMessage },
-  ];
-
   let rawJson = '';
 
-  if (env.geminiApiKey) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-            generationConfig: { responseMimeType: 'application/json' },
-          }),
-          signal: AbortSignal.timeout(30000),
-        }
-      );
-      const data: any = await res.json();
-      rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } catch (err) {
-      logger.warn('[AgentChatService] Gemini intent parse failed:', err);
-    }
-  }
-
-  if (!rawJson && env.groqApiKey) {
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.groqApiKey}` },
-        body: JSON.stringify({
-          model: 'groq/compound',
-          response_format: { type: 'json_object' },
-          messages: [{ role: 'system', content: systemPrompt }, ...messages],
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      const data: any = await res.json();
-      rawJson = data.choices?.[0]?.message?.content || '';
-    } catch (err) {
-      logger.warn('[AgentChatService] Groq intent parse failed:', err);
-    }
+  try {
+    rawJson = await AIRuntimeService.execute({
+      feature: 'agent-chat',
+      task: 'execution_planner',
+      variables: {
+        connectorContext,
+        historyContext,
+      },
+      userMessage: `${conversationHistory.slice(-6).map((m: any) => `${m.role}: ${m.content}`).join('\n')}\nuser: ${userMessage}`
+    });
+  } catch (err) {
+    logger.warn('[AgentChatService] AI Runtime intent parse failed:', err);
   }
 
   if (rawJson) {
@@ -828,58 +761,21 @@ async function assembleConversationalResult(
     ? `\n\nCRITICAL RESOURCE LINKS GENERATED IN THIS EXECUTION (You MUST include these exact markdown links in your response):\n${discoveredUrls.join('\n')}\n`
     : '';
 
-  const prompt = `You are the AutoFlow AI Agent directly serving the user.
-
-User Prompt / Query: "${userMessage}"
-
-Execution Payload & Extracted Real-Time Web Data:
-${resultsText}
-${urlSection}
-
-INSTRUCTIONS FOR YOUR RESPONSE:
-1. Thoroughly answer the user's query using the real-time search snippets, page text, and data extracted above.
-2. If the user asked about a company, person, website, or topic (e.g. "Aripra tech" or "Who is X"), provide a full, detailed profile summarizing what they do, their products, team, location, and key highlights based on the extracted search snippets and page content.
-3. NEVER write generic phrases like "content is not displayed here" or "the operation simply read the page". Always synthesize and output the actual information found!
-4. Format all URLs as prominent, clickable Markdown links: [Title / Site Name](URL).
-5. Use clean GitHub-flavored Markdown formatting with headers (##), bold text, and bulleted lists.
-
-Respond with ONLY your comprehensive Markdown response — no JSON formatting:`;
-
   let reply = '';
 
-  if (env.geminiApiKey) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {},
-          }),
-          signal: AbortSignal.timeout(20000),
-        }
-      );
-      const data: any = await res.json();
-      reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } catch { }
-  }
-
-  if (!reply && env.groqApiKey) {
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.groqApiKey}` },
-        body: JSON.stringify({
-          model: 'groq/compound',
-          messages: [{ role: 'user', content: prompt }],
-        }),
-        signal: AbortSignal.timeout(20000),
-      });
-      const data: any = await res.json();
-      reply = data.choices?.[0]?.message?.content || '';
-    } catch { }
+  try {
+    reply = await AIRuntimeService.execute({
+      feature: 'agent-chat',
+      task: 'result_synthesizer', // Wait, I didn't add this task config yet.
+      // Actually, I can just use a single chat message for this fallback or add the task config. Let me add the task config first.
+      variables: {
+        userMessage,
+        resultsText,
+        urlSection,
+      }
+    });
+  } catch (err) {
+    logger.warn('[AgentChatService] AI Runtime synthesis failed:', err);
   }
 
   return reply || stepsExecuted.map((s) => `${s.success ? '✅' : '❌'} ${s.description}: ${JSON.stringify(s.output || s.error).slice(0, 200)}`).join('\n');
