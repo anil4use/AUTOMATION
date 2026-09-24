@@ -28,6 +28,27 @@ export class AIControlPlaneController {
     }
   }
 
+  public static async syncProviders(req: Request, res: Response) {
+    try {
+      const { AIControlPlaneSeeder } = require('./ai-control-plane.seeder');
+      await AIControlPlaneSeeder.seed();
+      const providers = await AIProviderModel.find().lean();
+      res.json({ success: true, providers });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+
+  public static async deleteProvider(req: Request, res: Response) {
+    try {
+      const { providerId } = req.params;
+      await AIProviderModel.findOneAndDelete({ providerId });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+
   public static async updateProvider(req: Request, res: Response) {
     try {
       const { providerId } = req.params;

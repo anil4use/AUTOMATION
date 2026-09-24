@@ -5,6 +5,7 @@ import { OpenAIAdapter } from './openai.adapter';
 import { AnthropicAdapter } from './anthropic.adapter';
 import { OllamaAdapter } from './ollama.adapter';
 import { OpenAICompatibleAdapter } from './openai-compatible.adapter';
+import { OpenRouterAdapter } from './openrouter.adapter';
 
 export type AIAdapterFactory = (
   providerId: string,
@@ -72,4 +73,5 @@ AIAdapterRegistry.register('openai', (p, b, c) => new OpenAIAdapter(p, b, c));
 AIAdapterRegistry.register('anthropic', (p, b, c) => new AnthropicAdapter(p, b, c));
 AIAdapterRegistry.register('claude', (p, b, c) => new AnthropicAdapter(p, b, c));
 AIAdapterRegistry.register('ollama', (p, b, c) => new OllamaAdapter(p, b, c));
+AIAdapterRegistry.register('openrouter', (p, b, c) => new OpenRouterAdapter(p, b, c));
 AIAdapterRegistry.register('openai-compatible', (p, b, c) => new OpenAICompatibleAdapter(p, b, c));

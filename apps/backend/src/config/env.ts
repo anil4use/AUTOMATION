@@ -46,10 +46,14 @@ export const env = {
   redisPort: parseInt(process.env.REDIS_PORT || '14365', 10),
   redisPassword: process.env.REDIS_PASSWORD || undefined,
 
-  // AI Providers
+  // AI Providers — all read from environment, never hardcoded
   groqApiKey: process.env.GROQ_API_KEY || '',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  defaultLlmProvider: process.env.DEFAULT_LLM_PROVIDER || 'groq',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+  openrouterSiteUrl: process.env.OPENROUTER_SITE_URL || 'https://autoflow.app',
+  openrouterSiteName: process.env.OPENROUTER_SITE_NAME || 'AutoFlow',
+  defaultLlmProvider: process.env.DEFAULT_LLM_PROVIDER || 'openrouter',
 
   // Stripe
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',

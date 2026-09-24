@@ -10,7 +10,9 @@ router.use(authMiddleware);
 // Providers & Models
 router.get('/providers', AIControlPlaneController.listProviders);
 router.post('/providers', AIControlPlaneController.createProvider);
+router.post('/providers/sync', AIControlPlaneController.syncProviders);
 router.put('/providers/:providerId', AIControlPlaneController.updateProvider);
+router.delete('/providers/:providerId', AIControlPlaneController.deleteProvider);
 
 router.get('/models', AIControlPlaneController.listModels);
 router.post('/models', AIControlPlaneController.createModel);

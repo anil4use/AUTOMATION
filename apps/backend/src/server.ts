@@ -32,6 +32,14 @@ async function bootstrap(retries = 3) {
       logger.warn(`⚠️ [Bootstrap] Connector auto-seeding check notice: ${bootstrapErr?.message || bootstrapErr}`);
     }
 
+    // Auto-Bootstrap AI Control Plane (providers, task configs, prompts) from env vars
+    try {
+      const { AIControlPlaneSeeder } = require('./modules/ai-runtime/ai-control-plane.seeder');
+      await AIControlPlaneSeeder.seed();
+    } catch (aiSeedErr: any) {
+      logger.warn(`⚠️ [Bootstrap] AI Control Plane seeding notice: ${aiSeedErr?.message || aiSeedErr}`);
+    }
+
     // 2. Instantiate Express App & HTTP Server
     const app = createApp();
     const server = http.createServer(app);

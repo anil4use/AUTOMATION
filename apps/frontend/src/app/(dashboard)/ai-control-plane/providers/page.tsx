@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { Network, Database, Loader2, Play } from 'lucide-react';
+import { Network, Database, Loader2, Play, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AIProvider {
@@ -33,6 +33,7 @@ export default function ProvidersPage() {
   const [providers, setProviders] = useState<AIProvider[]>([]);
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -89,6 +90,19 @@ export default function ProvidersPage() {
       toast.error('Failed to load providers & models');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncProviders = async () => {
+    setSyncing(true);
+    try {
+      await apiClient.post('/v1/ai-control-plane/providers/sync');
+      toast.success('Synced AI providers & models from environment!');
+      await fetchData();
+    } catch (err: any) {
+      toast.error('Failed to sync providers: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -169,6 +183,13 @@ export default function ProvidersPage() {
             </div>
             Registered Providers
           </h2>
+          <button
+            onClick={handleSyncProviders}
+            disabled={syncing}
+            className="bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all border border-indigo-500/20 flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Sync from Env
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {providers.map((p) => (
