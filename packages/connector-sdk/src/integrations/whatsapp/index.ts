@@ -73,11 +73,26 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Send Text Message',
       description: 'Sends a freeform text message to a customer within the 24-hour service window.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'to', 'text'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          to                    : { type: 'string', title: 'Recipient Phone Number (with country code, e.g. 15551234567)' },
+          text                  : { type: 'string', title: 'Message Text' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'to', label: 'Recipient Phone Number (with country code, e.g. 15551234567)', type: 'string', required: true },
         { key: 'text', label: 'Message Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'WhatsApp Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],
@@ -87,6 +102,17 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Send Approved Template Message',
       description: 'Sends a pre-approved Meta WhatsApp template message (used outside 24h window).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'to', 'templateName', 'languageCode'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          to                    : { type: 'string', title: 'Recipient Phone Number' },
+          templateName          : { type: 'string', title: 'Template Name (e.g. hello_world)' },
+          languageCode          : { type: 'string', title: 'Language Code (e.g. en_US)' },
+          parametersJson        : { type: 'string', title: 'Body Parameters Array (JSON string)' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'to', label: 'Recipient Phone Number', type: 'string', required: true },
@@ -94,6 +120,12 @@ const whatsappManifest: ConnectorManifest = {
         { key: 'languageCode', label: 'Language Code (e.g. en_US)', type: 'string', required: true },
         { key: 'parametersJson', label: 'Body Parameters Array (JSON string)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'WhatsApp Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],
@@ -103,6 +135,17 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Send Image or Document',
       description: 'Sends an image, video, or document via URL.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'to', 'mediaType', 'mediaUrl'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          to                    : { type: 'string', title: 'Recipient Phone Number' },
+          mediaType             : { type: 'string', title: 'Media Type (image, document, audio, video)' },
+          mediaUrl              : { type: 'string', title: 'Public Media URL' },
+          caption               : { type: 'string', title: 'Optional Caption' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'to', label: 'Recipient Phone Number', type: 'string', required: true },
@@ -110,6 +153,12 @@ const whatsappManifest: ConnectorManifest = {
         { key: 'mediaUrl', label: 'Public Media URL', type: 'string', required: true },
         { key: 'caption', label: 'Optional Caption', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'WhatsApp Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],
@@ -119,10 +168,24 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Mark Message as Read',
       description: 'Sends read receipts for an incoming message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'messageId'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          messageId             : { type: 'string', title: 'WhatsApp Message ID (wamid)' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'messageId', label: 'WhatsApp Message ID (wamid)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -132,12 +195,28 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Send Interactive Quick Reply Buttons',
       description: 'Sends up to 3 quick-reply interactive buttons.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'to', 'bodyText', 'buttonTitlesJson'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          to                    : { type: 'string', title: 'Recipient Phone' },
+          bodyText              : { type: 'string', title: 'Body Text' },
+          buttonTitlesJson      : { type: 'string', title: 'Button Titles Array (JSON string)' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'to', label: 'Recipient Phone', type: 'string', required: true },
         { key: 'bodyText', label: 'Body Text', type: 'string', required: true },
         { key: 'buttonTitlesJson', label: 'Button Titles Array (JSON string)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'WhatsApp Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],
@@ -147,12 +226,28 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Send Contact Card',
       description: 'Sends a contact vCard message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'to', 'name', 'phone'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          to                    : { type: 'string', title: 'Recipient Phone' },
+          name                  : { type: 'string', title: 'Contact Name' },
+          phone                 : { type: 'string', title: 'Contact Phone' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'to', label: 'Recipient Phone', type: 'string', required: true },
         { key: 'name', label: 'Contact Name', type: 'string', required: true },
         { key: 'phone', label: 'Contact Phone', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'WhatsApp Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],
@@ -162,12 +257,28 @@ const whatsappManifest: ConnectorManifest = {
       name: 'Send Location Pin',
       description: 'Sends location pin with coordinates.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['phoneNumberId', 'to', 'latitude', 'longitude'],
+        properties: {
+          phoneNumberId         : { type: 'string', title: 'Meta Phone Number ID' },
+          to                    : { type: 'string', title: 'Recipient Phone' },
+          latitude              : { type: 'number', title: 'Latitude' },
+          longitude             : { type: 'number', title: 'Longitude' },
+        },
+      },
       inputs: [
         { key: 'phoneNumberId', label: 'Meta Phone Number ID', type: 'string', required: true },
         { key: 'to', label: 'Recipient Phone', type: 'string', required: true },
         { key: 'latitude', label: 'Latitude', type: 'number', required: true },
         { key: 'longitude', label: 'Longitude', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'WhatsApp Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'WhatsApp Message ID', type: 'string', required: true },
       ],

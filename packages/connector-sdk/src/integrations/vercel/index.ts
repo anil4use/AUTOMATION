@@ -36,10 +36,24 @@ export const vercelManifest: ConnectorManifest = {
       name: 'Create Deployment',
       description: 'Triggers a new production deployment build for a project.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          target                : { type: 'string', title: 'Target Environment (production or preview)' },
+        },
+      },
       inputs: [
         { key: 'projectId', label: 'Project Name or ID', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'projectId' } },
         { key: 'target', label: 'Target Environment (production or preview)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Deployment ID' },
+          url                   : { type: 'string', title: 'Deployment Preview URL' },
+          state                 : { type: 'string', title: 'Deployment State' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Deployment ID', type: 'string', required: true },
         { key: 'url', label: 'Deployment Preview URL', type: 'string', required: true },

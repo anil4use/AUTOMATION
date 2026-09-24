@@ -2,7 +2,7 @@ import { DAGNode } from '@automation/shared-types';
 import { safeRequire } from '../utils/safe-require';
 import { GmailConnector } from '../integrations/gmail';
 import { GoogleSheetsConnector } from '../integrations/google-sheets';
-import { GoogleDriveConnector } from '../connectors/google-drive.connector';
+import { GoogleDriveConnector } from '../integrations/google-drive';
 import { GoogleCalendarConnector } from '../connectors/google-calendar.connector';
 import { GoogleDocsConnector } from '../connectors/google-docs.connector';
 import { SlackConnector } from '../integrations/slack';

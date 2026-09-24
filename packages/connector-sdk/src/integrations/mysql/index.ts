@@ -17,10 +17,25 @@ export const mysqlManifest: ConnectorManifest = {
       name: 'Execute MySQL Query',
       description: 'Runs SQL statements against MySQL database.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['sql'],
+        properties: {
+          sql                   : { type: 'string', title: 'SQL Statement' },
+          params                : { type: 'string', title: 'Query Parameters JSON' },
+        },
+      },
       inputs: [
         { key: 'sql', label: 'SQL Statement', type: 'string', required: true },
         { key: 'params', label: 'Query Parameters JSON', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          rows                  : { type: 'object', title: 'Query Results Array' },
+          affectedRows          : { type: 'number', title: 'Affected Rows' },
+        },
+      },
       outputs: [
         { key: 'rows', label: 'Query Results Array', type: 'json', required: true },
         { key: 'affectedRows', label: 'Affected Rows', type: 'number', required: true },

@@ -51,16 +51,34 @@ export const asanaManifest: ConnectorManifest = {
       name: 'Create Task',
       description: 'Creates a new task in an Asana project.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['workspaceId', 'name'],
+        properties: {
+          workspaceId: { type: 'string', title: 'Workspace',                  description: 'The Asana workspace to create the task in', dynamicOptions: { endpoint: 'workspaceId' } },
+          projectId:   { type: 'string', title: 'Project (Optional)',          description: 'Project to assign the task to',            dynamicOptions: { endpoint: 'projectId' } },
+          name:        { type: 'string', title: 'Task Name',                  description: 'Name/title of the task' },
+          notes:       { type: 'string', title: 'Task Notes / Description',   description: 'Detailed description or notes for the task' },
+          due_on:      { type: 'string', title: 'Due Date (YYYY-MM-DD)',       description: 'Task due date in ISO date format' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          gid:           { type: 'string', title: 'Task GID' },
+          permalink_url: { type: 'string', title: 'Task Web URL' },
+        },
+      },
       inputs: [
-        { key: 'workspaceId', label: 'Workspace', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'workspaceId' } },
-        { key: 'projectId', label: 'Project', type: 'string', required: false, hasDynamicChoices: true, dependsOn: 'workspaceId', dynamicChoice: { endpoint: 'projectId' } },
-        { key: 'name', label: 'Task Name', type: 'string', required: true },
-        { key: 'notes', label: 'Task Notes / Description', type: 'string', required: false },
-        { key: 'due_on', label: 'Due Date (YYYY-MM-DD)', type: 'string', required: false },
+        { key: 'workspaceId', label: 'Workspace',                 type: 'string', required: true,  hasDynamicChoices: true, dynamicChoice: { endpoint: 'workspaceId' } },
+        { key: 'projectId',   label: 'Project',                   type: 'string', required: false, hasDynamicChoices: true, dependsOn: 'workspaceId', dynamicChoice: { endpoint: 'projectId' } },
+        { key: 'name',        label: 'Task Name',                 type: 'string', required: true  },
+        { key: 'notes',       label: 'Task Notes / Description',  type: 'string', required: false },
+        { key: 'due_on',      label: 'Due Date (YYYY-MM-DD)',      type: 'string', required: false },
       ],
       outputs: [
-        { key: 'gid', label: 'Task GID', type: 'string', required: true },
-        { key: 'permalink_url', label: 'Task Web URL', type: 'string', required: true },
+        { key: 'gid',           label: 'Task GID',      type: 'string', required: true },
+        { key: 'permalink_url', label: 'Task Web URL',  type: 'string', required: true },
       ],
     },
     {
@@ -68,12 +86,26 @@ export const asanaManifest: ConnectorManifest = {
       name: 'Complete Task',
       description: 'Marks an existing task as completed.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['taskGid'],
+        properties: {
+          taskGid: { type: 'string', title: 'Task GID', description: 'The unique Asana GID of the task to mark as complete' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          gid:       { type: 'string',  title: 'Task GID' },
+          completed: { type: 'boolean', title: 'Completed' },
+        },
+      },
       inputs: [
         { key: 'taskGid', label: 'Task GID', type: 'string', required: true },
       ],
       outputs: [
-        { key: 'gid', label: 'Task GID', type: 'string', required: true },
-        { key: 'completed', label: 'Completed Boolean', type: 'boolean', required: true },
+        { key: 'gid',       label: 'Task GID',           type: 'string',  required: true },
+        { key: 'completed', label: 'Completed Boolean',  type: 'boolean', required: true },
       ],
     },
   ],

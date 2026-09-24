@@ -51,15 +51,32 @@ export const gitlabManifest: ConnectorManifest = {
       name: 'Create Project Issue',
       description: 'Opens a new issue in a GitLab project.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['projectId', 'title'],
+        properties: {
+          projectId:   { type: 'string', title: 'Project',                   description: 'GitLab project ID or namespace/project path', dynamicOptions: { endpoint: 'projectId' } },
+          title:       { type: 'string', title: 'Issue Title',               description: 'Short summary of the issue' },
+          description: { type: 'string', title: 'Issue Description',         description: 'Full description or body of the issue' },
+          labels:      { type: 'string', title: 'Labels (Comma separated)', description: 'Comma-separated label names to attach' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          iid:     { type: 'number', title: 'Issue IID' },
+          web_url: { type: 'string', title: 'Issue Web URL' },
+        },
+      },
       inputs: [
-        { key: 'projectId', label: 'Project', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'projectId' } },
-        { key: 'title', label: 'Issue Title', type: 'string', required: true },
-        { key: 'description', label: 'Issue Description', type: 'string', required: false },
-        { key: 'labels', label: 'Labels (Comma separated)', type: 'string', required: false },
+        { key: 'projectId',   label: 'Project',                    type: 'string', required: true,  hasDynamicChoices: true, dynamicChoice: { endpoint: 'projectId' } },
+        { key: 'title',       label: 'Issue Title',                type: 'string', required: true  },
+        { key: 'description', label: 'Issue Description',          type: 'string', required: false },
+        { key: 'labels',      label: 'Labels (Comma separated)',   type: 'string', required: false },
       ],
       outputs: [
-        { key: 'iid', label: 'Issue IID (#12)', type: 'number', required: true },
-        { key: 'web_url', label: 'Issue Web URL', type: 'string', required: true },
+        { key: 'iid',     label: 'Issue IID (#12)', type: 'number', required: true },
+        { key: 'web_url', label: 'Issue Web URL',   type: 'string', required: true },
       ],
     },
     {
@@ -67,13 +84,29 @@ export const gitlabManifest: ConnectorManifest = {
       name: 'Trigger CI/CD Pipeline',
       description: 'Dispatches a new CI/CD pipeline run on a branch.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['projectId', 'ref'],
+        properties: {
+          projectId: { type: 'string', title: 'Project',                    description: 'GitLab project ID', dynamicOptions: { endpoint: 'projectId' } },
+          ref:       { type: 'string', title: 'Branch Name (e.g. main)',    description: 'Git branch or tag to run the pipeline on' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id:      { type: 'number', title: 'Pipeline ID' },
+          status:  { type: 'string', title: 'Pipeline Status' },
+          web_url: { type: 'string', title: 'Pipeline Web URL' },
+        },
+      },
       inputs: [
-        { key: 'projectId', label: 'Project', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'projectId' } },
-        { key: 'ref', label: 'Branch Name (e.g. main)', type: 'string', required: true },
+        { key: 'projectId', label: 'Project',                  type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'projectId' } },
+        { key: 'ref',       label: 'Branch Name (e.g. main)', type: 'string', required: true },
       ],
       outputs: [
-        { key: 'id', label: 'Pipeline ID', type: 'number', required: true },
-        { key: 'status', label: 'Status', type: 'string', required: true },
+        { key: 'id',      label: 'Pipeline ID',      type: 'number', required: true },
+        { key: 'status',  label: 'Status',           type: 'string', required: true },
         { key: 'web_url', label: 'Pipeline Web URL', type: 'string', required: true },
       ],
     },

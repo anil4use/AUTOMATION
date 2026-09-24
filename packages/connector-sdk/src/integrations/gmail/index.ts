@@ -132,6 +132,17 @@ const gmailManifest: ConnectorManifest = {
       name: 'Send Email',
       description: 'Sends a formatted email message to specified recipients.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['to', 'subject', 'body'],
+        properties: {
+          to                    : { type: 'string', title: 'Recipient Email' },
+          subject               : { type: 'string', title: 'Subject Line' },
+          body                  : { type: 'string', title: 'Email Content (HTML or Plain Text)' },
+          cc                    : { type: 'string', title: 'CC (Optional)' },
+          bcc                   : { type: 'string', title: 'BCC (Optional)' },
+        },
+      },
       inputs: [
         { key: 'to', label: 'Recipient Email', type: 'string', required: true },
         { key: 'subject', label: 'Subject Line', type: 'string', required: true },
@@ -139,6 +150,13 @@ const gmailManifest: ConnectorManifest = {
         { key: 'cc', label: 'CC (Optional)', type: 'string', required: false },
         { key: 'bcc', label: 'BCC (Optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+          threadId              : { type: 'string', title: 'Thread ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
         { key: 'threadId', label: 'Thread ID', type: 'string', required: true },
@@ -149,12 +167,27 @@ const gmailManifest: ConnectorManifest = {
       name: 'Send Email with Attachments',
       description: 'Sends an email with base64 encoded attachments.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['to', 'subject', 'body'],
+        properties: {
+          to                    : { type: 'string', title: 'Recipient Email' },
+          subject               : { type: 'string', title: 'Subject Line' },
+          body                  : { type: 'string', title: 'Email Content' },
+        },
+      },
       inputs: [
         { key: 'to', label: 'Recipient Email', type: 'string', required: true },
         { key: 'subject', label: 'Subject Line', type: 'string', required: true },
         { key: 'body', label: 'Email Content', type: 'string', required: true },
         { key: 'attachments', label: 'Attachments (JSON array of { filename, contentBase64, mimeType })', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
@@ -164,11 +197,26 @@ const gmailManifest: ConnectorManifest = {
       name: 'Reply to Email',
       description: 'Replies to a specific email thread.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['threadId', 'messageId', 'body'],
+        properties: {
+          threadId              : { type: 'string', title: 'Thread ID' },
+          messageId             : { type: 'string', title: 'Original Message ID' },
+          body                  : { type: 'string', title: 'Reply Body' },
+        },
+      },
       inputs: [
         { key: 'threadId', label: 'Thread ID', type: 'string', required: true },
         { key: 'messageId', label: 'Original Message ID', type: 'string', required: true },
         { key: 'body', label: 'Reply Body', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
@@ -178,11 +226,26 @@ const gmailManifest: ConnectorManifest = {
       name: 'Forward Email',
       description: 'Forwards an existing email to new recipients.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId', 'to'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID to Forward' },
+          to                    : { type: 'string', title: 'Forward To Email' },
+          comment               : { type: 'string', title: 'Optional Additional Comment' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID to Forward', type: 'string', required: true },
         { key: 'to', label: 'Forward To Email', type: 'string', required: true },
         { key: 'comment', label: 'Optional Additional Comment', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'New Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'New Message ID', type: 'string', required: true },
       ],
@@ -192,10 +255,25 @@ const gmailManifest: ConnectorManifest = {
       name: 'Search & Read Emails',
       description: 'Searches and retrieves real emails matching your query.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          maxResults            : { type: 'number', title: 'Max Results (Default: 5)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'maxResults', label: 'Max Results (Default: 5)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Emails Found' },
+          emails                : { type: 'array', title: 'List of Email Objects' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Emails Found', type: 'number', required: true },
         { key: 'emails', label: 'List of Email Objects', type: 'array', required: true },
@@ -206,9 +284,27 @@ const gmailManifest: ConnectorManifest = {
       name: 'Get Single Email by ID',
       description: 'Retrieves full details of a specific Gmail message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Gmail Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Gmail Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Message ID' },
+          subject               : { type: 'string', title: 'Subject' },
+          from                  : { type: 'string', title: 'Sender' },
+          to                    : { type: 'string', title: 'Recipient' },
+          body                  : { type: 'string', title: 'Body Text/HTML' },
+          snippet               : { type: 'string', title: 'Snippet' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Message ID', type: 'string', required: true },
         { key: 'subject', label: 'Subject', type: 'string', required: true },
@@ -223,9 +319,23 @@ const gmailManifest: ConnectorManifest = {
       name: 'Get Email Thread',
       description: 'Retrieves all messages in a thread.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['threadId'],
+        properties: {
+          threadId              : { type: 'string', title: 'Thread ID' },
+        },
+      },
       inputs: [
         { key: 'threadId', label: 'Thread ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          threadId              : { type: 'string', title: 'Thread ID' },
+          messages              : { type: 'array', title: 'Messages Array' },
+        },
+      },
       outputs: [
         { key: 'threadId', label: 'Thread ID', type: 'string', required: true },
         { key: 'messages', label: 'Messages Array', type: 'array', required: true },
@@ -236,11 +346,27 @@ const gmailManifest: ConnectorManifest = {
       name: 'Create Email Draft',
       description: 'Creates a draft email in your Gmail account.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['to', 'subject', 'body'],
+        properties: {
+          to                    : { type: 'string', title: 'Recipient Email' },
+          subject               : { type: 'string', title: 'Subject Line' },
+          body                  : { type: 'string', title: 'Draft Content' },
+        },
+      },
       inputs: [
         { key: 'to', label: 'Recipient Email', type: 'string', required: true },
         { key: 'subject', label: 'Subject Line', type: 'string', required: true },
         { key: 'body', label: 'Draft Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          draftId               : { type: 'string', title: 'Draft ID' },
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'draftId', label: 'Draft ID', type: 'string', required: true },
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
@@ -251,9 +377,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Send Draft Email',
       description: 'Sends an existing draft by Draft ID.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['draftId'],
+        properties: {
+          draftId               : { type: 'string', title: 'Draft ID' },
+        },
+      },
       inputs: [
         { key: 'draftId', label: 'Draft ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
@@ -263,10 +402,23 @@ const gmailManifest: ConnectorManifest = {
       name: 'Add Label to Email',
       description: 'Applies a label to an email message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
         { key: 'labelId', label: 'Label', type: 'string', required: true, dynamicChoice: { endpoint: 'labelId' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -276,10 +428,23 @@ const gmailManifest: ConnectorManifest = {
       name: 'Remove Label from Email',
       description: 'Removes a label from an email message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
         { key: 'labelId', label: 'Label', type: 'string', required: true, dynamicChoice: { endpoint: 'labelId' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -289,9 +454,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Create New Label',
       description: 'Creates a new user label in Gmail.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Label Name' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Label Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          labelId               : { type: 'string', title: 'New Label ID' },
+        },
+      },
       outputs: [
         { key: 'labelId', label: 'New Label ID', type: 'string', required: true },
       ],
@@ -301,9 +479,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Mark Email as Read',
       description: 'Removes the UNREAD label from an email.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -313,9 +504,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Mark Email as Unread',
       description: 'Adds the UNREAD label to an email.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -325,9 +529,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Star Email',
       description: 'Adds STARRED label to an email.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -337,9 +554,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Unstar Email',
       description: 'Removes STARRED label from an email.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -349,9 +579,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Archive Email',
       description: 'Removes INBOX label from an email.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -361,9 +604,22 @@ const gmailManifest: ConnectorManifest = {
       name: 'Trash Email',
       description: 'Moves an email to the Trash.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId'],
+        properties: {
+          messageId             : { type: 'string', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'messageId', label: 'Message ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],

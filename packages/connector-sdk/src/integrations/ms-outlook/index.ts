@@ -40,12 +40,28 @@ export const msOutlookManifest: ConnectorManifest = {
       name: 'Send Email Message',
       description: 'Sends an email using Microsoft Graph Mail API.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['to', 'subject', 'body'],
+        properties: {
+          to                    : { type: 'string', title: 'Recipient Email (To)' },
+          subject               : { type: 'string', title: 'Subject' },
+          body                  : { type: 'string', title: 'Message Body (HTML or Text)' },
+          cc                    : { type: 'string', title: 'CC Recipient Emails' },
+        },
+      },
       inputs: [
         { key: 'to', label: 'Recipient Email (To)', type: 'string', required: true },
         { key: 'subject', label: 'Subject', type: 'string', required: true },
         { key: 'body', label: 'Message Body (HTML or Text)', type: 'string', required: true },
         { key: 'cc', label: 'CC Recipient Emails', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          status                : { type: 'string', title: 'Delivery Status' },
+        },
+      },
       outputs: [
         { key: 'status', label: 'Delivery Status', type: 'string', required: true },
       ],
@@ -55,10 +71,25 @@ export const msOutlookManifest: ConnectorManifest = {
       name: 'Search Emails',
       description: 'Searches Outlook inbox messages matching a search term.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          maxResults            : { type: 'number', title: 'Max Results Count (Default: 10)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'maxResults', label: 'Max Results Count (Default: 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          emails                : { type: 'object', title: 'Emails Array' },
+          count                 : { type: 'number', title: 'Found Email Count' },
+        },
+      },
       outputs: [
         { key: 'emails', label: 'Emails Array', type: 'json', required: true },
         { key: 'count', label: 'Found Email Count', type: 'number', required: true },

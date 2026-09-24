@@ -35,14 +35,31 @@ export const activecampaignManifest: ConnectorManifest = {
       name: 'Create or Update Contact',
       description: 'Creates a new contact or updates an existing contact by email.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email:     { type: 'string', title: 'Contact Email',  description: 'Email address of the contact (used as unique identifier)' },
+          firstName: { type: 'string', title: 'First Name',     description: 'Contact first name' },
+          lastName:  { type: 'string', title: 'Last Name',      description: 'Contact last name' },
+          phone:     { type: 'string', title: 'Phone Number',   description: 'Contact phone number' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id:    { type: 'string', title: 'Contact ID' },
+          email: { type: 'string', title: 'Contact Email' },
+        },
+      },
       inputs: [
-        { key: 'email', label: 'Contact Email', type: 'string', required: true },
-        { key: 'firstName', label: 'First Name', type: 'string', required: false },
-        { key: 'lastName', label: 'Last Name', type: 'string', required: false },
-        { key: 'phone', label: 'Phone Number', type: 'string', required: false },
+        { key: 'email',     label: 'Contact Email',  type: 'string', required: true  },
+        { key: 'firstName', label: 'First Name',     type: 'string', required: false },
+        { key: 'lastName',  label: 'Last Name',      type: 'string', required: false },
+        { key: 'phone',     label: 'Phone Number',   type: 'string', required: false },
       ],
       outputs: [
-        { key: 'id', label: 'Contact ID', type: 'string', required: true },
+        { key: 'id',    label: 'Contact ID',    type: 'string', required: true },
         { key: 'email', label: 'Contact Email', type: 'string', required: true },
       ],
     },
@@ -51,9 +68,23 @@ export const activecampaignManifest: ConnectorManifest = {
       name: 'Add Tag to Contact',
       description: 'Attaches a tag to a contact.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['contactId', 'tagId'],
+        properties: {
+          contactId: { type: 'string', title: 'Contact ID', description: 'The ActiveCampaign contact ID' },
+          tagId:     { type: 'string', title: 'Tag ID',     description: 'The tag ID to attach to the contact' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', title: 'Contact Tag Association ID' },
+        },
+      },
       inputs: [
         { key: 'contactId', label: 'Contact ID', type: 'string', required: true },
-        { key: 'tagId', label: 'Tag ID', type: 'string', required: true },
+        { key: 'tagId',     label: 'Tag ID',     type: 'string', required: true },
       ],
       outputs: [
         { key: 'id', label: 'Contact Tag Association ID', type: 'string', required: true },

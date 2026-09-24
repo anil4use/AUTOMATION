@@ -50,6 +50,17 @@ export const woocommerceManifest: ConnectorManifest = {
       name: 'Create Store Order',
       description: 'Creates a new customer order in WooCommerce.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['billing_email', 'billing_first_name', 'billing_last_name', 'line_items'],
+        properties: {
+          billing_email         : { type: 'string', title: 'Customer Billing Email' },
+          billing_first_name    : { type: 'string', title: 'First Name' },
+          billing_last_name     : { type: 'string', title: 'Last Name' },
+          line_items            : { type: 'string', title: 'Line Items Array (JSON)' },
+          status                : { type: 'string', title: 'Initial Status (e.g. pending, processing)' },
+        },
+      },
       inputs: [
         { key: 'billing_email', label: 'Customer Billing Email', type: 'string', required: true },
         { key: 'billing_first_name', label: 'First Name', type: 'string', required: true },
@@ -57,6 +68,13 @@ export const woocommerceManifest: ConnectorManifest = {
         { key: 'line_items', label: 'Line Items Array (JSON)', type: 'string', required: true },
         { key: 'status', label: 'Initial Status (e.g. pending, processing)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'number', title: 'Created Order ID' },
+          order_key             : { type: 'string', title: 'Order Secret Key' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Created Order ID', type: 'number', required: true },
         { key: 'order_key', label: 'Order Secret Key', type: 'string', required: true },
@@ -67,11 +85,27 @@ export const woocommerceManifest: ConnectorManifest = {
       name: 'Create Catalog Product',
       description: 'Creates a new product listing.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name', 'regular_price'],
+        properties: {
+          name                  : { type: 'string', title: 'Product Name' },
+          regular_price         : { type: 'string', title: 'Regular Price' },
+          description           : { type: 'string', title: 'Product Description (HTML/Text)' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Product Name', type: 'string', required: true },
         { key: 'regular_price', label: 'Regular Price', type: 'string', required: true },
         { key: 'description', label: 'Product Description (HTML/Text)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'number', title: 'Product ID' },
+          permalink             : { type: 'string', title: 'Product URL Link' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Product ID', type: 'number', required: true },
         { key: 'permalink', label: 'Product URL Link', type: 'string', required: true },

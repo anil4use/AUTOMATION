@@ -15,63 +15,17 @@ interface DynamicActionTestRunnerDrawerProps {
 }
 
 function getDefaultInputValue(propKey: string, propMeta: any, actionId: string = '', connectorId: string = ''): string {
-  const k = propKey.toLowerCase();
-  const cId = connectorId.toLowerCase();
-  const aId = actionId.toLowerCase();
-
-  if (k === 'filename' || k === 'name' || k === 'datasetname' || k === 'file_name') {
-    return cId === 'data-vault' ? 'sample_test_document' : 'sample_test_file.txt';
-  }
-  if (k === 'format' || k === 'fileformat' || k === 'extension') {
-    return '.html';
-  }
-  if (k === 'records' || k === 'items' || k === 'dataset') {
-    return JSON.stringify([
-      { id: 1, name: "Alice", role: "Developer", company: "AutoFlow" },
-      { id: 2, name: "Bob", role: "Architect", company: "AutoFlow" }
-    ], null, 2);
-  }
-  if (k === 'to' || k === 'recipient' || k === 'email') {
-    return 'anil4use@gmail.com';
-  }
-  if (k === 'subject') {
-    return 'AutoFlow Verification Test Email';
-  }
-  if (k === 'body' || k === 'html' || k === 'content' || k === 'documentcontent' || k === 'data' || k === 'payload') {
-    if (cId === 'data-vault' || aId.includes('document') || aId.includes('file') || aId.includes('vault')) {
-      return '<h1>AutoFlow Data Vault Live Test</h1>\n<p>Stored locally in Data Vault persistent disk storage.</p>';
-    }
-    return 'Hello! This is an automated test content payload executed live from AutoFlow Action Test Runner.';
-  }
-  if (k === 'channel') {
-    return 'general';
-  }
-  if (k === 'text' || k === 'message') {
-    return 'AutoFlow live connector action test verified!';
-  }
-  if (k === 'prompt') {
-    return 'Explain AI automation in 1 sentence.';
-  }
-  if (k === 'query' || k === 'searchquery' || k === 'q') {
-    if (cId.includes('postgres') || cId.includes('mysql') || cId.includes('sql')) {
-      return 'SELECT 1 as live_test_connection;';
-    }
-    return 'Latest AI technology updates';
-  }
-  if (k === 'title' || k === 'summary') {
-    return 'AutoFlow Live Verification Item';
-  }
-  if (k === 'description') {
-    return 'Created automatically during live action test run.';
-  }
-  if (k === 'maxresults' || k === 'limit') {
-    return '5';
-  }
-  if (k === 'offset') {
-    return '0';
-  }
-  if (propMeta?.default) {
+  if (propMeta?.default !== undefined) {
     return String(propMeta.default);
+  }
+  if (propMeta?.type === 'number' || propMeta?.type === 'integer') {
+    return '1';
+  }
+  if (propMeta?.type === 'boolean') {
+    return 'true';
+  }
+  if (propMeta?.type === 'array' || propMeta?.type === 'object') {
+    return '{}';
   }
   return '';
 }

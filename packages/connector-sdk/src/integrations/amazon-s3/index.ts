@@ -31,12 +31,29 @@ export const amazonS3Manifest: ConnectorManifest = {
       name: 'Upload Object to S3',
       description: 'Uploads raw file content or buffer to specified S3 bucket key.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['bucket', 'key', 'content'],
+        properties: {
+          bucket                : { type: 'string', title: 'Bucket Name' },
+          key                   : { type: 'string', title: 'Object Key / Path (e.g. uploads/file.png)' },
+          content               : { type: 'string', title: 'File Content (Base64 or String)' },
+          contentType           : { type: 'string', title: 'MIME Content Type' },
+        },
+      },
       inputs: [
         { key: 'bucket', label: 'Bucket Name', type: 'string', required: true },
         { key: 'key', label: 'Object Key / Path (e.g. uploads/file.png)', type: 'string', required: true },
         { key: 'content', label: 'File Content (Base64 or String)', type: 'string', required: true },
         { key: 'contentType', label: 'MIME Content Type', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          location              : { type: 'string', title: 'S3 Public URL' },
+          eTag                  : { type: 'string', title: 'Object eTag' },
+        },
+      },
       outputs: [
         { key: 'location', label: 'S3 Public URL', type: 'string', required: true },
         { key: 'eTag', label: 'Object eTag', type: 'string', required: true },
@@ -47,11 +64,27 @@ export const amazonS3Manifest: ConnectorManifest = {
       name: 'Generate Presigned Download URL',
       description: 'Generates a temporary signed download link valid for N seconds.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['bucket', 'key'],
+        properties: {
+          bucket                : { type: 'string', title: 'Bucket Name' },
+          key                   : { type: 'string', title: 'Object Key' },
+          expiresInSeconds      : { type: 'number', title: 'Expiration Time Seconds (Default: 3600)' },
+        },
+      },
       inputs: [
         { key: 'bucket', label: 'Bucket Name', type: 'string', required: true },
         { key: 'key', label: 'Object Key', type: 'string', required: true },
         { key: 'expiresInSeconds', label: 'Expiration Time Seconds (Default: 3600)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          url                   : { type: 'string', title: 'Presigned Download URL' },
+          expiresAt             : { type: 'string', title: 'Expiration Timestamp' },
+        },
+      },
       outputs: [
         { key: 'url', label: 'Presigned Download URL', type: 'string', required: true },
         { key: 'expiresAt', label: 'Expiration Timestamp', type: 'string', required: true },

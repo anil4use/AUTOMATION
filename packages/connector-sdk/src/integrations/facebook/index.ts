@@ -36,10 +36,25 @@ export const facebookManifest: ConnectorManifest = {
       name: 'Publish Page Post',
       description: 'Posts a message or photo update to your Facebook Page timeline.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['pageId', 'message'],
+        properties: {
+          pageId:  { type: 'string', title: 'Facebook Page',        description: 'The Facebook Page to post to', dynamicOptions: { endpoint: 'pageId' } },
+          message: { type: 'string', title: 'Post Message Content', description: 'Text content of the Facebook post' },
+          link:    { type: 'string', title: 'Attached Link URL',    description: 'Optional URL to attach to the post' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', title: 'Published Post ID' },
+        },
+      },
       inputs: [
-        { key: 'pageId', label: 'Facebook Page', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'pageId' } },
-        { key: 'message', label: 'Post Message Content', type: 'string', required: true },
-        { key: 'link', label: 'Attached Link URL', type: 'string', required: false },
+        { key: 'pageId',   label: 'Facebook Page',        type: 'string', required: true,  hasDynamicChoices: true, dynamicChoice: { endpoint: 'pageId' } },
+        { key: 'message',  label: 'Post Message Content', type: 'string', required: true  },
+        { key: 'link',     label: 'Attached Link URL',    type: 'string', required: false },
       ],
       outputs: [
         { key: 'id', label: 'Published Post ID', type: 'string', required: true },

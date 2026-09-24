@@ -32,12 +32,29 @@ export const ziprecruiterManifest: ConnectorManifest = {
       name: 'Search ZipRecruiter Jobs',
       description: 'Query ZipRecruiter marketplace jobs by keyword, location, and radius.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['search'],
+        properties: {
+          search                : { type: 'string', title: 'Search Keyword / Job Title' },
+          location              : { type: 'string', title: 'Location (City or Zip)' },
+          radiusMiles           : { type: 'number', title: 'Radius (Miles)' },
+          daysAgo               : { type: 'number', title: 'Posted Within Days (Default: 30)' },
+        },
+      },
       inputs: [
         { key: 'search', label: 'Search Keyword / Job Title', type: 'string', required: true },
         { key: 'location', label: 'Location (City or Zip)', type: 'string', required: false },
         { key: 'radiusMiles', label: 'Radius (Miles)', type: 'number', required: false },
         { key: 'daysAgo', label: 'Posted Within Days (Default: 30)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of ZipRecruiter Jobs' },
+          totalJobs             : { type: 'number', title: 'Total Jobs Count' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of ZipRecruiter Jobs', type: 'json', required: true },
         { key: 'totalJobs', label: 'Total Jobs Count', type: 'number', required: true },
@@ -48,6 +65,17 @@ export const ziprecruiterManifest: ConnectorManifest = {
       name: 'Post Job to Network',
       description: 'Distribute job opening across ZipRecruiter partner job boards.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title', 'location', 'description', 'employmentType'],
+        properties: {
+          title                 : { type: 'string', title: 'Job Title' },
+          location              : { type: 'string', title: 'Job Location' },
+          description           : { type: 'string', title: 'Full Description' },
+          employmentType        : { type: 'string', title: 'Employment Type (full_time, part_time, contract)' },
+          category              : { type: 'string', title: 'Industry Category' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Job Title', type: 'string', required: true },
         { key: 'location', label: 'Job Location', type: 'string', required: true },
@@ -55,6 +83,14 @@ export const ziprecruiterManifest: ConnectorManifest = {
         { key: 'employmentType', label: 'Employment Type (full_time, part_time, contract)', type: 'string', required: true },
         { key: 'category', label: 'Industry Category', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobId                 : { type: 'string', title: 'ZipRecruiter Job ID' },
+          status                : { type: 'string', title: 'Distribution Status' },
+          postingUrl            : { type: 'string', title: 'Public Job Posting URL' },
+        },
+      },
       outputs: [
         { key: 'jobId', label: 'ZipRecruiter Job ID', type: 'string', required: true },
         { key: 'status', label: 'Distribution Status', type: 'string', required: true },
@@ -66,12 +102,29 @@ export const ziprecruiterManifest: ConnectorManifest = {
       name: 'Search Resume Database',
       description: 'Search ZipRecruiter candidate database by skills, experience, and location.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['skills'],
+        properties: {
+          skills                : { type: 'string', title: 'Required Skills (e.g. React, Node.js)' },
+          location              : { type: 'string', title: 'Target Location' },
+          experienceYears       : { type: 'number', title: 'Min Experience Years' },
+          limit                 : { type: 'number', title: 'Max Results Limit (Default: 10)' },
+        },
+      },
       inputs: [
         { key: 'skills', label: 'Required Skills (e.g. React, Node.js)', type: 'string', required: true },
         { key: 'location', label: 'Target Location', type: 'string', required: false },
         { key: 'experienceYears', label: 'Min Experience Years', type: 'number', required: false },
         { key: 'limit', label: 'Max Results Limit (Default: 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          candidates            : { type: 'object', title: 'Array of Candidate Profiles' },
+          count                 : { type: 'number', title: 'Candidate Count' },
+        },
+      },
       outputs: [
         { key: 'candidates', label: 'Array of Candidate Profiles', type: 'json', required: true },
         { key: 'count', label: 'Candidate Count', type: 'number', required: true },

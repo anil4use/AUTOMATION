@@ -47,12 +47,29 @@ export const paypalManifest: ConnectorManifest = {
       name: 'Create Batch Payout',
       description: 'Sends funds directly to a PayPal recipient email account.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['recipient_email', 'amount', 'currency'],
+        properties: {
+          recipient_email       : { type: 'string', title: 'Recipient PayPal Email' },
+          amount                : { type: 'string', title: 'Payout Amount (e.g. 50.00)' },
+          currency              : { type: 'string', title: 'Currency Code (USD, EUR, GBP)' },
+          note                  : { type: 'string', title: 'Transfer Memo Note' },
+        },
+      },
       inputs: [
         { key: 'recipient_email', label: 'Recipient PayPal Email', type: 'string', required: true },
         { key: 'amount', label: 'Payout Amount (e.g. 50.00)', type: 'string', required: true },
         { key: 'currency', label: 'Currency Code (USD, EUR, GBP)', type: 'string', required: true },
         { key: 'note', label: 'Transfer Memo Note', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          payout_batch_id       : { type: 'string', title: 'Payout Batch ID' },
+          batch_status          : { type: 'string', title: 'Batch Status' },
+        },
+      },
       outputs: [
         { key: 'payout_batch_id', label: 'Payout Batch ID', type: 'string', required: true },
         { key: 'batch_status', label: 'Batch Status', type: 'string', required: true },
@@ -63,11 +80,27 @@ export const paypalManifest: ConnectorManifest = {
       name: 'Issue Payment Refund',
       description: 'Refunds a completed payment transaction.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['capture_id'],
+        properties: {
+          capture_id            : { type: 'string', title: 'Payment Capture ID' },
+          amount                : { type: 'string', title: 'Refund Amount (Optional, full refund if omitted)' },
+          currency              : { type: 'string', title: 'Currency Code' },
+        },
+      },
       inputs: [
         { key: 'capture_id', label: 'Payment Capture ID', type: 'string', required: true },
         { key: 'amount', label: 'Refund Amount (Optional, full refund if omitted)', type: 'string', required: false },
         { key: 'currency', label: 'Currency Code', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Refund ID' },
+          status                : { type: 'string', title: 'Refund Status' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Refund ID', type: 'string', required: true },
         { key: 'status', label: 'Refund Status', type: 'string', required: true },

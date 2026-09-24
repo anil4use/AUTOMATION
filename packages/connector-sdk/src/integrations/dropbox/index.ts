@@ -38,12 +38,28 @@ export const dropboxManifest: ConnectorManifest = {
       name: 'Upload File',
       description: 'Uploads a file to a specified Dropbox path.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['path', 'content'],
+        properties: {
+          path:    { type: 'string', title: 'Target File Path',          description: 'Destination path in Dropbox (e.g. /documents/report.pdf)' },
+          content: { type: 'string', title: 'File Text / Base64 Content', description: 'The file content — plain text or base64-encoded binary' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id:   { type: 'string', title: 'File ID' },
+          name: { type: 'string', title: 'File Name' },
+          size: { type: 'number', title: 'File Size (Bytes)' },
+        },
+      },
       inputs: [
-        { key: 'path', label: 'Target File Path (e.g. /documents/report.pdf)', type: 'string', required: true },
-        { key: 'content', label: 'File Text / Base64 Content', type: 'string', required: true },
+        { key: 'path',    label: 'Target File Path (e.g. /documents/report.pdf)', type: 'string', required: true },
+        { key: 'content', label: 'File Text / Base64 Content',                    type: 'string', required: true },
       ],
       outputs: [
-        { key: 'id', label: 'File ID', type: 'string', required: true },
+        { key: 'id',   label: 'File ID',   type: 'string', required: true },
         { key: 'name', label: 'File Name', type: 'string', required: true },
         { key: 'size', label: 'File Size', type: 'number', required: true },
       ],
@@ -53,12 +69,26 @@ export const dropboxManifest: ConnectorManifest = {
       name: 'Create Folder',
       description: 'Creates a new folder at a path.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['path'],
+        properties: {
+          path: { type: 'string', title: 'New Folder Path', description: 'Path where the new folder should be created (e.g. /projects/2026)' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id:           { type: 'string', title: 'Folder ID' },
+          path_display: { type: 'string', title: 'Path Display' },
+        },
+      },
       inputs: [
         { key: 'path', label: 'New Folder Path (e.g. /projects/2026)', type: 'string', required: true },
       ],
       outputs: [
-        { key: 'id', label: 'Folder ID', type: 'string', required: true },
-        { key: 'path_display', label: 'Path Display', type: 'string', required: true },
+        { key: 'id',           label: 'Folder ID',     type: 'string', required: true },
+        { key: 'path_display', label: 'Path Display',  type: 'string', required: true },
       ],
     },
     {
@@ -66,6 +96,19 @@ export const dropboxManifest: ConnectorManifest = {
       name: 'Search Files',
       description: 'Searches files and folders by filename query.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query: { type: 'string', title: 'Search Query Term', description: 'Keyword or filename to search for in Dropbox' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          matches: { type: 'array', title: 'Matched Files Array', items: { type: 'object' } },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query Term', type: 'string', required: true },
       ],

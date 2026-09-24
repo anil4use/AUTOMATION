@@ -48,6 +48,17 @@ export const zoomManifest: ConnectorManifest = {
       name: 'Create Meeting',
       description: 'Schedules a new video conference meeting.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['topic', 'startTime', 'duration'],
+        properties: {
+          topic                 : { type: 'string', title: 'Meeting Title / Topic' },
+          type                  : { type: 'number', title: 'Meeting Type (1: Instant, 2: Scheduled)' },
+          startTime             : { type: 'string', title: 'Start Time (ISO string)' },
+          duration              : { type: 'number', title: 'Duration (Minutes)' },
+          agenda                : { type: 'string', title: 'Meeting Agenda Description' },
+        },
+      },
       inputs: [
         { key: 'userId', label: 'Host User (Default: me)', type: 'string', required: false, hasDynamicChoices: true, dynamicChoice: { endpoint: 'userId' } },
         { key: 'topic', label: 'Meeting Title / Topic', type: 'string', required: true },
@@ -56,6 +67,15 @@ export const zoomManifest: ConnectorManifest = {
         { key: 'duration', label: 'Duration (Minutes)', type: 'number', required: true },
         { key: 'agenda', label: 'Meeting Agenda Description', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'number', title: 'Meeting ID' },
+          join_url              : { type: 'string', title: 'Join URL' },
+          start_url             : { type: 'string', title: 'Host Start URL' },
+          password              : { type: 'string', title: 'Passcode' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Meeting ID', type: 'number', required: true },
         { key: 'join_url', label: 'Join URL', type: 'string', required: true },
@@ -68,12 +88,29 @@ export const zoomManifest: ConnectorManifest = {
       name: 'Add Meeting Registrant',
       description: 'Registers a participant for a scheduled meeting.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['meetingId', 'email', 'first_name'],
+        properties: {
+          meetingId             : { type: 'string', title: 'Meeting ID' },
+          email                 : { type: 'string', title: 'Registrant Email' },
+          first_name            : { type: 'string', title: 'First Name' },
+          last_name             : { type: 'string', title: 'Last Name' },
+        },
+      },
       inputs: [
         { key: 'meetingId', label: 'Meeting ID', type: 'string', required: true },
         { key: 'email', label: 'Registrant Email', type: 'string', required: true },
         { key: 'first_name', label: 'First Name', type: 'string', required: true },
         { key: 'last_name', label: 'Last Name', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          registrant_id         : { type: 'string', title: 'Registrant ID' },
+          join_url              : { type: 'string', title: 'Personal Join URL' },
+        },
+      },
       outputs: [
         { key: 'registrant_id', label: 'Registrant ID', type: 'string', required: true },
         { key: 'join_url', label: 'Personal Join URL', type: 'string', required: true },

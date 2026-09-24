@@ -361,6 +361,18 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'POST',
       endpoint: '/user/repos',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Repository Name' },
+          description           : { type: 'string', title: 'Description' },
+          private               : { type: 'boolean', title: 'Private Repository' },
+          autoInit              : { type: 'boolean', title: 'Initialize with README' },
+          gitignoreTemplate     : { type: 'string', title: '.gitignore Template (e.g. Node)' },
+          org                   : { type: 'string', title: 'Organization (optional)' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Repository Name', type: 'string', required: true },
         { key: 'description', label: 'Description', type: 'string', required: false },
@@ -369,6 +381,17 @@ export const githubManifest: ConnectorManifest = {
         { key: 'gitignoreTemplate', label: '.gitignore Template (e.g. Node)', type: 'string', required: false },
         { key: 'org', label: 'Organization (optional)', type: 'string', required: false, description: 'Creates under org instead of user account' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          repoId                : { type: 'number', title: 'Repository ID' },
+          fullName              : { type: 'string', title: 'Full Name (owner/repo)' },
+          htmlUrl               : { type: 'string', title: 'Repository URL' },
+          cloneUrl              : { type: 'string', title: 'Clone URL' },
+          defaultBranch         : { type: 'string', title: 'Default Branch' },
+          private               : { type: 'boolean', title: 'Is Private' },
+        },
+      },
       outputs: [
         { key: 'repoId', label: 'Repository ID', type: 'number', required: true },
         { key: 'fullName', label: 'Full Name (owner/repo)', type: 'string', required: true },
@@ -387,6 +410,19 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'PATCH',
       endpoint: '/repos/{owner}/{repo}',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          newName               : { type: 'string', title: 'New Repository Name' },
+          description           : { type: 'string', title: 'Description' },
+          private               : { type: 'boolean', title: 'Make Private' },
+          defaultBranch         : { type: 'string', title: 'Default Branch' },
+          hasIssues             : { type: 'boolean', title: 'Enable Issues' },
+          hasWiki               : { type: 'boolean', title: 'Enable Wiki' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'newName', label: 'New Repository Name', type: 'string', required: false },
@@ -396,6 +432,14 @@ export const githubManifest: ConnectorManifest = {
         { key: 'hasIssues', label: 'Enable Issues', type: 'boolean', required: false },
         { key: 'hasWiki', label: 'Enable Wiki', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fullName              : { type: 'string', title: 'Updated Full Name' },
+          htmlUrl               : { type: 'string', title: 'Repository URL' },
+          updatedAt             : { type: 'string', title: 'Updated At' },
+        },
+      },
       outputs: [
         { key: 'fullName', label: 'Updated Full Name', type: 'string', required: true },
         { key: 'htmlUrl', label: 'Repository URL', type: 'string', required: true },
@@ -410,9 +454,22 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'DELETE',
       endpoint: '/repos/{owner}/{repo}',
       requiredScopes: ['delete_repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName', description: '⚠ Irreversible. Repository and all data will be deleted.' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          deleted               : { type: 'boolean', title: 'Was Deleted' },
+        },
+      },
       outputs: [
         { key: 'deleted', label: 'Was Deleted', type: 'boolean', required: true },
       ],
@@ -425,12 +482,19 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/user/repos',
-      inputs: [
+            inputs: [
         { key: 'type', label: 'Type', type: 'select', required: false, options: [{ label: 'All', value: 'all' }, { label: 'Owner', value: 'owner' }, { label: 'Public', value: 'public' }, { label: 'Private', value: 'private' }] },
         { key: 'sort', label: 'Sort By', type: 'select', required: false, options: [{ label: 'Updated', value: 'updated' }, { label: 'Created', value: 'created' }, { label: 'Full Name', value: 'full_name' }] },
         { key: 'perPage', label: 'Results Per Page (max 100)', type: 'number', required: false },
         { key: 'org', label: 'Organization (optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          repos                 : { type: 'array', title: 'Repositories Array' },
+          count                 : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'repos', label: 'Repositories Array', type: 'array', required: true },
         { key: 'count', label: 'Total Count', type: 'number', required: true },
@@ -443,9 +507,33 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          repoId                : { type: 'number', title: 'Repository ID' },
+          fullName              : { type: 'string', title: 'Full Name' },
+          description           : { type: 'string', title: 'Description' },
+          private               : { type: 'boolean', title: 'Is Private' },
+          htmlUrl               : { type: 'string', title: 'URL' },
+          stargazersCount       : { type: 'number', title: 'Stars' },
+          forksCount            : { type: 'number', title: 'Forks' },
+          openIssuesCount       : { type: 'number', title: 'Open Issues' },
+          defaultBranch         : { type: 'string', title: 'Default Branch' },
+          language              : { type: 'string', title: 'Primary Language' },
+          createdAt             : { type: 'string', title: 'Created At' },
+          updatedAt             : { type: 'string', title: 'Updated At' },
+        },
+      },
       outputs: [
         { key: 'repoId', label: 'Repository ID', type: 'number', required: true },
         { key: 'fullName', label: 'Full Name', type: 'string', required: true },
@@ -470,11 +558,28 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'POST',
       endpoint: '/repos/{owner}/{repo}/git/refs',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'branchName', 'fromBranch'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          branchName            : { type: 'string', title: 'New Branch Name' },
+          fromBranch            : { type: 'string', title: 'Base Branch or SHA' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'branchName', label: 'New Branch Name', type: 'string', required: true },
         { key: 'fromBranch', label: 'Base Branch or SHA', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'branchName', description: 'Branch name (e.g. main) or full commit SHA to branch from.' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          branchName            : { type: 'string', title: 'Branch Name' },
+          sha                   : { type: 'string', title: 'Commit SHA' },
+          ref                   : { type: 'string', title: 'Full Ref' },
+        },
+      },
       outputs: [
         { key: 'branchName', label: 'Branch Name', type: 'string', required: true },
         { key: 'sha', label: 'Commit SHA', type: 'string', required: true },
@@ -488,10 +593,24 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'DELETE',
       endpoint: '/repos/{owner}/{repo}/git/refs/heads/{branch}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'branchName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          branchName            : { type: 'string', title: 'Branch to Delete' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'branchName', label: 'Branch to Delete', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'branchName' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          deleted               : { type: 'boolean', title: 'Was Deleted' },
+        },
+      },
       outputs: [{ key: 'deleted', label: 'Was Deleted', type: 'boolean', required: true }],
     },
     {
@@ -501,10 +620,25 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/branches',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          perPage               : { type: 'number', title: 'Results Per Page (max 100)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'perPage', label: 'Results Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          branches              : { type: 'array', title: 'Branches Array' },
+          count                 : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'branches', label: 'Branches Array', type: 'array', required: true },
         { key: 'count', label: 'Total Count', type: 'number', required: true },
@@ -517,10 +651,27 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/branches/{branch}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'branchName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          branchName            : { type: 'string', title: 'Branch' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'branchName', label: 'Branch', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'branchName' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          name                  : { type: 'string', title: 'Branch Name' },
+          sha                   : { type: 'string', title: 'HEAD Commit SHA' },
+          commitMessage         : { type: 'string', title: 'HEAD Commit Message' },
+          protected             : { type: 'boolean', title: 'Is Protected' },
+        },
+      },
       outputs: [
         { key: 'name', label: 'Branch Name', type: 'string', required: true },
         { key: 'sha', label: 'HEAD Commit SHA', type: 'string', required: true },
@@ -537,6 +688,17 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'PUT',
       endpoint: '/repos/{owner}/{repo}/contents/{path}',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'filePath', 'content', 'commitMessage'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          filePath              : { type: 'string', title: 'File Path (e.g. docs/readme.md)' },
+          content               : { type: 'string', title: 'File Content (text or base64)' },
+          commitMessage         : { type: 'string', title: 'Commit Message' },
+          branch                : { type: 'string', title: 'Branch' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'filePath', label: 'File Path (e.g. docs/readme.md)', type: 'string', required: true },
@@ -544,6 +706,14 @@ export const githubManifest: ConnectorManifest = {
         { key: 'commitMessage', label: 'Commit Message', type: 'string', required: true },
         { key: 'branch', label: 'Branch', type: 'string', required: false, hasDynamicChoices: true, choicesFieldId: 'branchName', description: 'Default: repository default branch' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          sha                   : { type: 'string', title: 'File SHA' },
+          htmlUrl               : { type: 'string', title: 'File URL' },
+          commitSha             : { type: 'string', title: 'Commit SHA' },
+        },
+      },
       outputs: [
         { key: 'sha', label: 'File SHA', type: 'string', required: true },
         { key: 'htmlUrl', label: 'File URL', type: 'string', required: true },
@@ -557,6 +727,18 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'PUT',
       endpoint: '/repos/{owner}/{repo}/contents/{path}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'filePath', 'content', 'sha', 'commitMessage'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          filePath              : { type: 'string', title: 'File Path' },
+          content               : { type: 'string', title: 'New File Content' },
+          sha                   : { type: 'string', title: 'Current File SHA (required for update)' },
+          commitMessage         : { type: 'string', title: 'Commit Message' },
+          branch                : { type: 'string', title: 'Branch' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'filePath', label: 'File Path', type: 'string', required: true },
@@ -565,6 +747,14 @@ export const githubManifest: ConnectorManifest = {
         { key: 'commitMessage', label: 'Commit Message', type: 'string', required: true },
         { key: 'branch', label: 'Branch', type: 'string', required: false, hasDynamicChoices: true, choicesFieldId: 'branchName' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          sha                   : { type: 'string', title: 'New File SHA' },
+          commitSha             : { type: 'string', title: 'Commit SHA' },
+          htmlUrl               : { type: 'string', title: 'File URL' },
+        },
+      },
       outputs: [
         { key: 'sha', label: 'New File SHA', type: 'string', required: true },
         { key: 'commitSha', label: 'Commit SHA', type: 'string', required: true },
@@ -578,6 +768,17 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'DELETE',
       endpoint: '/repos/{owner}/{repo}/contents/{path}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'filePath', 'sha', 'commitMessage'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          filePath              : { type: 'string', title: 'File Path' },
+          sha                   : { type: 'string', title: 'File SHA (required)' },
+          commitMessage         : { type: 'string', title: 'Commit Message' },
+          branch                : { type: 'string', title: 'Branch' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'filePath', label: 'File Path', type: 'string', required: true },
@@ -585,6 +786,12 @@ export const githubManifest: ConnectorManifest = {
         { key: 'commitMessage', label: 'Commit Message', type: 'string', required: true },
         { key: 'branch', label: 'Branch', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          commitSha             : { type: 'string', title: 'Commit SHA' },
+        },
+      },
       outputs: [{ key: 'commitSha', label: 'Commit SHA', type: 'string', required: true }],
     },
     {
@@ -594,11 +801,30 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/contents/{path}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'filePath'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          filePath              : { type: 'string', title: 'File Path' },
+          branch                : { type: 'string', title: 'Branch (optional)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'filePath', label: 'File Path', type: 'string', required: true },
         { key: 'branch', label: 'Branch (optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'File Content (decoded text)' },
+          sha                   : { type: 'string', title: 'File SHA' },
+          size                  : { type: 'number', title: 'File Size (bytes)' },
+          htmlUrl               : { type: 'string', title: 'File URL' },
+          downloadUrl           : { type: 'string', title: 'Raw Download URL' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'File Content (decoded text)', type: 'string', required: true },
         { key: 'sha', label: 'File SHA', type: 'string', required: true },
@@ -614,11 +840,27 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/contents/{path}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          dirPath               : { type: 'string', title: 'Directory Path (e.g. src/ or empty for root)' },
+          branch                : { type: 'string', title: 'Branch (optional)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'dirPath', label: 'Directory Path (e.g. src/ or empty for root)', type: 'string', required: false },
         { key: 'branch', label: 'Branch (optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          files                 : { type: 'array', title: 'Files Array' },
+          count                 : { type: 'number', title: 'File Count' },
+        },
+      },
       outputs: [
         { key: 'files', label: 'Files Array', type: 'array', required: true },
         { key: 'count', label: 'File Count', type: 'number', required: true },
@@ -632,10 +874,31 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/commits/{commit_sha}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'commitSha'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          commitSha             : { type: 'string', title: 'Commit SHA' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'commitSha', label: 'Commit SHA', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          sha                   : { type: 'string', title: 'SHA' },
+          message               : { type: 'string', title: 'Commit Message' },
+          authorName            : { type: 'string', title: 'Author Name' },
+          authorEmail           : { type: 'string', title: 'Author Email' },
+          htmlUrl               : { type: 'string', title: 'Commit URL' },
+          filesChanged          : { type: 'array', title: 'Files Changed (array)' },
+          additions             : { type: 'number', title: 'Lines Added' },
+          deletions             : { type: 'number', title: 'Lines Deleted' },
+        },
+      },
       outputs: [
         { key: 'sha', label: 'SHA', type: 'string', required: true },
         { key: 'message', label: 'Commit Message', type: 'string', required: true },
@@ -654,6 +917,17 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/commits',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          branch                : { type: 'string', title: 'Branch (optional)' },
+          author                : { type: 'string', title: 'Author Filter (username or email)' },
+          path                  : { type: 'string', title: 'File Path Filter' },
+          perPage               : { type: 'number', title: 'Results Per Page (max 100)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'branch', label: 'Branch (optional)', type: 'string', required: false },
@@ -661,6 +935,13 @@ export const githubManifest: ConnectorManifest = {
         { key: 'path', label: 'File Path Filter', type: 'string', required: false },
         { key: 'perPage', label: 'Results Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          commits               : { type: 'array', title: 'Commits Array' },
+          count                 : { type: 'number', title: 'Count Returned' },
+        },
+      },
       outputs: [
         { key: 'commits', label: 'Commits Array', type: 'array', required: true },
         { key: 'count', label: 'Count Returned', type: 'number', required: true },
@@ -675,6 +956,18 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'POST',
       endpoint: '/repos/{owner}/{repo}/pulls',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'title', 'headBranch', 'baseBranch'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          title                 : { type: 'string', title: 'PR Title' },
+          body                  : { type: 'string', title: 'PR Description' },
+          headBranch            : { type: 'string', title: 'Source Branch (head)' },
+          baseBranch            : { type: 'string', title: 'Target Branch (base)' },
+          draft                 : { type: 'boolean', title: 'Create as Draft' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'title', label: 'PR Title', type: 'string', required: true },
@@ -683,6 +976,14 @@ export const githubManifest: ConnectorManifest = {
         { key: 'baseBranch', label: 'Target Branch (base)', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'branchName' },
         { key: 'draft', label: 'Create as Draft', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          prNumber              : { type: 'number', title: 'PR Number' },
+          htmlUrl               : { type: 'string', title: 'PR URL' },
+          state                 : { type: 'string', title: 'State' },
+        },
+      },
       outputs: [
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
         { key: 'htmlUrl', label: 'PR URL', type: 'string', required: true },
@@ -696,6 +997,16 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'PATCH',
       endpoint: '/repos/{owner}/{repo}/pulls/{pull_number}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'prNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          prNumber              : { type: 'number', title: 'PR Number' },
+          title                 : { type: 'string', title: 'New Title' },
+          body                  : { type: 'string', title: 'New Body' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
@@ -703,6 +1014,14 @@ export const githubManifest: ConnectorManifest = {
         { key: 'body', label: 'New Body', type: 'string', required: false },
         { key: 'state', label: 'State', type: 'select', required: false, options: [{ label: 'Open', value: 'open' }, { label: 'Closed', value: 'closed' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          prNumber              : { type: 'number', title: 'PR Number' },
+          state                 : { type: 'string', title: 'State' },
+          updatedAt             : { type: 'string', title: 'Updated At' },
+        },
+      },
       outputs: [
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
         { key: 'state', label: 'State', type: 'string', required: true },
@@ -716,6 +1035,14 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'PUT',
       endpoint: '/repos/{owner}/{repo}/pulls/{pull_number}/merge',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'prNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          prNumber              : { type: 'number', title: 'PR Number' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
@@ -723,6 +1050,14 @@ export const githubManifest: ConnectorManifest = {
         { key: 'commitTitle', label: 'Commit Title (optional)', type: 'string', required: false },
         { key: 'commitMessage', label: 'Commit Message (optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          merged                : { type: 'boolean', title: 'Was Merged' },
+          sha                   : { type: 'string', title: 'Merge Commit SHA' },
+          message               : { type: 'string', title: 'Response Message' },
+        },
+      },
       outputs: [
         { key: 'merged', label: 'Was Merged', type: 'boolean', required: true },
         { key: 'sha', label: 'Merge Commit SHA', type: 'string', required: true },
@@ -736,10 +1071,24 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'PATCH',
       endpoint: '/repos/{owner}/{repo}/pulls/{pull_number}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'prNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          prNumber              : { type: 'number', title: 'PR Number' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          state                 : { type: 'string', title: 'New State' },
+        },
+      },
       outputs: [{ key: 'state', label: 'New State', type: 'string', required: true }],
     },
     {
@@ -749,12 +1098,26 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/pulls',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'state', label: 'State Filter', type: 'select', required: false, options: [{ label: 'Open', value: 'open' }, { label: 'Closed', value: 'closed' }, { label: 'All', value: 'all' }] },
         { key: 'base', label: 'Base Branch Filter', type: 'string', required: false },
         { key: 'perPage', label: 'Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          prs                   : { type: 'array', title: 'Pull Requests Array' },
+          count                 : { type: 'number', title: 'Count' },
+        },
+      },
       outputs: [
         { key: 'prs', label: 'Pull Requests Array', type: 'array', required: true },
         { key: 'count', label: 'Count', type: 'number', required: true },
@@ -767,10 +1130,33 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/pulls/{pull_number}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'prNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          prNumber              : { type: 'number', title: 'PR Number' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          prNumber              : { type: 'number', title: 'PR Number' },
+          title                 : { type: 'string', title: 'Title' },
+          state                 : { type: 'string', title: 'State' },
+          merged                : { type: 'boolean', title: 'Is Merged' },
+          authorLogin           : { type: 'string', title: 'Author' },
+          reviewers             : { type: 'array', title: 'Reviewers (array)' },
+          commitsCount          : { type: 'number', title: 'Commits Count' },
+          additions             : { type: 'number', title: 'Lines Added' },
+          deletions             : { type: 'number', title: 'Lines Deleted' },
+          htmlUrl               : { type: 'string', title: 'PR URL' },
+        },
+      },
       outputs: [
         { key: 'prNumber', label: 'PR Number', type: 'number', required: true },
         { key: 'title', label: 'Title', type: 'string', required: true },
@@ -793,6 +1179,18 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'POST',
       endpoint: '/repos/{owner}/{repo}/issues',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'title'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          title                 : { type: 'string', title: 'Issue Title' },
+          body                  : { type: 'string', title: 'Issue Body' },
+          labels                : { type: 'string', title: 'Labels (comma-separated)' },
+          assignees             : { type: 'string', title: 'Assignees (comma-separated usernames)' },
+          milestone             : { type: 'number', title: 'Milestone Number' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'title', label: 'Issue Title', type: 'string', required: true },
@@ -801,6 +1199,15 @@ export const githubManifest: ConnectorManifest = {
         { key: 'assignees', label: 'Assignees (comma-separated usernames)', type: 'string', required: false },
         { key: 'milestone', label: 'Milestone Number', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          htmlUrl               : { type: 'string', title: 'Issue URL' },
+          state                 : { type: 'string', title: 'State' },
+          nodeId                : { type: 'string', title: 'Node ID' },
+        },
+      },
       outputs: [
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'htmlUrl', label: 'Issue URL', type: 'string', required: true },
@@ -815,6 +1222,16 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'PATCH',
       endpoint: '/repos/{owner}/{repo}/issues/{issue_number}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'issueNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          title                 : { type: 'string', title: 'New Title' },
+          body                  : { type: 'string', title: 'New Body' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
@@ -824,6 +1241,15 @@ export const githubManifest: ConnectorManifest = {
         { key: 'labels', label: 'Labels (comma-separated)', type: 'string', required: false },
         { key: 'assignees', label: 'Assignees (comma-separated)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          state                 : { type: 'string', title: 'State' },
+          updatedAt             : { type: 'string', title: 'Updated At' },
+          htmlUrl               : { type: 'string', title: 'Issue URL' },
+        },
+      },
       outputs: [
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'state', label: 'State', type: 'string', required: true },
@@ -838,11 +1264,27 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'PATCH',
       endpoint: '/repos/{owner}/{repo}/issues/{issue_number}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'issueNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'stateReason', label: 'Close Reason', type: 'select', required: false, options: [{ label: 'Completed', value: 'completed' }, { label: 'Not Planned', value: 'not_planned' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          state                 : { type: 'string', title: 'State' },
+          closedAt              : { type: 'string', title: 'Closed At' },
+        },
+      },
       outputs: [
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'state', label: 'State', type: 'string', required: true },
@@ -856,6 +1298,13 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/issues',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'state', label: 'State Filter', type: 'select', required: false, options: [{ label: 'Open', value: 'open' }, { label: 'Closed', value: 'closed' }, { label: 'All', value: 'all' }] },
@@ -864,6 +1313,13 @@ export const githubManifest: ConnectorManifest = {
         { key: 'since', label: 'Since Date (ISO 8601)', type: 'string', required: false },
         { key: 'perPage', label: 'Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issues                : { type: 'array', title: 'Issues Array' },
+          count                 : { type: 'number', title: 'Count' },
+        },
+      },
       outputs: [
         { key: 'issues', label: 'Issues Array', type: 'array', required: true },
         { key: 'count', label: 'Count', type: 'number', required: true },
@@ -876,10 +1332,34 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/issues/{issue_number}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'issueNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          title                 : { type: 'string', title: 'Title' },
+          body                  : { type: 'string', title: 'Body' },
+          state                 : { type: 'string', title: 'State' },
+          authorLogin           : { type: 'string', title: 'Author' },
+          labels                : { type: 'array', title: 'Labels' },
+          assignees             : { type: 'array', title: 'Assignees' },
+          htmlUrl               : { type: 'string', title: 'Issue URL' },
+          commentsCount         : { type: 'number', title: 'Comments Count' },
+          createdAt             : { type: 'string', title: 'Created At' },
+          updatedAt             : { type: 'string', title: 'Updated At' },
+        },
+      },
       outputs: [
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'title', label: 'Title', type: 'string', required: true },
@@ -901,11 +1381,28 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/repos/{owner}/{repo}/issues/{issue_number}/comments',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'issueNumber', 'body'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          body                  : { type: 'string', title: 'Comment Text' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'body', label: 'Comment Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          commentId             : { type: 'number', title: 'Comment ID' },
+          htmlUrl               : { type: 'string', title: 'Comment URL' },
+          createdAt             : { type: 'string', title: 'Created At' },
+        },
+      },
       outputs: [
         { key: 'commentId', label: 'Comment ID', type: 'number', required: true },
         { key: 'htmlUrl', label: 'Comment URL', type: 'string', required: true },
@@ -919,11 +1416,27 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/issues/{issue_number}/comments',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'issueNumber'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          issueNumber           : { type: 'number', title: 'Issue Number' },
+          perPage               : { type: 'number', title: 'Per Page (max 100)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'issueNumber', label: 'Issue Number', type: 'number', required: true },
         { key: 'perPage', label: 'Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          comments              : { type: 'array', title: 'Comments Array' },
+          count                 : { type: 'number', title: 'Count' },
+        },
+      },
       outputs: [
         { key: 'comments', label: 'Comments Array', type: 'array', required: true },
         { key: 'count', label: 'Count', type: 'number', required: true },
@@ -937,6 +1450,20 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/repos/{owner}/{repo}/releases',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'tagName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          tagName               : { type: 'string', title: 'Tag Name (e.g. v1.2.0)' },
+          releaseName           : { type: 'string', title: 'Release Name' },
+          body                  : { type: 'string', title: 'Release Notes' },
+          draft                 : { type: 'boolean', title: 'Create as Draft' },
+          prerelease            : { type: 'boolean', title: 'Mark as Pre-release' },
+          targetCommitish       : { type: 'string', title: 'Target Branch or SHA' },
+          generateReleaseNotes  : { type: 'boolean', title: 'Auto-generate Release Notes' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'tagName', label: 'Tag Name (e.g. v1.2.0)', type: 'string', required: true },
@@ -947,6 +1474,16 @@ export const githubManifest: ConnectorManifest = {
         { key: 'targetCommitish', label: 'Target Branch or SHA', type: 'string', required: false },
         { key: 'generateReleaseNotes', label: 'Auto-generate Release Notes', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          releaseId             : { type: 'number', title: 'Release ID' },
+          htmlUrl               : { type: 'string', title: 'Release URL' },
+          tagName               : { type: 'string', title: 'Tag Name' },
+          uploadUrl             : { type: 'string', title: 'Asset Upload URL' },
+          publishedAt           : { type: 'string', title: 'Published At' },
+        },
+      },
       outputs: [
         { key: 'releaseId', label: 'Release ID', type: 'number', required: true },
         { key: 'htmlUrl', label: 'Release URL', type: 'string', required: true },
@@ -962,10 +1499,25 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/releases',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          perPage               : { type: 'number', title: 'Per Page (max 100)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'perPage', label: 'Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          releases              : { type: 'array', title: 'Releases Array' },
+          count                 : { type: 'number', title: 'Count' },
+        },
+      },
       outputs: [
         { key: 'releases', label: 'Releases Array', type: 'array', required: true },
         { key: 'count', label: 'Count', type: 'number', required: true },
@@ -980,12 +1532,29 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'POST',
       endpoint: '/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches',
       requiredScopes: ['workflow'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'workflowId', 'ref'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          workflowId            : { type: 'string', title: 'Workflow File Name or ID (e.g. deploy.yml)' },
+          ref                   : { type: 'string', title: 'Branch or Tag to Run On' },
+          inputs                : { type: 'object', title: 'Workflow Inputs (JSON object)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'workflowId', label: 'Workflow File Name or ID (e.g. deploy.yml)', type: 'string', required: true },
         { key: 'ref', label: 'Branch or Tag to Run On', type: 'string', required: true },
         { key: 'inputs', label: 'Workflow Inputs (JSON object)', type: 'json', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          triggered             : { type: 'boolean', title: 'Was Triggered' },
+          message               : { type: 'string', title: 'Response Message' },
+        },
+      },
       outputs: [
         { key: 'triggered', label: 'Was Triggered', type: 'boolean', required: true },
         { key: 'message', label: 'Response Message', type: 'string', required: true },
@@ -998,10 +1567,30 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/actions/runs/{run_id}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'runId'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          runId                 : { type: 'number', title: 'Run ID' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'runId', label: 'Run ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          runId                 : { type: 'number', title: 'Run ID' },
+          status                : { type: 'string', title: 'Status (queued/in_progress/completed)' },
+          conclusion            : { type: 'string', title: 'Conclusion (success/failure/cancelled)' },
+          workflowName          : { type: 'string', title: 'Workflow Name' },
+          htmlUrl               : { type: 'string', title: 'Run URL' },
+          createdAt             : { type: 'string', title: 'Started At' },
+          updatedAt             : { type: 'string', title: 'Updated At' },
+        },
+      },
       outputs: [
         { key: 'runId', label: 'Run ID', type: 'number', required: true },
         { key: 'status', label: 'Status (queued/in_progress/completed)', type: 'string', required: true },
@@ -1019,6 +1608,14 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/actions/runs',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          workflowId            : { type: 'string', title: 'Workflow File Name (optional)' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'workflowId', label: 'Workflow File Name (optional)', type: 'string', required: false },
@@ -1026,6 +1623,13 @@ export const githubManifest: ConnectorManifest = {
         { key: 'branch', label: 'Branch Filter', type: 'string', required: false },
         { key: 'perPage', label: 'Per Page (max 100)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          runs                  : { type: 'array', title: 'Workflow Runs Array' },
+          totalCount            : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'runs', label: 'Workflow Runs Array', type: 'array', required: true },
         { key: 'totalCount', label: 'Total Count', type: 'number', required: true },
@@ -1040,11 +1644,27 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'PUT',
       endpoint: '/repos/{owner}/{repo}/collaborators/{username}',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'username'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          username              : { type: 'string', title: 'GitHub Username to Invite' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'username', label: 'GitHub Username to Invite', type: 'string', required: true },
         { key: 'permission', label: 'Permission Level', type: 'select', required: false, options: [{ label: 'Read', value: 'pull' }, { label: 'Triage', value: 'triage' }, { label: 'Write', value: 'push' }, { label: 'Maintain', value: 'maintain' }, { label: 'Admin', value: 'admin' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          invited               : { type: 'boolean', title: 'Was Invited' },
+          invitationId          : { type: 'number', title: 'Invitation ID' },
+          permission            : { type: 'string', title: 'Permission Granted' },
+        },
+      },
       outputs: [
         { key: 'invited', label: 'Was Invited', type: 'boolean', required: true },
         { key: 'invitationId', label: 'Invitation ID', type: 'number', required: false },
@@ -1058,10 +1678,24 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'DELETE',
       endpoint: '/repos/{owner}/{repo}/collaborators/{username}',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName', 'username'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+          username              : { type: 'string', title: 'GitHub Username to Remove' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'username', label: 'GitHub Username to Remove', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          removed               : { type: 'boolean', title: 'Was Removed' },
+        },
+      },
       outputs: [{ key: 'removed', label: 'Was Removed', type: 'boolean', required: true }],
     },
     {
@@ -1071,10 +1705,24 @@ export const githubManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/collaborators',
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'permission', label: 'Permission Filter', type: 'select', required: false, options: [{ label: 'All', value: 'all' }, { label: 'Pull', value: 'pull' }, { label: 'Push', value: 'push' }, { label: 'Admin', value: 'admin' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          collaborators         : { type: 'array', title: 'Collaborators Array' },
+          count                 : { type: 'number', title: 'Count' },
+        },
+      },
       outputs: [
         { key: 'collaborators', label: 'Collaborators Array', type: 'array', required: true },
         { key: 'count', label: 'Count', type: 'number', required: true },
@@ -1089,10 +1737,27 @@ export const githubManifest: ConnectorManifest = {
       httpMethod: 'GET',
       endpoint: '/repos/{owner}/{repo}/traffic/views',
       requiredScopes: ['repo'],
+            inputSchema: {
+        type: 'object',
+        required: ['repoName'],
+        properties: {
+          repoName              : { type: 'string', title: 'Repository' },
+        },
+      },
       inputs: [
         { key: 'repoName', label: 'Repository', type: 'string', required: true, hasDynamicChoices: true, choicesFieldId: 'repoName' },
         { key: 'per', label: 'Breakdown Period', type: 'select', required: false, options: [{ label: 'Day', value: 'day' }, { label: 'Week', value: 'week' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          totalViews            : { type: 'number', title: 'Total Views' },
+          uniqueViews           : { type: 'number', title: 'Unique Visitors' },
+          totalClones           : { type: 'number', title: 'Total Clones' },
+          uniqueClones          : { type: 'number', title: 'Unique Cloners' },
+          views                 : { type: 'array', title: 'Daily/Weekly Views Breakdown' },
+        },
+      },
       outputs: [
         { key: 'totalViews', label: 'Total Views', type: 'number', required: true },
         { key: 'uniqueViews', label: 'Unique Visitors', type: 'number', required: true },

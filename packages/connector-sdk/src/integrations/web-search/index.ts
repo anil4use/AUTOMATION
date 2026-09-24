@@ -17,11 +17,27 @@ const webSearchManifest: ConnectorManifest = {
       name: 'Multi-Provider Web Search',
       description: 'Searches the web using DuckDuckGo, Google, or Tavily.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query Keywords' },
+          provider              : { type: 'string', title: 'Search Provider (duckduckgo, google, tavily)' },
+          maxResults            : { type: 'number', title: 'Max Results Limit (Default 10)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query Keywords', type: 'string', required: true },
         { key: 'provider', label: 'Search Provider (duckduckgo, google, tavily)', type: 'string', required: false },
         { key: 'maxResults', label: 'Max Results Limit (Default 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          results               : { type: 'object', title: 'Results Array' },
+          totalResults          : { type: 'number', title: 'Total Results Count' },
+        },
+      },
       outputs: [
         { key: 'results', label: 'Results Array', type: 'json', required: true },
         { key: 'totalResults', label: 'Total Results Count', type: 'number', required: true },
@@ -32,10 +48,24 @@ const webSearchManifest: ConnectorManifest = {
       name: 'Search Latest News & Headlines',
       description: 'Searches for recent news articles and media coverage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'News Query' },
+          maxResults            : { type: 'number', title: 'Max Articles' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'News Query', type: 'string', required: true },
         { key: 'maxResults', label: 'Max Articles', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          articles              : { type: 'object', title: 'Articles Array' },
+        },
+      },
       outputs: [
         { key: 'articles', label: 'Articles Array', type: 'json', required: true },
       ],
@@ -45,9 +75,24 @@ const webSearchManifest: ConnectorManifest = {
       name: 'DuckDuckGo Instant Answer',
       description: 'Fetches structured instant answers, Wikipedia summaries, and topic abstracts.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Knowledge Query' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Knowledge Query', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          answer                : { type: 'string', title: 'Instant Answer' },
+          abstract              : { type: 'string', title: 'Abstract Summary' },
+          source                : { type: 'string', title: 'Source' },
+        },
+      },
       outputs: [
         { key: 'answer', label: 'Instant Answer', type: 'string', required: true },
         { key: 'abstract', label: 'Abstract Summary', type: 'string', required: true },
@@ -59,10 +104,25 @@ const webSearchManifest: ConnectorManifest = {
       name: 'Search Web & Read Top Pages',
       description: 'Searches the web and automatically reads the full text of top N result pages using Playwright.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          readTopN              : { type: 'number', title: 'Number of Pages to Read (Default 3, Max 5)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'readTopN', label: 'Number of Pages to Read (Default 3, Max 5)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          searchResults         : { type: 'object', title: 'Search Results Array' },
+          pagesContent          : { type: 'object', title: 'Pages Text Content Array' },
+        },
+      },
       outputs: [
         { key: 'searchResults', label: 'Search Results Array', type: 'json', required: true },
         { key: 'pagesContent', label: 'Pages Text Content Array', type: 'json', required: true },

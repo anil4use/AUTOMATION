@@ -96,11 +96,27 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Message',
       description: 'Sends a text message to a Telegram chat or channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'text'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID or @channelusername' },
+          text                  : { type: 'string', title: 'Message Text (HTML or Markdown supported)' },
+          parseMode             : { type: 'string', title: 'Parse Mode (HTML or MarkdownV2)' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID or @channelusername', type: 'string', required: true },
         { key: 'text', label: 'Message Text (HTML or Markdown supported)', type: 'string', required: true },
         { key: 'parseMode', label: 'Parse Mode (HTML or MarkdownV2)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+          chatId                : { type: 'number', title: 'Chat ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
         { key: 'chatId', label: 'Chat ID', type: 'number', required: true },
@@ -111,11 +127,26 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Photo',
       description: 'Sends a photo via URL or file ID to a Telegram chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'photoUrl'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          photoUrl              : { type: 'string', title: 'Photo URL or File ID' },
+          caption               : { type: 'string', title: 'Caption Text' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'photoUrl', label: 'Photo URL or File ID', type: 'string', required: true },
         { key: 'caption', label: 'Caption Text', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
@@ -125,11 +156,26 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Document / File',
       description: 'Sends a document via URL to a Telegram chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'documentUrl'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          documentUrl           : { type: 'string', title: 'Document URL' },
+          caption               : { type: 'string', title: 'Caption Text' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'documentUrl', label: 'Document URL', type: 'string', required: true },
         { key: 'caption', label: 'Caption Text', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
@@ -139,11 +185,26 @@ const telegramManifest: ConnectorManifest = {
       name: 'Edit Message Text',
       description: 'Edits text of a message previously sent by the bot.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'messageId', 'text'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          messageId             : { type: 'number', title: 'Message ID' },
+          text                  : { type: 'string', title: 'New Message Text' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
         { key: 'text', label: 'New Message Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -153,10 +214,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Delete Message',
       description: 'Deletes a message from a chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'messageId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -166,11 +241,26 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Location',
       description: 'Sends geographic location coordinates.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'latitude', 'longitude'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          latitude              : { type: 'number', title: 'Latitude' },
+          longitude             : { type: 'number', title: 'Longitude' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'latitude', label: 'Latitude', type: 'number', required: true },
         { key: 'longitude', label: 'Longitude', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
@@ -180,10 +270,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Audio',
       description: 'Sends an audio track to chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'audioUrl'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          audioUrl              : { type: 'string', title: 'Audio URL' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'audioUrl', label: 'Audio URL', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
@@ -193,10 +297,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Video',
       description: 'Sends a video file to chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'videoUrl'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          videoUrl              : { type: 'string', title: 'Video URL' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'videoUrl', label: 'Video URL', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
@@ -206,11 +324,25 @@ const telegramManifest: ConnectorManifest = {
       name: 'Send Poll',
       description: 'Creates and sends a poll to chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'question'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          question              : { type: 'string', title: 'Poll Question' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'question', label: 'Poll Question', type: 'string', required: true },
         { key: 'options', label: 'Options Array (e.g. ["Yes", "No"])', type: 'array', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
@@ -220,10 +352,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Pin Message',
       description: 'Pins a message in a chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'messageId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -233,10 +379,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Unpin Message',
       description: 'Unpins a message in a chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'messageId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          messageId             : { type: 'number', title: 'Message ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'messageId', label: 'Message ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -246,9 +406,23 @@ const telegramManifest: ConnectorManifest = {
       name: 'Get Chat Info',
       description: 'Fetches details of a group or channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'number', title: 'Chat ID' },
+          title                 : { type: 'string', title: 'Title' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Chat ID', type: 'number', required: true },
         { key: 'title', label: 'Title', type: 'string', required: true },
@@ -259,10 +433,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Get Chat Member',
       description: 'Gets status of a user in a chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'userId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          userId                : { type: 'number', title: 'User ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'userId', label: 'User ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          status                : { type: 'string', title: 'Member Status' },
+        },
+      },
       outputs: [
         { key: 'status', label: 'Member Status', type: 'string', required: true },
       ],
@@ -272,10 +460,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Kick Chat Member',
       description: 'Bans/kicks a member from a chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'userId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          userId                : { type: 'number', title: 'User ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'userId', label: 'User ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -285,10 +487,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Unban Chat Member',
       description: 'Unbans a member in a chat.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'userId'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          userId                : { type: 'number', title: 'User ID' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'userId', label: 'User ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -298,10 +514,24 @@ const telegramManifest: ConnectorManifest = {
       name: 'Set Chat Title',
       description: 'Changes title of a chat or channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chatId', 'title'],
+        properties: {
+          chatId                : { type: 'string', title: 'Chat ID' },
+          title                 : { type: 'string', title: 'New Title' },
+        },
+      },
       inputs: [
         { key: 'chatId', label: 'Chat ID', type: 'string', required: true },
         { key: 'title', label: 'New Title', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],

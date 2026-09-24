@@ -47,6 +47,18 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Search Indeed Jobs',
       description: 'Search active job listings on Indeed by title, location, and salary filter.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Job Title or Search Query' },
+          location              : { type: 'string', title: 'Location (City or State)' },
+          radius                : { type: 'number', title: 'Radius (Miles)' },
+          jobType               : { type: 'string', title: 'Job Type (fulltime, parttime, contract)' },
+          salary                : { type: 'number', title: 'Min Salary Filter' },
+          maxResults            : { type: 'number', title: 'Max Results (Default: 10)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Job Title or Search Query', type: 'string', required: true },
         { key: 'location', label: 'Location (City or State)', type: 'string', required: false },
@@ -55,6 +67,13 @@ export const indeedManifest: ConnectorManifest = {
         { key: 'salary', label: 'Min Salary Filter', type: 'number', required: false },
         { key: 'maxResults', label: 'Max Results (Default: 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of Job Listings' },
+          totalResults          : { type: 'number', title: 'Total Results Count' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of Job Listings', type: 'json', required: true },
         { key: 'totalResults', label: 'Total Results Count', type: 'number', required: true },
@@ -65,9 +84,27 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Get Job Details',
       description: 'Retrieve full job description, requirements, and benefits.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobKey'],
+        properties: {
+          jobKey                : { type: 'string', title: 'Indeed Job Key or URL' },
+        },
+      },
       inputs: [
         { key: 'jobKey', label: 'Indeed Job Key or URL', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          title                 : { type: 'string', title: 'Job Title' },
+          company               : { type: 'string', title: 'Company' },
+          location              : { type: 'string', title: 'Location' },
+          description           : { type: 'string', title: 'Description Text' },
+          salary                : { type: 'string', title: 'Salary Info' },
+          postedAt              : { type: 'string', title: 'Posted Timestamp' },
+        },
+      },
       outputs: [
         { key: 'title', label: 'Job Title', type: 'string', required: true },
         { key: 'company', label: 'Company', type: 'string', required: true },
@@ -82,11 +119,26 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Get Company Jobs',
       description: 'Retrieve all open postings for a specific company.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['companyName'],
+        properties: {
+          companyName           : { type: 'string', title: 'Company Name' },
+          location              : { type: 'string', title: 'Location Filter' },
+          maxResults            : { type: 'number', title: 'Max Results' },
+        },
+      },
       inputs: [
         { key: 'companyName', label: 'Company Name', type: 'string', required: true },
         { key: 'location', label: 'Location Filter', type: 'string', required: false },
         { key: 'maxResults', label: 'Max Results', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of Postings' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of Postings', type: 'json', required: true },
       ],
@@ -96,11 +148,27 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Set Job Search Alert',
       description: 'Set up an automatic Indeed job alert.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          location              : { type: 'string', title: 'Target Location' },
+          frequency             : { type: 'string', title: 'Frequency (daily, weekly)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'location', label: 'Target Location', type: 'string', required: false },
         { key: 'frequency', label: 'Frequency (daily, weekly)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success' },
+          alertId               : { type: 'string', title: 'Alert ID' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success', type: 'boolean', required: true },
         { key: 'alertId', label: 'Alert ID', type: 'string', required: true },
@@ -111,7 +179,13 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Get Saved Jobs',
       description: 'Retrieve user bookmarked jobs on Indeed.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of Bookmarked Jobs' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of Bookmarked Jobs', type: 'json', required: true },
       ],
@@ -121,6 +195,17 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Post Employer Job Listing',
       description: 'Create a new job posting on Indeed (Requires Employer API Access).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title', 'company', 'location', 'description', 'applyUrl'],
+        properties: {
+          title                 : { type: 'string', title: 'Job Title' },
+          company               : { type: 'string', title: 'Company Name' },
+          location              : { type: 'string', title: 'Location' },
+          description           : { type: 'string', title: 'Job Description' },
+          applyUrl              : { type: 'string', title: 'Apply Link' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Job Title', type: 'string', required: true },
         { key: 'company', label: 'Company Name', type: 'string', required: true },
@@ -128,6 +213,13 @@ export const indeedManifest: ConnectorManifest = {
         { key: 'description', label: 'Job Description', type: 'string', required: true },
         { key: 'applyUrl', label: 'Apply Link', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobId                 : { type: 'string', title: 'Created Job ID' },
+          jobUrl                : { type: 'string', title: 'Public Job Link' },
+        },
+      },
       outputs: [
         { key: 'jobId', label: 'Created Job ID', type: 'string', required: true },
         { key: 'jobUrl', label: 'Public Job Link', type: 'string', required: true },
@@ -138,11 +230,26 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Update Employer Job',
       description: 'Update fields of an active posting (Requires Employer API Access).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobId'],
+        properties: {
+          jobId                 : { type: 'string', title: 'Job ID' },
+          title                 : { type: 'string', title: 'Updated Title' },
+          description           : { type: 'string', title: 'Updated Description' },
+        },
+      },
       inputs: [
         { key: 'jobId', label: 'Job ID', type: 'string', required: true },
         { key: 'title', label: 'Updated Title', type: 'string', required: false },
         { key: 'description', label: 'Updated Description', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success', type: 'boolean', required: true },
       ],
@@ -152,9 +259,22 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Close Job Listing',
       description: 'Remove/close an active job posting (Requires Employer API Access).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobId'],
+        properties: {
+          jobId                 : { type: 'string', title: 'Job ID' },
+        },
+      },
       inputs: [
         { key: 'jobId', label: 'Job ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success', type: 'boolean', required: true },
       ],
@@ -164,10 +284,24 @@ export const indeedManifest: ConnectorManifest = {
       name: 'Get Job Applications',
       description: 'Fetch candidate applications for a job posting (Requires Employer API Access).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobId'],
+        properties: {
+          jobId                 : { type: 'string', title: 'Job ID' },
+          status                : { type: 'string', title: 'Status Filter' },
+        },
+      },
       inputs: [
         { key: 'jobId', label: 'Job ID', type: 'string', required: true },
         { key: 'status', label: 'Status Filter', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          applications          : { type: 'object', title: 'Array of Applications' },
+        },
+      },
       outputs: [
         { key: 'applications', label: 'Array of Applications', type: 'json', required: true },
       ],

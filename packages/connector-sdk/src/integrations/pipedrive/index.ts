@@ -52,12 +52,29 @@ export const pipedriveManifest: ConnectorManifest = {
       name: 'Create Contact Person',
       description: 'Creates a new contact person record.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Person Full Name' },
+          email                 : { type: 'string', title: 'Email Address' },
+          phone                 : { type: 'string', title: 'Phone Number' },
+          org_id                : { type: 'number', title: 'Organization ID' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Person Full Name', type: 'string', required: true },
         { key: 'email', label: 'Email Address', type: 'string', required: false },
         { key: 'phone', label: 'Phone Number', type: 'string', required: false },
         { key: 'org_id', label: 'Organization ID', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'number', title: 'Person ID' },
+          name                  : { type: 'string', title: 'Full Name' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Person ID', type: 'number', required: true },
         { key: 'name', label: 'Full Name', type: 'string', required: true },
@@ -68,6 +85,16 @@ export const pipedriveManifest: ConnectorManifest = {
       name: 'Create Sales Deal',
       description: 'Creates a new sales deal in a pipeline.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title', 'value'],
+        properties: {
+          title                 : { type: 'string', title: 'Deal Title' },
+          value                 : { type: 'string', title: 'Deal Value Amount' },
+          currency              : { type: 'string', title: 'Currency (e.g. USD, EUR)' },
+          person_id             : { type: 'number', title: 'Contact Person ID' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Deal Title', type: 'string', required: true },
         { key: 'value', label: 'Deal Value Amount', type: 'string', required: true },
@@ -75,6 +102,13 @@ export const pipedriveManifest: ConnectorManifest = {
         { key: 'person_id', label: 'Contact Person ID', type: 'number', required: false },
         { key: 'stage_id', label: 'Pipeline Stage', type: 'string', required: false, hasDynamicChoices: true, dynamicChoice: { endpoint: 'stageId' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'number', title: 'Created Deal ID' },
+          title                 : { type: 'string', title: 'Deal Title' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Created Deal ID', type: 'number', required: true },
         { key: 'title', label: 'Deal Title', type: 'string', required: true },

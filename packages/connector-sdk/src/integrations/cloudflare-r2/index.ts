@@ -17,11 +17,27 @@ export const cloudflareR2Manifest: ConnectorManifest = {
       name: 'Upload R2 Object',
       description: 'Uploads a file to Cloudflare R2 bucket.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['bucket', 'key', 'content'],
+        properties: {
+          bucket                : { type: 'string', title: 'Bucket Name' },
+          key                   : { type: 'string', title: 'Object Key Path' },
+          content               : { type: 'string', title: 'File Data (Base64 / String)' },
+        },
+      },
       inputs: [
         { key: 'bucket', label: 'Bucket Name', type: 'string', required: true },
         { key: 'key', label: 'Object Key Path', type: 'string', required: true },
         { key: 'content', label: 'File Data (Base64 / String)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          key                   : { type: 'string', title: 'Uploaded Object Key' },
+          publicUrl             : { type: 'string', title: 'R2 Public Custom Domain URL' },
+        },
+      },
       outputs: [
         { key: 'key', label: 'Uploaded Object Key', type: 'string', required: true },
         { key: 'publicUrl', label: 'R2 Public Custom Domain URL', type: 'string', required: true },

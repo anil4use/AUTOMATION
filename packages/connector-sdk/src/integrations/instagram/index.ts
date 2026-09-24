@@ -35,10 +35,25 @@ export const instagramManifest: ConnectorManifest = {
       name: 'Publish Image Post',
       description: 'Publishes a photo post to your Instagram Business account.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['instagram_account_id', 'image_url'],
+        properties: {
+          instagram_account_id: { type: 'string', title: 'Instagram Business Account ID', description: 'Your Instagram Business Account ID from Meta Business Suite' },
+          image_url:            { type: 'string', title: 'Public Image URL',              description: 'Publicly accessible URL of the image to post' },
+          caption:              { type: 'string', title: 'Post Caption & Hashtags',       description: 'Caption text and hashtags for the post' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', title: 'Published Media ID' },
+        },
+      },
       inputs: [
-        { key: 'instagram_account_id', label: 'Instagram Business Account ID', type: 'string', required: true },
-        { key: 'image_url', label: 'Public Image URL', type: 'string', required: true },
-        { key: 'caption', label: 'Post Caption & Hashtags', type: 'string', required: false },
+        { key: 'instagram_account_id', label: 'Instagram Business Account ID', type: 'string', required: true  },
+        { key: 'image_url',            label: 'Public Image URL',              type: 'string', required: true  },
+        { key: 'caption',              label: 'Post Caption & Hashtags',       type: 'string', required: false },
       ],
       outputs: [
         { key: 'id', label: 'Published Media ID', type: 'string', required: true },
@@ -49,9 +64,23 @@ export const instagramManifest: ConnectorManifest = {
       name: 'Reply to Comment',
       description: 'Replies directly to a user comment on a post.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['comment_id', 'message'],
+        properties: {
+          comment_id: { type: 'string', title: 'Comment ID',         description: 'The ID of the comment to reply to' },
+          message:    { type: 'string', title: 'Reply Message Text', description: 'Text of the reply to post' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', title: 'Reply Comment ID' },
+        },
+      },
       inputs: [
-        { key: 'comment_id', label: 'Comment ID', type: 'string', required: true },
-        { key: 'message', label: 'Reply Message Text', type: 'string', required: true },
+        { key: 'comment_id', label: 'Comment ID',         type: 'string', required: true },
+        { key: 'message',    label: 'Reply Message Text', type: 'string', required: true },
       ],
       outputs: [
         { key: 'id', label: 'Reply Comment ID', type: 'string', required: true },

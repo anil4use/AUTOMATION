@@ -108,12 +108,28 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Upload File',
       description: 'Uploads a file (text or base64) to Google Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name', 'content', 'mimeType'],
+        properties: {
+          name                  : { type: 'string', title: 'File Name' },
+          content               : { type: 'string', title: 'File Content (Text or Base64)' },
+          mimeType              : { type: 'string', title: 'MIME Type (e.g. text/plain, application/json)' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'File Name', type: 'string', required: true },
         { key: 'content', label: 'File Content (Text or Base64)', type: 'string', required: true },
         { key: 'mimeType', label: 'MIME Type (e.g. text/plain, application/json)', type: 'string', required: true },
         { key: 'folderId', label: 'Target Folder', type: 'string', required: false, dynamicChoice: { endpoint: 'folderId' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          webViewLink           : { type: 'string', title: 'View Link' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
@@ -124,10 +140,24 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Create Folder',
       description: 'Creates a new folder in Google Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Folder Name' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Folder Name', type: 'string', required: true },
         { key: 'parentFolderId', label: 'Parent Folder', type: 'string', required: false, dynamicChoice: { endpoint: 'parentFolderId' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          folderId              : { type: 'string', title: 'Folder ID' },
+          name                  : { type: 'string', title: 'Folder Name' },
+        },
+      },
       outputs: [
         { key: 'folderId', label: 'Folder ID', type: 'string', required: true },
         { key: 'name', label: 'Folder Name', type: 'string', required: true },
@@ -138,10 +168,25 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Search Files',
       description: 'Searches files in Google Drive using Drive query parameters.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query (e.g. name contains ' },
+          pageSize              : { type: 'number', title: 'Max Results (Default: 10)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query (e.g. name contains "Report")', type: 'string', required: true },
         { key: 'pageSize', label: 'Max Results (Default: 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Files Found' },
+          files                 : { type: 'array', title: 'Files Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Files Found', type: 'number', required: true },
         { key: 'files', label: 'Files Array', type: 'array', required: true },
@@ -152,9 +197,27 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Get File Metadata',
       description: 'Retrieves metadata for a specific Drive file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'File ID' },
+          name                  : { type: 'string', title: 'Name' },
+          mimeType              : { type: 'string', title: 'MIME Type' },
+          size                  : { type: 'string', title: 'Size in Bytes' },
+          webViewLink           : { type: 'string', title: 'View Link' },
+          webContentLink        : { type: 'string', title: 'Download Link' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'File ID', type: 'string', required: true },
         { key: 'name', label: 'Name', type: 'string', required: true },
@@ -169,9 +232,23 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Download File Content',
       description: 'Downloads raw file content as text or base64.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'File Content (Base64)' },
+          mimeType              : { type: 'string', title: 'MIME Type' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'File Content (Base64)', type: 'string', required: true },
         { key: 'mimeType', label: 'MIME Type', type: 'string', required: true },
@@ -182,10 +259,23 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Move File',
       description: 'Moves a file from one folder to another.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'targetFolderId', label: 'Target Folder ID', type: 'string', required: true, dynamicChoice: { endpoint: 'folderId' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -195,10 +285,25 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Copy File',
       description: 'Creates a copy of an existing file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID to Copy' },
+          newName               : { type: 'string', title: 'New File Name' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID to Copy', type: 'string', required: true },
         { key: 'newName', label: 'New File Name', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'New File ID' },
+          name                  : { type: 'string', title: 'New File Name' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'New File ID', type: 'string', required: true },
         { key: 'name', label: 'New File Name', type: 'string', required: true },
@@ -209,9 +314,22 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Delete File',
       description: 'Moves a file to Trash or deletes it permanently.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -221,12 +339,28 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Share File / Change Permissions',
       description: 'Shares a file with a user or makes it public.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId', 'role', 'type'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          role                  : { type: 'string', title: 'Role (reader, commenter, writer)' },
+          type                  : { type: 'string', title: 'Type (user, group, domain, anyone)' },
+          emailAddress          : { type: 'string', title: 'User Email Address' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'role', label: 'Role (reader, commenter, writer)', type: 'string', required: true },
         { key: 'type', label: 'Type (user, group, domain, anyone)', type: 'string', required: true },
         { key: 'emailAddress', label: 'User Email Address', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          permissionId          : { type: 'string', title: 'Permission ID' },
+        },
+      },
       outputs: [
         { key: 'permissionId', label: 'Permission ID', type: 'string', required: true },
       ],
@@ -236,10 +370,25 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Create Google Doc',
       description: 'Creates a new empty Google Doc document in Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'Document Title' },
+          folderId              : { type: 'string', title: 'Parent Folder ID' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Document Title', type: 'string', required: true },
         { key: 'folderId', label: 'Parent Folder ID', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          webViewLink           : { type: 'string', title: 'View Link' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
@@ -250,10 +399,25 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Create Google Sheet',
       description: 'Creates a new Google Spreadsheet in Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'Spreadsheet Title' },
+          folderId              : { type: 'string', title: 'Parent Folder ID' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Spreadsheet Title', type: 'string', required: true },
         { key: 'folderId', label: 'Parent Folder ID', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          webViewLink           : { type: 'string', title: 'View Link' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
@@ -264,10 +428,25 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Create Google Slides',
       description: 'Creates a new Google Slides presentation in Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'Presentation Title' },
+          folderId              : { type: 'string', title: 'Parent Folder ID' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Presentation Title', type: 'string', required: true },
         { key: 'folderId', label: 'Parent Folder ID', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          webViewLink           : { type: 'string', title: 'View Link' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'webViewLink', label: 'View Link', type: 'string', required: true },
@@ -278,10 +457,24 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Add Comment to File',
       description: 'Posts a comment thread on a Drive file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId', 'content'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          content               : { type: 'string', title: 'Comment Text' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'content', label: 'Comment Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          commentId             : { type: 'string', title: 'Comment ID' },
+        },
+      },
       outputs: [
         { key: 'commentId', label: 'Comment ID', type: 'string', required: true },
       ],
@@ -291,9 +484,22 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'List Comments on File',
       description: 'Lists all comments posted on a Drive file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          comments              : { type: 'array', title: 'Comments Array' },
+        },
+      },
       outputs: [
         { key: 'comments', label: 'Comments Array', type: 'array', required: true },
       ],
@@ -303,10 +509,24 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Remove Sharing Permission',
       description: 'Revokes a specific permission from a file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId', 'permissionId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          permissionId          : { type: 'string', title: 'Permission ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'permissionId', label: 'Permission ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -316,9 +536,22 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'List File Permissions',
       description: 'Lists all users/groups with permission to access a file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          permissions           : { type: 'array', title: 'Permissions Array' },
+        },
+      },
       outputs: [
         { key: 'permissions', label: 'Permissions Array', type: 'array', required: true },
       ],
@@ -328,9 +561,22 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Star File',
       description: 'Stars a file in Google Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -340,9 +586,22 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Unstar File',
       description: 'Removes star from a file in Google Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -352,7 +611,13 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Empty Trash',
       description: 'Permanently deletes all files in user trash.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -362,10 +627,24 @@ const googleDriveManifest: ConnectorManifest = {
       name: 'Update File Content',
       description: 'Overwrites existing file content in Google Drive.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileId', 'content'],
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          content               : { type: 'string', title: 'New File Content' },
+        },
+      },
       inputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'content', label: 'New File Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
       ],

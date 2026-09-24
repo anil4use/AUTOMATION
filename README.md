@@ -80,6 +80,21 @@ Before launching the app, run the **Smart Data Mapping Seeds**. This populates t
 npm run seed:all
 ```
 
+**Connector Schema & Seeding Workflow (When adding or modifying connectors)**:
+
+Whenever you add a new connector or update action schemas in `packages/connector-sdk`:
+
+```bash
+# 1. Inject inputSchema + outputSchema into actions missing them
+npx tsx scripts/inject-schemas.ts
+
+# 2. Build the connector SDK package
+npm run build -w @automation/connector-sdk
+
+# 3. Seed connectors, actions, auth specs, and test definitions to MongoDB
+npm run connectors:seed
+```
+
 **Individual Seed Commands**:
 ```bash
 # Seed only the connector field catalog (reads all connector manifests)

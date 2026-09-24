@@ -38,10 +38,25 @@ export const webhookTriggerManifest: ConnectorManifest = {
       name: 'Custom Webhook Response',
       description: 'Sends a custom HTTP response code and JSON payload back to the webhook caller.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['statusCode', 'responseBody'],
+        properties: {
+          statusCode            : { type: 'number', title: 'HTTP Status Code (e.g. 200, 201, 202)' },
+          responseBody          : { type: 'string', title: 'Response Body (JSON string or text)' },
+        },
+      },
       inputs: [
         { key: 'statusCode', label: 'HTTP Status Code (e.g. 200, 201, 202)', type: 'number', required: true },
         { key: 'responseBody', label: 'Response Body (JSON string or text)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          statusCode            : { type: 'number', title: 'Status Code Sent' },
+          status                : { type: 'string', title: 'Status' },
+        },
+      },
       outputs: [
         { key: 'statusCode', label: 'Status Code Sent', type: 'number', required: true },
         { key: 'status', label: 'Status', type: 'string', required: true },

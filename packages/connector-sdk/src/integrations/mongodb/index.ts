@@ -18,11 +18,26 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Find Documents',
       description: 'Queries documents in a MongoDB collection.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+          limit                 : { type: 'number', title: 'Limit Count' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: '/api/v1/connectors/choices/collections' } },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: false },
         { key: 'limit', label: 'Limit Count', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          documents             : { type: 'object', title: 'Matched Documents Array' },
+          count                 : { type: 'number', title: 'Document Count' },
+          truncated             : { type: 'boolean', title: 'Truncated Flag' },
+        },
+      },
       outputs: [
         { key: 'documents', label: 'Matched Documents Array', type: 'json', required: true },
         { key: 'count', label: 'Document Count', type: 'number', required: true },
@@ -34,10 +49,24 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Find One Document',
       description: 'Retrieves a single matching document.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'filter'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          document              : { type: 'object', title: 'Matching Document' },
+        },
+      },
       outputs: [
         { key: 'document', label: 'Matching Document', type: 'json', required: true },
       ],
@@ -47,10 +76,24 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Insert One Document',
       description: 'Inserts a single BSON/JSON document into collection.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'document'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          document              : { type: 'string', title: 'Document JSON Object' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'document', label: 'Document JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          insertedId            : { type: 'string', title: 'Inserted Object _id' },
+        },
+      },
       outputs: [
         { key: 'insertedId', label: 'Inserted Object _id', type: 'string', required: true },
       ],
@@ -60,10 +103,25 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Insert Many Documents',
       description: 'Inserts an array of BSON/JSON documents.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'documents'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          documents             : { type: 'string', title: 'Array of Document JSON Objects' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'documents', label: 'Array of Document JSON Objects', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          insertedCount         : { type: 'number', title: 'Inserted Count' },
+          insertedIds           : { type: 'object', title: 'Inserted _ids Array' },
+        },
+      },
       outputs: [
         { key: 'insertedCount', label: 'Inserted Count', type: 'number', required: true },
         { key: 'insertedIds', label: 'Inserted _ids Array', type: 'json', required: true },
@@ -74,11 +132,27 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Update One Document',
       description: 'Updates a single matching document.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'filter', 'update'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+          update                : { type: 'string', title: 'Update Operations JSON Object ($set, $inc, etc.)' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: true },
         { key: 'update', label: 'Update Operations JSON Object ($set, $inc, etc.)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          matchedCount          : { type: 'number', title: 'Matched Count' },
+          modifiedCount         : { type: 'number', title: 'Modified Count' },
+        },
+      },
       outputs: [
         { key: 'matchedCount', label: 'Matched Count', type: 'number', required: true },
         { key: 'modifiedCount', label: 'Modified Count', type: 'number', required: true },
@@ -89,11 +163,27 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Update Many Documents',
       description: 'Updates all matching documents.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'filter', 'update'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+          update                : { type: 'string', title: 'Update Operations JSON Object' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: true },
         { key: 'update', label: 'Update Operations JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          matchedCount          : { type: 'number', title: 'Matched Count' },
+          modifiedCount         : { type: 'number', title: 'Modified Count' },
+        },
+      },
       outputs: [
         { key: 'matchedCount', label: 'Matched Count', type: 'number', required: true },
         { key: 'modifiedCount', label: 'Modified Count', type: 'number', required: true },
@@ -104,10 +194,24 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Delete One Document',
       description: 'Deletes a single matching document.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'filter'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          deletedCount          : { type: 'number', title: 'Deleted Count' },
+        },
+      },
       outputs: [
         { key: 'deletedCount', label: 'Deleted Count', type: 'number', required: true },
       ],
@@ -117,10 +221,24 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Delete Many Documents',
       description: 'Deletes all matching documents.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'filter'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          deletedCount          : { type: 'number', title: 'Deleted Count' },
+        },
+      },
       outputs: [
         { key: 'deletedCount', label: 'Deleted Count', type: 'number', required: true },
       ],
@@ -130,10 +248,24 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Run Aggregation Pipeline',
       description: 'Executes an aggregation pipeline array.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection', 'pipeline'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          pipeline              : { type: 'string', title: 'Aggregation Stages JSON Array' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'pipeline', label: 'Aggregation Stages JSON Array', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          results               : { type: 'object', title: 'Pipeline Result Documents' },
+        },
+      },
       outputs: [
         { key: 'results', label: 'Pipeline Result Documents', type: 'json', required: true },
       ],
@@ -143,10 +275,24 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Count Documents',
       description: 'Returns document count matching filter.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+          filter                : { type: 'string', title: 'Filter Query JSON Object' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'filter', label: 'Filter Query JSON Object', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Document Count' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Document Count', type: 'number', required: true },
       ],
@@ -156,7 +302,13 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'List Collections',
       description: 'Lists all collections in the database.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          collections           : { type: 'object', title: 'Collection Names Array' },
+        },
+      },
       outputs: [
         { key: 'collections', label: 'Collection Names Array', type: 'json', required: true },
       ],
@@ -166,10 +318,23 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Create Index',
       description: 'Creates a new index on a collection.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
         { key: 'keys', label: 'Index Spec JSON Object (e.g. {"email": 1})', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          indexName             : { type: 'string', title: 'Created Index Name' },
+        },
+      },
       outputs: [
         { key: 'indexName', label: 'Created Index Name', type: 'string', required: true },
       ],
@@ -179,9 +344,22 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Drop Collection',
       description: 'Drops a collection from the database.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['collection'],
+        properties: {
+          collection            : { type: 'string', title: 'Collection Name' },
+        },
+      },
       inputs: [
         { key: 'collection', label: 'Collection Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Flag' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Flag', type: 'boolean', required: true },
       ],
@@ -191,9 +369,22 @@ export const mongodbManifest: ConnectorManifest = {
       name: 'Run Administrative Command',
       description: 'Executes a raw MongoDB admin command.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['command'],
+        properties: {
+          command               : { type: 'string', title: 'Command JSON Object' },
+        },
+      },
       inputs: [
         { key: 'command', label: 'Command JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          result                : { type: 'object', title: 'Raw Command Response' },
+        },
+      },
       outputs: [
         { key: 'result', label: 'Raw Command Response', type: 'json', required: true },
       ],

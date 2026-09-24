@@ -3,10 +3,10 @@ import { AutoFlowScheduleConnector } from '../packages/connector-sdk/src/connect
 import { GmailConnector } from '../packages/connector-sdk/src/integrations/gmail';
 import { SlackConnector } from '../packages/connector-sdk/src/integrations/slack';
 import { GoogleSheetsConnector } from '../packages/connector-sdk/src/integrations/google-sheets';
-import { GoogleDriveConnector } from '../packages/connector-sdk/src/connectors/google-drive.connector';
-import { NotionConnector } from '../packages/connector-sdk/src/connectors/notion.connector';
-import { StripeConnector } from '../packages/connector-sdk/src/connectors/stripe.connector';
-import { WhatsAppConnector } from '../packages/connector-sdk/src/connectors/whatsapp.connector';
+import { GoogleDriveConnector } from '../packages/connector-sdk/src/integrations/google-drive';
+import { NotionConnector } from '../packages/connector-sdk/src/integrations/notion';
+import { StripeConnector } from '../packages/connector-sdk/src/integrations/stripe';
+import { WhatsAppConnector } from '../packages/connector-sdk/src/integrations/whatsapp';
 import { AINodeConnector } from '../packages/connector-sdk/src/integrations/ai-node';
 import { OAuth2Strategy } from '../packages/connector-sdk/src/auth/oauth2.strategy';
 import { ApiKeyStrategy } from '../packages/connector-sdk/src/auth/api-key.strategy';

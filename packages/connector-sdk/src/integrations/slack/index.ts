@@ -191,10 +191,24 @@ const slackManifest: ConnectorManifest = {
       name: 'Post Channel Message',
       description: 'Posts a text message to a Slack channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text                  : { type: 'string', title: 'Message Text' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'text', label: 'Message Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+          channel               : { type: 'string', title: 'Channel ID' },
+        },
+      },
       outputs: [
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
         { key: 'channel', label: 'Channel ID', type: 'string', required: true },
@@ -205,10 +219,24 @@ const slackManifest: ConnectorManifest = {
       name: 'Send Direct Message',
       description: 'Sends a private direct message to a user.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text                  : { type: 'string', title: 'Message Text' },
+        },
+      },
       inputs: [
         { key: 'user', label: 'Target User', type: 'string', required: true, dynamicChoice: { endpoint: 'user' } },
         { key: 'text', label: 'Message Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+          channel               : { type: 'string', title: 'DM Channel ID' },
+        },
+      },
       outputs: [
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
         { key: 'channel', label: 'DM Channel ID', type: 'string', required: true },
@@ -219,11 +247,25 @@ const slackManifest: ConnectorManifest = {
       name: 'Reply to Message Thread',
       description: 'Replies to an existing message thread.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['threadTs', 'text'],
+        properties: {
+          threadTs              : { type: 'string', title: 'Parent Message Timestamp (thread_ts)' },
+          text                  : { type: 'string', title: 'Reply Text' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'threadTs', label: 'Parent Message Timestamp (thread_ts)', type: 'string', required: true },
         { key: 'text', label: 'Reply Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          ts                    : { type: 'string', title: 'Reply Timestamp' },
+        },
+      },
       outputs: [
         { key: 'ts', label: 'Reply Timestamp', type: 'string', required: true },
       ],
@@ -233,11 +275,25 @@ const slackManifest: ConnectorManifest = {
       name: 'Update Existing Message',
       description: 'Edits the content of an existing message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts', 'text'],
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp (ts)' },
+          text                  : { type: 'string', title: 'New Message Text' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Message Timestamp (ts)', type: 'string', required: true },
         { key: 'text', label: 'New Message Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          ts                    : { type: 'string', title: 'Updated Message Timestamp' },
+        },
+      },
       outputs: [
         { key: 'ts', label: 'Updated Message Timestamp', type: 'string', required: true },
       ],
@@ -247,10 +303,23 @@ const slackManifest: ConnectorManifest = {
       name: 'Delete Message',
       description: 'Deletes a posted message from a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts'],
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp (ts)' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Message Timestamp (ts)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -260,11 +329,25 @@ const slackManifest: ConnectorManifest = {
       name: 'Add Reaction',
       description: 'Adds an emoji reaction to a message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts', 'name'],
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+          name                  : { type: 'string', title: 'Emoji Name (e.g. thumbsup)' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
         { key: 'name', label: 'Emoji Name (e.g. thumbsup)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -274,11 +357,25 @@ const slackManifest: ConnectorManifest = {
       name: 'Remove Reaction',
       description: 'Removes an emoji reaction from a message.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts', 'name'],
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+          name                  : { type: 'string', title: 'Emoji Name' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
         { key: 'name', label: 'Emoji Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -288,10 +385,25 @@ const slackManifest: ConnectorManifest = {
       name: 'Create Channel',
       description: 'Creates a new public or private Slack channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Channel Name' },
+          isPrivate             : { type: 'boolean', title: 'Is Private Channel?' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Channel Name', type: 'string', required: true },
         { key: 'isPrivate', label: 'Is Private Channel?', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          channelId             : { type: 'string', title: 'Channel ID' },
+          name                  : { type: 'string', title: 'Channel Name' },
+        },
+      },
       outputs: [
         { key: 'channelId', label: 'Channel ID', type: 'string', required: true },
         { key: 'name', label: 'Channel Name', type: 'string', required: true },
@@ -302,9 +414,15 @@ const slackManifest: ConnectorManifest = {
       name: 'Archive Channel',
       description: 'Archives an active Slack channel.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -314,9 +432,22 @@ const slackManifest: ConnectorManifest = {
       name: 'Unarchive Channel',
       description: 'Unarchives an archived Slack channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['channel'],
+        properties: {
+          channel               : { type: 'string', title: 'Channel ID' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -326,10 +457,24 @@ const slackManifest: ConnectorManifest = {
       name: 'Rename Channel',
       description: 'Renames an existing Slack channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'New Channel Name' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'name', label: 'New Channel Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          channelId             : { type: 'string', title: 'Channel ID' },
+          name                  : { type: 'string', title: 'New Name' },
+        },
+      },
       outputs: [
         { key: 'channelId', label: 'Channel ID', type: 'string', required: true },
         { key: 'name', label: 'New Name', type: 'string', required: true },
@@ -340,10 +485,16 @@ const slackManifest: ConnectorManifest = {
       name: 'Invite User to Channel',
       description: 'Adds a member to a channel.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'user', label: 'User to Invite', type: 'string', required: true, dynamicChoice: { endpoint: 'user' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -353,10 +504,16 @@ const slackManifest: ConnectorManifest = {
       name: 'Remove User from Channel',
       description: 'Kicks a user from a channel.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'user', label: 'User to Remove', type: 'string', required: true, dynamicChoice: { endpoint: 'user' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -366,10 +523,23 @@ const slackManifest: ConnectorManifest = {
       name: 'Set Channel Topic',
       description: 'Updates the topic of a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['topic'],
+        properties: {
+          topic                 : { type: 'string', title: 'Topic Text' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'topic', label: 'Topic Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          topic                 : { type: 'string', title: 'Updated Topic' },
+        },
+      },
       outputs: [
         { key: 'topic', label: 'Updated Topic', type: 'string', required: true },
       ],
@@ -379,10 +549,23 @@ const slackManifest: ConnectorManifest = {
       name: 'Set Channel Purpose',
       description: 'Updates the description/purpose of a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['purpose'],
+        properties: {
+          purpose               : { type: 'string', title: 'Purpose Text' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'purpose', label: 'Purpose Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          purpose               : { type: 'string', title: 'Updated Purpose' },
+        },
+      },
       outputs: [
         { key: 'purpose', label: 'Updated Purpose', type: 'string', required: true },
       ],
@@ -392,12 +575,28 @@ const slackManifest: ConnectorManifest = {
       name: 'Upload File to Channel',
       description: 'Uploads a file or document to a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['filename', 'content'],
+        properties: {
+          filename              : { type: 'string', title: 'File Name' },
+          content               : { type: 'string', title: 'File Text / Content' },
+          title                 : { type: 'string', title: 'Title' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'filename', label: 'File Name', type: 'string', required: true },
         { key: 'content', label: 'File Text / Content', type: 'string', required: true },
         { key: 'title', label: 'Title', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File ID' },
+          urlPrivate            : { type: 'string', title: 'Download URL' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File ID', type: 'string', required: true },
         { key: 'urlPrivate', label: 'Download URL', type: 'string', required: true },
@@ -408,10 +607,23 @@ const slackManifest: ConnectorManifest = {
       name: 'Pin Message',
       description: 'Pins a message to a channel header.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts'],
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -421,10 +633,23 @@ const slackManifest: ConnectorManifest = {
       name: 'Unpin Message',
       description: 'Unpins a message from a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts'],
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -434,9 +659,17 @@ const slackManifest: ConnectorManifest = {
       name: 'Get User Profile',
       description: 'Fetches details and avatar of a user.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'user', label: 'User ID', type: 'string', required: true, dynamicChoice: { endpoint: 'user' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          realName              : { type: 'string', title: 'Real Name' },
+          email                 : { type: 'string', title: 'Email' },
+          image                 : { type: 'string', title: 'Avatar Image URL' },
+        },
+      },
       outputs: [
         { key: 'realName', label: 'Real Name', type: 'string', required: true },
         { key: 'email', label: 'Email', type: 'string', required: false },
@@ -448,10 +681,24 @@ const slackManifest: ConnectorManifest = {
       name: 'Set Status',
       description: 'Updates custom status text and emoji.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['statusText'],
+        properties: {
+          statusText            : { type: 'string', title: 'Status Text' },
+          statusEmoji           : { type: 'string', title: 'Status Emoji (e.g. :coffee:)' },
+        },
+      },
       inputs: [
         { key: 'statusText', label: 'Status Text', type: 'string', required: true },
         { key: 'statusEmoji', label: 'Status Emoji (e.g. :coffee:)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -461,7 +708,13 @@ const slackManifest: ConnectorManifest = {
       name: 'List Channels',
       description: 'Lists public and private workspace channels.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          channels              : { type: 'array', title: 'Channels Array' },
+        },
+      },
       outputs: [
         { key: 'channels', label: 'Channels Array', type: 'array', required: true },
       ],
@@ -471,7 +724,13 @@ const slackManifest: ConnectorManifest = {
       name: 'List Users',
       description: 'Lists all workspace members.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          users                 : { type: 'array', title: 'Users Array' },
+        },
+      },
       outputs: [
         { key: 'users', label: 'Users Array', type: 'array', required: true },
       ],
@@ -481,10 +740,22 @@ const slackManifest: ConnectorManifest = {
       name: 'Get Channel History',
       description: 'Retrieves recent messages from a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          limit                 : { type: 'number', title: 'Message Limit (Default: 20)' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'limit', label: 'Message Limit (Default: 20)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messages              : { type: 'array', title: 'Messages Array' },
+        },
+      },
       outputs: [
         { key: 'messages', label: 'Messages Array', type: 'array', required: true },
       ],
@@ -494,10 +765,23 @@ const slackManifest: ConnectorManifest = {
       name: 'Get Thread Replies',
       description: 'Retrieves all replies in a message thread.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['ts'],
+        properties: {
+          ts                    : { type: 'string', title: 'Parent Message Timestamp (ts)' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'ts', label: 'Parent Message Timestamp (ts)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          messages              : { type: 'array', title: 'Thread Messages' },
+        },
+      },
       outputs: [
         { key: 'messages', label: 'Thread Messages', type: 'array', required: true },
       ],
@@ -507,11 +791,25 @@ const slackManifest: ConnectorManifest = {
       name: 'Send Block Kit Message',
       description: 'Posts a structured Block Kit interactive card.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['blocks'],
+        properties: {
+          blocks                : { type: 'string', title: 'Block Kit JSON string / array' },
+          text                  : { type: 'string', title: 'Fallback Text' },
+        },
+      },
       inputs: [
         { key: 'channel', label: 'Channel', type: 'string', required: true, dynamicChoice: { endpoint: 'channel' } },
         { key: 'blocks', label: 'Block Kit JSON string / array', type: 'string', required: true },
         { key: 'text', label: 'Fallback Text', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          ts                    : { type: 'string', title: 'Message Timestamp' },
+        },
+      },
       outputs: [
         { key: 'ts', label: 'Message Timestamp', type: 'string', required: true },
       ],

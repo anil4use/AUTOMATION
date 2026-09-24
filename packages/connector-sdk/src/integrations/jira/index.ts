@@ -103,6 +103,15 @@ const jiraManifest: ConnectorManifest = {
       name: 'Create Issue',
       description: 'Creates a new issue in a Jira project.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['summary'],
+        properties: {
+          summary               : { type: 'string', title: 'Summary' },
+          description           : { type: 'string', title: 'Description Text' },
+          assigneeAccountId     : { type: 'string', title: 'Assignee Account ID' },
+        },
+      },
       inputs: [
         { key: 'projectKey', label: 'Project', type: 'string', required: true, dynamicChoice: { endpoint: 'projectKey' } },
         { key: 'summary', label: 'Summary', type: 'string', required: true },
@@ -110,6 +119,13 @@ const jiraManifest: ConnectorManifest = {
         { key: 'description', label: 'Description Text', type: 'string', required: false },
         { key: 'assigneeAccountId', label: 'Assignee Account ID', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          issueId               : { type: 'string', title: 'Issue ID' },
+        },
+      },
       outputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'issueId', label: 'Issue ID', type: 'string', required: true },
@@ -120,9 +136,25 @@ const jiraManifest: ConnectorManifest = {
       name: 'Get Issue Details',
       description: 'Fetches details of a specific Jira issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key (e.g. PROJ-123)' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key (e.g. PROJ-123)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          summary               : { type: 'string', title: 'Summary' },
+          status                : { type: 'string', title: 'Status' },
+          description           : { type: 'string', title: 'Description' },
+        },
+      },
       outputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'summary', label: 'Summary', type: 'string', required: true },
@@ -135,10 +167,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Add Comment to Issue',
       description: 'Posts a comment on a Jira issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey', 'comment'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          comment               : { type: 'string', title: 'Comment Text' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'comment', label: 'Comment Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          commentId             : { type: 'string', title: 'Comment ID' },
+        },
+      },
       outputs: [
         { key: 'commentId', label: 'Comment ID', type: 'string', required: true },
       ],
@@ -148,10 +194,25 @@ const jiraManifest: ConnectorManifest = {
       name: 'Search Issues (JQL)',
       description: 'Searches issues using Jira Query Language (JQL).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jql'],
+        properties: {
+          jql                   : { type: 'string', title: 'JQL Query (e.g. project = MYPROJ AND status = ' },
+          maxResults            : { type: 'number', title: 'Max Results (Default: 20)' },
+        },
+      },
       inputs: [
         { key: 'jql', label: 'JQL Query (e.g. project = MYPROJ AND status = "In Progress")', type: 'string', required: true },
         { key: 'maxResults', label: 'Max Results (Default: 20)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Count' },
+          issues                : { type: 'array', title: 'Issues Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Count', type: 'number', required: true },
         { key: 'issues', label: 'Issues Array', type: 'array', required: true },
@@ -162,10 +223,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Transition Issue Status',
       description: 'Moves an issue to a new status workflow state.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey', 'transitionId'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          transitionId          : { type: 'string', title: 'Transition ID' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'transitionId', label: 'Transition ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -175,9 +250,22 @@ const jiraManifest: ConnectorManifest = {
       name: 'Delete Issue',
       description: 'Deletes a Jira issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -187,10 +275,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Assign Issue',
       description: 'Assigns an issue to a specific user account.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey', 'accountId'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          accountId             : { type: 'string', title: 'User Account ID' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'accountId', label: 'User Account ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -200,10 +302,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Update Issue Summary',
       description: 'Updates summary or description of an issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey', 'summary'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          summary               : { type: 'string', title: 'New Summary' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'summary', label: 'New Summary', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -213,11 +329,26 @@ const jiraManifest: ConnectorManifest = {
       name: 'Link Issues',
       description: 'Creates a link between two Jira issues.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['inwardIssueKey', 'outwardIssueKey', 'linkType'],
+        properties: {
+          inwardIssueKey        : { type: 'string', title: 'Inward Issue Key' },
+          outwardIssueKey       : { type: 'string', title: 'Outward Issue Key' },
+          linkType              : { type: 'string', title: 'Link Type (e.g. Relates)' },
+        },
+      },
       inputs: [
         { key: 'inwardIssueKey', label: 'Inward Issue Key', type: 'string', required: true },
         { key: 'outwardIssueKey', label: 'Outward Issue Key', type: 'string', required: true },
         { key: 'linkType', label: 'Link Type (e.g. Relates)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -227,9 +358,23 @@ const jiraManifest: ConnectorManifest = {
       name: 'Get Project Details',
       description: 'Fetches metadata of a Jira project.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['projectKey'],
+        properties: {
+          projectKey            : { type: 'string', title: 'Project Key' },
+        },
+      },
       inputs: [
         { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Project ID' },
+          name                  : { type: 'string', title: 'Project Name' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Project ID', type: 'string', required: true },
         { key: 'name', label: 'Project Name', type: 'string', required: true },
@@ -240,7 +385,13 @@ const jiraManifest: ConnectorManifest = {
       name: 'List Projects',
       description: 'Lists all accessible projects in Jira.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          projects              : { type: 'array', title: 'Projects Array' },
+        },
+      },
       outputs: [
         { key: 'projects', label: 'Projects Array', type: 'array', required: true },
       ],
@@ -250,10 +401,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Create Component',
       description: 'Creates a component in a project.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['projectKey', 'name'],
+        properties: {
+          projectKey            : { type: 'string', title: 'Project Key' },
+          name                  : { type: 'string', title: 'Component Name' },
+        },
+      },
       inputs: [
         { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
         { key: 'name', label: 'Component Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Component ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Component ID', type: 'string', required: true },
       ],
@@ -263,10 +428,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Create Version',
       description: 'Creates a version release in a project.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['projectKey', 'name'],
+        properties: {
+          projectKey            : { type: 'string', title: 'Project Key' },
+          name                  : { type: 'string', title: 'Version Name' },
+        },
+      },
       inputs: [
         { key: 'projectKey', label: 'Project Key', type: 'string', required: true },
         { key: 'name', label: 'Version Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Version ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Version ID', type: 'string', required: true },
       ],
@@ -276,11 +455,26 @@ const jiraManifest: ConnectorManifest = {
       name: 'Add Attachment',
       description: 'Attaches text or file content to an issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey', 'filename', 'content'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          filename              : { type: 'string', title: 'File Name' },
+          content               : { type: 'string', title: 'File Content' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'filename', label: 'File Name', type: 'string', required: true },
         { key: 'content', label: 'File Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          attachmentId          : { type: 'string', title: 'Attachment ID' },
+        },
+      },
       outputs: [
         { key: 'attachmentId', label: 'Attachment ID', type: 'string', required: true },
       ],
@@ -290,9 +484,22 @@ const jiraManifest: ConnectorManifest = {
       name: 'Get Issue Comments',
       description: 'Gets all comments on an issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          comments              : { type: 'array', title: 'Comments Array' },
+        },
+      },
       outputs: [
         { key: 'comments', label: 'Comments Array', type: 'array', required: true },
       ],
@@ -302,10 +509,24 @@ const jiraManifest: ConnectorManifest = {
       name: 'Log Work Time',
       description: 'Logs time spent working on an issue.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['issueKey', 'timeSpent'],
+        properties: {
+          issueKey              : { type: 'string', title: 'Issue Key' },
+          timeSpent             : { type: 'string', title: 'Time Spent (e.g. 2h 30m)' },
+        },
+      },
       inputs: [
         { key: 'issueKey', label: 'Issue Key', type: 'string', required: true },
         { key: 'timeSpent', label: 'Time Spent (e.g. 2h 30m)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          worklogId             : { type: 'string', title: 'Worklog ID' },
+        },
+      },
       outputs: [
         { key: 'worklogId', label: 'Worklog ID', type: 'string', required: true },
       ],
@@ -315,7 +536,14 @@ const jiraManifest: ConnectorManifest = {
       name: 'Get Current User Profile',
       description: 'Gets profile of authenticated Jira user.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          accountId             : { type: 'string', title: 'Account ID' },
+          displayName           : { type: 'string', title: 'Display Name' },
+        },
+      },
       outputs: [
         { key: 'accountId', label: 'Account ID', type: 'string', required: true },
         { key: 'displayName', label: 'Display Name', type: 'string', required: true },

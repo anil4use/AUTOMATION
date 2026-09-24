@@ -95,11 +95,18 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Append Row',
       description: 'Appends a new row of values to the bottom of a sheet.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'values', label: 'Row Values (JSON array or comma-separated string)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          updatedRange          : { type: 'string', title: 'Updated Range' },
+          updatedRows           : { type: 'number', title: 'Updated Rows Count' },
+        },
+      },
       outputs: [
         { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
         { key: 'updatedRows', label: 'Updated Rows Count', type: 'number', required: true },
@@ -110,12 +117,18 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Update Row by Number',
       description: 'Overwrites values in a specific row number.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'rowNumber', label: 'Row Number (1-based)', type: 'number', required: true },
         { key: 'values', label: 'New Values (JSON array)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          updatedRange          : { type: 'string', title: 'Updated Range' },
+        },
+      },
       outputs: [
         { key: 'updatedRange', label: 'Updated Range', type: 'string', required: true },
       ],
@@ -125,11 +138,18 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Get Single Row',
       description: 'Retrieves values from a specific row number.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'rowNumber', label: 'Row Number (1-based)', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          rowNumber             : { type: 'number', title: 'Row Number' },
+          values                : { type: 'array', title: 'Values Array' },
+        },
+      },
       outputs: [
         { key: 'rowNumber', label: 'Row Number', type: 'number', required: true },
         { key: 'values', label: 'Values Array', type: 'array', required: true },
@@ -140,11 +160,18 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Get All Rows',
       description: 'Retrieves all rows and header mappings from a worksheet.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'hasHeaders', label: 'First row is header?', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Total Rows' },
+          rows                  : { type: 'array', title: 'Rows Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Total Rows', type: 'number', required: true },
         { key: 'rows', label: 'Rows Array', type: 'array', required: true },
@@ -155,12 +182,19 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Search Rows',
       description: 'Searches rows where a column matches a target value.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'columnName', label: 'Column Header or Letter (e.g. Email, A)', type: 'string', required: true },
         { key: 'searchValue', label: 'Search Value', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Matches Found' },
+          matches               : { type: 'array', title: 'Matching Rows Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Matches Found', type: 'number', required: true },
         { key: 'matches', label: 'Matching Rows Array', type: 'array', required: true },
@@ -171,11 +205,17 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Clear Row Content',
       description: 'Clears cell contents of a row without shifting remaining rows.',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'rowNumber', label: 'Row Number', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          clearedRange          : { type: 'string', title: 'Cleared Range' },
+        },
+      },
       outputs: [
         { key: 'clearedRange', label: 'Cleared Range', type: 'string', required: true },
       ],
@@ -185,11 +225,25 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Delete Row (Shift Up)',
       description: 'Deletes a row completely and shifts remaining rows up.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['sheetId', 'rowNumber'],
+        properties: {
+          sheetId               : { type: 'number', title: 'Sheet Numeric ID' },
+          rowNumber             : { type: 'number', title: 'Row Index (1-based)' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetId', label: 'Sheet Numeric ID', type: 'number', required: true },
         { key: 'rowNumber', label: 'Row Index (1-based)', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -199,12 +253,18 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Update Single Cell',
       description: 'Updates value of a specific cell (e.g. B5).',
       type: 'action',
-      inputs: [
+            inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Tab Name', type: 'string', required: true, dynamicChoice: { endpoint: 'sheetName', dependsOn: ['spreadsheetId'] } },
         { key: 'cell', label: 'Cell Identifier (e.g. C12)', type: 'string', required: true },
         { key: 'value', label: 'Cell Value', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          updatedRange          : { type: 'string', title: 'Updated Cell Range' },
+        },
+      },
       outputs: [
         { key: 'updatedRange', label: 'Updated Cell Range', type: 'string', required: true },
       ],
@@ -214,9 +274,23 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Create Blank Spreadsheet',
       description: 'Creates a brand new Google Spreadsheet.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'Spreadsheet Title' },
+        },
+      },
       inputs: [
         { key: 'title', label: 'Spreadsheet Title', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          spreadsheetUrl        : { type: 'string', title: 'Spreadsheet URL' },
+        },
+      },
       outputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'spreadsheetUrl', label: 'Spreadsheet URL', type: 'string', required: true },
@@ -227,10 +301,24 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Add Worksheet Tab',
       description: 'Adds a new sheet tab to an existing spreadsheet.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'New Sheet Title' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'title', label: 'New Sheet Title', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          sheetId               : { type: 'number', title: 'Sheet ID' },
+          title                 : { type: 'string', title: 'Sheet Title' },
+        },
+      },
       outputs: [
         { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
         { key: 'title', label: 'Sheet Title', type: 'string', required: true },
@@ -241,11 +329,26 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Find Row by Value',
       description: 'Finds a row by matching a column value.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['sheetName', 'searchValue'],
+        properties: {
+          sheetName             : { type: 'string', title: 'Sheet Name' },
+          searchValue           : { type: 'string', title: 'Search Value' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet', type: 'string', required: true, dynamicChoice: { endpoint: 'spreadsheetId' } },
         { key: 'sheetName', label: 'Sheet Name', type: 'string', required: true },
         { key: 'searchValue', label: 'Search Value', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          rowIndex              : { type: 'number', title: 'Row Index' },
+          rowValues             : { type: 'array', title: 'Row Values' },
+        },
+      },
       outputs: [
         { key: 'rowIndex', label: 'Row Index', type: 'number', required: true },
         { key: 'rowValues', label: 'Row Values', type: 'array', required: true },
@@ -256,11 +359,26 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Rename Worksheet',
       description: 'Renames an existing worksheet tab.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['spreadsheetId', 'sheetId', 'newTitle'],
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          sheetId               : { type: 'number', title: 'Sheet ID' },
+          newTitle              : { type: 'string', title: 'New Title' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
         { key: 'newTitle', label: 'New Title', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -270,10 +388,24 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Delete Worksheet Tab',
       description: 'Deletes a worksheet tab from a spreadsheet.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['spreadsheetId', 'sheetId'],
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          sheetId               : { type: 'number', title: 'Sheet ID' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'sheetId', label: 'Sheet ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -283,10 +415,24 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Batch Update Values',
       description: 'Updates multiple cell ranges in one request.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['spreadsheetId', 'valueData'],
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          valueData             : { type: 'string', title: 'Values JSON Array' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'valueData', label: 'Values JSON Array', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          updatedCells          : { type: 'number', title: 'Total Updated Cells' },
+        },
+      },
       outputs: [
         { key: 'updatedCells', label: 'Total Updated Cells', type: 'number', required: true },
       ],
@@ -296,10 +442,24 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Clear Range',
       description: 'Clears cell contents in a range (e.g. A1:C10).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['spreadsheetId', 'range'],
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          range                 : { type: 'string', title: 'Cell Range' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'range', label: 'Cell Range', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          clearedRange          : { type: 'string', title: 'Cleared Range' },
+        },
+      },
       outputs: [
         { key: 'clearedRange', label: 'Cleared Range', type: 'string', required: true },
       ],
@@ -309,11 +469,26 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Add Conditional Formatting',
       description: 'Adds a conditional formatting rule to range.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['spreadsheetId', 'range', 'ruleType'],
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          range                 : { type: 'string', title: 'Range (e.g. A1:B10)' },
+          ruleType              : { type: 'string', title: 'Rule Type (e.g. CELL_NOT_EMPTY)' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'range', label: 'Range (e.g. A1:B10)', type: 'string', required: true },
         { key: 'ruleType', label: 'Rule Type (e.g. CELL_NOT_EMPTY)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -323,11 +498,26 @@ const googleSheetsManifest: ConnectorManifest = {
       name: 'Sort Range',
       description: 'Sorts data in a specific range by column.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['spreadsheetId', 'range', 'sortOrder'],
+        properties: {
+          spreadsheetId         : { type: 'string', title: 'Spreadsheet ID' },
+          range                 : { type: 'string', title: 'Range to Sort' },
+          sortOrder             : { type: 'string', title: 'Order (ASCENDING/DESCENDING)' },
+        },
+      },
       inputs: [
         { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'string', required: true },
         { key: 'range', label: 'Range to Sort', type: 'string', required: true },
         { key: 'sortOrder', label: 'Order (ASCENDING/DESCENDING)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],

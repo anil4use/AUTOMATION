@@ -17,10 +17,26 @@ export class AINodeConnector extends BaseConnector {
         name: 'Analyze / Summarize / Extract with LLM',
         description: 'Processes input text using Gemini/Groq LLM models.',
         type: 'action',
+                inputSchema: {
+          type: 'object',
+          required: ['inputText'],
+          properties: {
+            prompt                : { type: 'string', title: 'Prompt Template / Instructions' },
+            inputText             : { type: 'string', title: 'Input Text / Payload' },
+          },
+        },
         inputs: [
           { key: 'prompt', label: 'Prompt Template / Instructions', type: 'string', required: false },
           { key: 'inputText', label: 'Input Text / Payload', type: 'string', required: true },
         ],
+                outputSchema: {
+          type: 'object',
+          properties: {
+            result                : { type: 'string', title: 'AI Response Output / Summary' },
+            summary               : { type: 'string', title: 'Structured Summary' },
+            tokensUsed            : { type: 'number', title: 'Tokens Used' },
+          },
+        },
         outputs: [
           { key: 'result', label: 'AI Response Output / Summary', type: 'string', required: true },
           { key: 'summary', label: 'Structured Summary', type: 'string', required: true },
@@ -32,7 +48,21 @@ export class AINodeConnector extends BaseConnector {
         name: 'Summarize Emails or Data',
         description: 'Extracts key points and creates bulleted summary.',
         type: 'action',
+                inputSchema: {
+          type: 'object',
+          required: ['text'],
+          properties: {
+            text                  : { type: 'string', title: 'Text / Email Body Content' },
+          },
+        },
         inputs: [{ key: 'text', label: 'Text / Email Body Content', type: 'string', required: true }],
+                outputSchema: {
+          type: 'object',
+          properties: {
+            result                : { type: 'string', title: 'Summary Output' },
+            summary               : { type: 'string', title: 'Short Summary' },
+          },
+        },
         outputs: [
           { key: 'result', label: 'Summary Output', type: 'string', required: true },
           { key: 'summary', label: 'Short Summary', type: 'string', required: true },

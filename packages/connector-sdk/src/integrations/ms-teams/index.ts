@@ -51,11 +51,25 @@ export const msTeamsManifest: ConnectorManifest = {
       name: 'Send Channel Message',
       description: 'Posts a chat message to a Microsoft Teams channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['content'],
+        properties: {
+          content               : { type: 'string', title: 'Message Content (HTML / Markdown)' },
+        },
+      },
       inputs: [
         { key: 'teamId', label: 'Team', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'teamId' } },
         { key: 'channelId', label: 'Channel', type: 'string', required: true, hasDynamicChoices: true, dependsOn: 'teamId', dynamicChoice: { endpoint: 'channelId' } },
         { key: 'content', label: 'Message Content (HTML / Markdown)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Message ID' },
+          createdDateTime       : { type: 'string', title: 'Sent Timestamp' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Message ID', type: 'string', required: true },
         { key: 'createdDateTime', label: 'Sent Timestamp', type: 'string', required: true },
@@ -66,12 +80,26 @@ export const msTeamsManifest: ConnectorManifest = {
       name: 'Reply to Message Thread',
       description: 'Replies directly to an existing channel message thread.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['messageId', 'content'],
+        properties: {
+          messageId             : { type: 'string', title: 'Parent Message ID' },
+          content               : { type: 'string', title: 'Reply Text Content' },
+        },
+      },
       inputs: [
         { key: 'teamId', label: 'Team', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'teamId' } },
         { key: 'channelId', label: 'Channel', type: 'string', required: true, hasDynamicChoices: true, dependsOn: 'teamId', dynamicChoice: { endpoint: 'channelId' } },
         { key: 'messageId', label: 'Parent Message ID', type: 'string', required: true },
         { key: 'content', label: 'Reply Text Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Reply Message ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Reply Message ID', type: 'string', required: true },
       ],
@@ -81,11 +109,24 @@ export const msTeamsManifest: ConnectorManifest = {
       name: 'Post Adaptive Card',
       description: 'Sends a rich interactive Microsoft Adaptive Card to a channel.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['cardJson'],
+        properties: {
+          cardJson              : { type: 'string', title: 'Adaptive Card JSON Payload' },
+        },
+      },
       inputs: [
         { key: 'teamId', label: 'Team', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'teamId' } },
         { key: 'channelId', label: 'Channel', type: 'string', required: true, hasDynamicChoices: true, dependsOn: 'teamId', dynamicChoice: { endpoint: 'channelId' } },
         { key: 'cardJson', label: 'Adaptive Card JSON Payload', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Message ID', type: 'string', required: true },
       ],
@@ -95,11 +136,26 @@ export const msTeamsManifest: ConnectorManifest = {
       name: 'Create Team Channel',
       description: 'Creates a new public or private channel in a Team.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['displayName'],
+        properties: {
+          displayName           : { type: 'string', title: 'Channel Name' },
+          description           : { type: 'string', title: 'Channel Description' },
+        },
+      },
       inputs: [
         { key: 'teamId', label: 'Team', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'teamId' } },
         { key: 'displayName', label: 'Channel Name', type: 'string', required: true },
         { key: 'description', label: 'Channel Description', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Channel ID' },
+          webUrl                : { type: 'string', title: 'Channel Web URL' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Channel ID', type: 'string', required: true },
         { key: 'webUrl', label: 'Channel Web URL', type: 'string', required: true },

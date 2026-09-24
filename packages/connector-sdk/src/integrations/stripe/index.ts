@@ -129,11 +129,26 @@ const stripeManifest: ConnectorManifest = {
       name: 'Create Customer',
       description: 'Creates a new Stripe customer.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email                 : { type: 'string', title: 'Customer Email' },
+          name                  : { type: 'string', title: 'Customer Name' },
+          description           : { type: 'string', title: 'Description' },
+        },
+      },
       inputs: [
         { key: 'email', label: 'Customer Email', type: 'string', required: true },
         { key: 'name', label: 'Customer Name', type: 'string', required: false },
         { key: 'description', label: 'Description', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID' },
+        },
+      },
       outputs: [
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
       ],
@@ -143,9 +158,25 @@ const stripeManifest: ConnectorManifest = {
       name: 'Get Customer Details',
       description: 'Fetches details for a specific Stripe customer.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['customerId'],
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID' },
+        },
+      },
       inputs: [
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Customer ID' },
+          email                 : { type: 'string', title: 'Email' },
+          name                  : { type: 'string', title: 'Name' },
+          balance               : { type: 'number', title: 'Balance' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Customer ID', type: 'string', required: true },
         { key: 'email', label: 'Email', type: 'string', required: false },
@@ -158,12 +189,30 @@ const stripeManifest: ConnectorManifest = {
       name: 'Create Payment Intent',
       description: 'Creates a Stripe PaymentIntent for charging a customer.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['amount', 'currency'],
+        properties: {
+          amount                : { type: 'number', title: 'Amount in Cents (e.g. 2000 = $20.00)' },
+          currency              : { type: 'string', title: 'Currency Code (e.g. usd)' },
+          customerId            : { type: 'string', title: 'Customer ID (Optional)' },
+          description           : { type: 'string', title: 'Description' },
+        },
+      },
       inputs: [
         { key: 'amount', label: 'Amount in Cents (e.g. 2000 = $20.00)', type: 'number', required: true },
         { key: 'currency', label: 'Currency Code (e.g. usd)', type: 'string', required: true },
         { key: 'customerId', label: 'Customer ID (Optional)', type: 'string', required: false },
         { key: 'description', label: 'Description', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          paymentIntentId       : { type: 'string', title: 'Payment Intent ID' },
+          clientSecret          : { type: 'string', title: 'Client Secret' },
+          status                : { type: 'string', title: 'Status' },
+        },
+      },
       outputs: [
         { key: 'paymentIntentId', label: 'Payment Intent ID', type: 'string', required: true },
         { key: 'clientSecret', label: 'Client Secret', type: 'string', required: true },
@@ -175,10 +224,25 @@ const stripeManifest: ConnectorManifest = {
       name: 'Create Draft Invoice',
       description: 'Creates a draft invoice for a customer.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['customerId'],
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID' },
+          autoAdvance           : { type: 'boolean', title: 'Auto Finalize and Charge?' },
+        },
+      },
       inputs: [
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
         { key: 'autoAdvance', label: 'Auto Finalize and Charge?', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          invoiceId             : { type: 'string', title: 'Invoice ID' },
+          status                : { type: 'string', title: 'Invoice Status' },
+        },
+      },
       outputs: [
         { key: 'invoiceId', label: 'Invoice ID', type: 'string', required: true },
         { key: 'status', label: 'Invoice Status', type: 'string', required: true },
@@ -189,9 +253,23 @@ const stripeManifest: ConnectorManifest = {
       name: 'Send Invoice for Payment',
       description: 'Finalizes and emails an invoice to customer.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['invoiceId'],
+        properties: {
+          invoiceId             : { type: 'string', title: 'Invoice ID' },
+        },
+      },
       inputs: [
         { key: 'invoiceId', label: 'Invoice ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          invoiceId             : { type: 'string', title: 'Invoice ID' },
+          hostedInvoiceUrl      : { type: 'string', title: 'Payment URL' },
+        },
+      },
       outputs: [
         { key: 'invoiceId', label: 'Invoice ID', type: 'string', required: true },
         { key: 'hostedInvoiceUrl', label: 'Payment URL', type: 'string', required: true },
@@ -202,9 +280,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'List Customers',
       description: 'Lists Stripe customers.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          limit                 : { type: 'number', title: 'Max Results (Default: 10)' },
+        },
+      },
       inputs: [
         { key: 'limit', label: 'Max Results (Default: 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Count' },
+          customers             : { type: 'array', title: 'Customers Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Count', type: 'number', required: true },
         { key: 'customers', label: 'Customers Array', type: 'array', required: true },
@@ -215,9 +306,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'List Invoices',
       description: 'Lists recent invoices.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID (Optional filter)' },
+        },
+      },
       inputs: [
         { key: 'customerId', label: 'Customer ID (Optional filter)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Count' },
+          invoices              : { type: 'array', title: 'Invoices Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Count', type: 'number', required: true },
         { key: 'invoices', label: 'Invoices Array', type: 'array', required: true },
@@ -228,10 +332,24 @@ const stripeManifest: ConnectorManifest = {
       name: 'Update Customer',
       description: 'Updates email or description of a customer.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['customerId'],
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID' },
+          email                 : { type: 'string', title: 'New Email' },
+        },
+      },
       inputs: [
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
         { key: 'email', label: 'New Email', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -241,9 +359,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'Delete Customer',
       description: 'Deletes a customer record from Stripe.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['customerId'],
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID' },
+        },
+      },
       inputs: [
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -253,9 +384,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'Capture Payment Intent',
       description: 'Captures an authorized PaymentIntent.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['paymentIntentId'],
+        properties: {
+          paymentIntentId       : { type: 'string', title: 'Payment Intent ID' },
+        },
+      },
       inputs: [
         { key: 'paymentIntentId', label: 'Payment Intent ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          status                : { type: 'string', title: 'Status' },
+        },
+      },
       outputs: [
         { key: 'status', label: 'Status', type: 'string', required: true },
       ],
@@ -265,9 +409,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'Cancel Payment Intent',
       description: 'Cancels an uncaptured PaymentIntent.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['paymentIntentId'],
+        properties: {
+          paymentIntentId       : { type: 'string', title: 'Payment Intent ID' },
+        },
+      },
       inputs: [
         { key: 'paymentIntentId', label: 'Payment Intent ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          status                : { type: 'string', title: 'Status' },
+        },
+      },
       outputs: [
         { key: 'status', label: 'Status', type: 'string', required: true },
       ],
@@ -277,10 +434,24 @@ const stripeManifest: ConnectorManifest = {
       name: 'Create Subscription',
       description: 'Subscribes a customer to a price plan.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['customerId', 'priceId'],
+        properties: {
+          customerId            : { type: 'string', title: 'Customer ID' },
+          priceId               : { type: 'string', title: 'Price ID (e.g. price_xxx)' },
+        },
+      },
       inputs: [
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
         { key: 'priceId', label: 'Price ID (e.g. price_xxx)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          subscriptionId        : { type: 'string', title: 'Subscription ID' },
+        },
+      },
       outputs: [
         { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
       ],
@@ -290,9 +461,23 @@ const stripeManifest: ConnectorManifest = {
       name: 'Get Subscription Details',
       description: 'Gets subscription details by ID.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['subscriptionId'],
+        properties: {
+          subscriptionId        : { type: 'string', title: 'Subscription ID' },
+        },
+      },
       inputs: [
         { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          subscriptionId        : { type: 'string', title: 'Subscription ID' },
+          status                : { type: 'string', title: 'Status' },
+        },
+      },
       outputs: [
         { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
         { key: 'status', label: 'Status', type: 'string', required: true },
@@ -303,9 +488,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'Cancel Subscription',
       description: 'Cancels an active subscription.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['subscriptionId'],
+        properties: {
+          subscriptionId        : { type: 'string', title: 'Subscription ID' },
+        },
+      },
       inputs: [
         { key: 'subscriptionId', label: 'Subscription ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -315,9 +513,22 @@ const stripeManifest: ConnectorManifest = {
       name: 'Create Product',
       description: 'Creates a product in Stripe product catalog.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Product Name' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Product Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          productId             : { type: 'string', title: 'Product ID' },
+        },
+      },
       outputs: [
         { key: 'productId', label: 'Product ID', type: 'string', required: true },
       ],
@@ -327,11 +538,26 @@ const stripeManifest: ConnectorManifest = {
       name: 'Create Price',
       description: 'Creates a price point for a product.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['productId', 'unitAmount', 'currency'],
+        properties: {
+          productId             : { type: 'string', title: 'Product ID' },
+          unitAmount            : { type: 'number', title: 'Unit Amount in Cents' },
+          currency              : { type: 'string', title: 'Currency Code' },
+        },
+      },
       inputs: [
         { key: 'productId', label: 'Product ID', type: 'string', required: true },
         { key: 'unitAmount', label: 'Unit Amount in Cents', type: 'number', required: true },
         { key: 'currency', label: 'Currency Code', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          priceId               : { type: 'string', title: 'Price ID' },
+        },
+      },
       outputs: [
         { key: 'priceId', label: 'Price ID', type: 'string', required: true },
       ],
@@ -341,10 +567,24 @@ const stripeManifest: ConnectorManifest = {
       name: 'Refund Charge',
       description: 'Issues a full or partial refund.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['chargeId'],
+        properties: {
+          chargeId              : { type: 'string', title: 'Charge or Payment Intent ID' },
+          amount                : { type: 'number', title: 'Amount in Cents (Optional)' },
+        },
+      },
       inputs: [
         { key: 'chargeId', label: 'Charge or Payment Intent ID', type: 'string', required: true },
         { key: 'amount', label: 'Amount in Cents (Optional)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          refundId              : { type: 'string', title: 'Refund ID' },
+        },
+      },
       outputs: [
         { key: 'refundId', label: 'Refund ID', type: 'string', required: true },
       ],

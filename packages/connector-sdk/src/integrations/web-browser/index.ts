@@ -17,10 +17,26 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Navigate to URL',
       description: 'Navigates the browser to any web URL.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url                   : { type: 'string', title: 'Target Web Page URL' },
+          timeout               : { type: 'number', title: 'Navigation Timeout (ms)' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Target Web Page URL', type: 'string', required: true },
         { key: 'timeout', label: 'Navigation Timeout (ms)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success' },
+          finalUrl              : { type: 'string', title: 'Final Page URL' },
+          pageTitle             : { type: 'string', title: 'Page Title' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success', type: 'boolean', required: true },
         { key: 'finalUrl', label: 'Final Page URL', type: 'string', required: true },
@@ -32,10 +48,25 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Read Page Content',
       description: 'Extracts clean structured text and links from a website.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL (Optional if already navigated)' },
+          selector              : { type: 'string', title: 'Specific Element Selector (Optional)' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL (Optional if already navigated)', type: 'string', required: false },
         { key: 'selector', label: 'Specific Element Selector (Optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          title                 : { type: 'string', title: 'Page Title' },
+          content               : { type: 'string', title: 'Readable Page Text Content' },
+          links                 : { type: 'object', title: 'Extracted Links Array' },
+        },
+      },
       outputs: [
         { key: 'title', label: 'Page Title', type: 'string', required: true },
         { key: 'content', label: 'Readable Page Text Content', type: 'string', required: true },
@@ -47,11 +78,28 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Capture Page Screenshot',
       description: 'Captures a webpage screenshot as JPEG base64 or LLM vision description.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL (Optional)' },
+          fullPage              : { type: 'boolean', title: 'Capture Full Scrollable Page' },
+          returnAs              : { type: 'string', title: 'Output Mode (base64 or description)' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL (Optional)', type: 'string', required: false },
         { key: 'fullPage', label: 'Capture Full Scrollable Page', type: 'boolean', required: false },
         { key: 'returnAs', label: 'Output Mode (base64 or description)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          imageBase64           : { type: 'string', title: 'JPEG Base64 Data' },
+          description           : { type: 'string', title: 'LLM Vision Text Description' },
+          width                 : { type: 'number', title: 'Viewport Width' },
+          height                : { type: 'number', title: 'Viewport Height' },
+        },
+      },
       outputs: [
         { key: 'imageBase64', label: 'JPEG Base64 Data', type: 'string', required: false },
         { key: 'description', label: 'LLM Vision Text Description', type: 'string', required: false },
@@ -64,10 +112,25 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Click Element on Page',
       description: 'Clicks a button, link, or interactive element on the active page.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['element'],
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL (Optional)' },
+          element               : { type: 'string', title: 'Element Description or CSS Selector' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL (Optional)', type: 'string', required: false },
         { key: 'element', label: 'Element Description or CSS Selector', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+          newUrl                : { type: 'string', title: 'Current URL After Click' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
         { key: 'newUrl', label: 'Current URL After Click', type: 'string', required: true },
@@ -78,11 +141,26 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Fill and Submit Form',
       description: 'Fills multiple form fields and clicks a submit button.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url                   : { type: 'string', title: 'Form Page URL' },
+          submitElement         : { type: 'string', title: 'Submit Button Selector/Label (Optional)' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Form Page URL', type: 'string', required: true },
         { key: 'fields', label: 'Form Fields (Array of { element, value })', type: 'json', required: true },
         { key: 'submitElement', label: 'Submit Button Selector/Label (Optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+          resultUrl             : { type: 'string', title: 'URL After Form Submission' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
         { key: 'resultUrl', label: 'URL After Form Submission', type: 'string', required: false },
@@ -93,10 +171,24 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Search Web via DuckDuckGo',
       description: 'Searches the web using scraper-friendly DuckDuckGo HTML search.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query Keywords' },
+          maxResults            : { type: 'number', title: 'Max Results (Default: 5)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query Keywords', type: 'string', required: true },
         { key: 'maxResults', label: 'Max Results (Default: 5)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          topSnippet            : { type: 'string', title: 'Summary Snippet' },
+        },
+      },
       outputs: [
         { key: 'results', label: 'Results Array ({ title, url, snippet })', type: 'json', required: true },
         { key: 'topSnippet', label: 'Summary Snippet', type: 'string', required: true },
@@ -107,10 +199,24 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Extract Data in English',
       description: 'Extracts data matching plain English instructions from a webpage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url', 'instructions'],
+        properties: {
+          url                   : { type: 'string', title: 'Target Web Page URL' },
+          instructions          : { type: 'string', title: 'Plain English Extraction Instructions' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Target Web Page URL', type: 'string', required: true },
         { key: 'instructions', label: 'Plain English Extraction Instructions', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          extractedData         : { type: 'string', title: 'Extracted Content Text' },
+        },
+      },
       outputs: [
         { key: 'extractedData', label: 'Extracted Content Text', type: 'string', required: true },
       ],
@@ -120,6 +226,19 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Secure Website Login',
       description: 'Performs form login with encrypted credentials and navigates to target URL.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['loginUrl', 'usernameSelector', 'passwordSelector', 'username', 'password', 'submitSelector'],
+        properties: {
+          loginUrl              : { type: 'string', title: 'Login Page URL' },
+          usernameSelector      : { type: 'string', title: 'Username Input Field' },
+          passwordSelector      : { type: 'string', title: 'Password Input Field' },
+          username              : { type: 'string', title: 'Username / Email' },
+          password              : { type: 'string', title: 'Password (Masked)' },
+          submitSelector        : { type: 'string', title: 'Login Submit Button' },
+          targetUrl             : { type: 'string', title: 'Target URL After Login (Optional)' },
+        },
+      },
       inputs: [
         { key: 'loginUrl', label: 'Login Page URL', type: 'string', required: true },
         { key: 'usernameSelector', label: 'Username Input Field', type: 'string', required: true },
@@ -129,6 +248,14 @@ const webBrowserManifest: ConnectorManifest = {
         { key: 'submitSelector', label: 'Login Submit Button', type: 'string', required: true },
         { key: 'targetUrl', label: 'Target URL After Login (Optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Login Success' },
+          currentUrl            : { type: 'string', title: 'Landing Page URL' },
+          pageContent           : { type: 'string', title: 'Page Text Content' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Login Success', type: 'boolean', required: true },
         { key: 'currentUrl', label: 'Landing Page URL', type: 'string', required: true },
@@ -140,11 +267,27 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Wait for Content & Read',
       description: 'Waits for specific text to appear on the page before capturing snapshot.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url', 'waitForText'],
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL' },
+          waitForText           : { type: 'string', title: 'Text to Wait For' },
+          timeout               : { type: 'number', title: 'Timeout (ms, default 10000)' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL', type: 'string', required: true },
         { key: 'waitForText', label: 'Text to Wait For', type: 'string', required: true },
         { key: 'timeout', label: 'Timeout (ms, default 10000)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          appeared              : { type: 'boolean', title: 'Text Appeared' },
+          pageContent           : { type: 'string', title: 'Page Content' },
+        },
+      },
       outputs: [
         { key: 'appeared', label: 'Text Appeared', type: 'boolean', required: true },
         { key: 'pageContent', label: 'Page Content', type: 'string', required: true },
@@ -155,11 +298,19 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Extract All Links',
       description: 'Extracts all hyperlinked URLs from a webpage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL' },
+          filter                : { type: 'string', title: 'Filter Keyword (Optional)' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL', type: 'string', required: true },
         { key: 'filter', label: 'Filter Keyword (Optional)', type: 'string', required: false },
       ],
-      outputs: [
+            outputs: [
         { key: 'links', label: 'Links Array ({ text, href })', type: 'json', required: true },
       ],
     },
@@ -168,10 +319,24 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Run Custom JavaScript',
       description: 'Evaluates custom JavaScript expression on the active page DOM.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['script'],
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL (Optional)' },
+          script                : { type: 'string', title: 'JavaScript Expression' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL (Optional)', type: 'string', required: false },
         { key: 'script', label: 'JavaScript Expression', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          result                : { type: 'object', title: 'Script Return Value' },
+        },
+      },
       outputs: [
         { key: 'result', label: 'Script Return Value', type: 'json', required: true },
       ],
@@ -181,10 +346,25 @@ const webBrowserManifest: ConnectorManifest = {
       name: 'Monitor Page Element Change',
       description: 'Checks if page element content has changed compared to previous content.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url', 'previousContent'],
+        properties: {
+          url                   : { type: 'string', title: 'Web Page URL' },
+          previousContent       : { type: 'string', title: 'Previous Element Content' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Web Page URL', type: 'string', required: true },
         { key: 'previousContent', label: 'Previous Element Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          changed               : { type: 'boolean', title: 'Content Has Changed' },
+          currentContent        : { type: 'string', title: 'Current Element Content' },
+        },
+      },
       outputs: [
         { key: 'changed', label: 'Content Has Changed', type: 'boolean', required: true },
         { key: 'currentContent', label: 'Current Element Content', type: 'string', required: true },

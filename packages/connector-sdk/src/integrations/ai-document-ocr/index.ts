@@ -19,10 +19,27 @@ export const aiDocumentOCRManifest: ConnectorManifest = {
       name: 'Extract Invoice Data',
       description: 'Parses PDF/Image invoices and extracts vendor name, invoice number, line items & total amount.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['documentContent'],
+        properties: {
+          documentContent       : { type: 'string', title: 'PDF/Image Base64 or Public URL' },
+        },
+      },
       inputs: [
         { key: 'documentContent', label: 'PDF/Image Base64 or Public URL', type: 'string', required: true },
         { key: 'documentType', label: 'Document Type', type: 'string', required: false, hasDynamicChoices: true, dynamicChoice: { endpoint: 'documentType' } },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          vendorName            : { type: 'string', title: 'Vendor Name' },
+          invoiceNumber         : { type: 'string', title: 'Invoice Number' },
+          totalAmount           : { type: 'string', title: 'Total Amount' },
+          currency              : { type: 'string', title: 'Currency Code' },
+          lineItems             : { type: 'object', title: 'Line Items Array' },
+        },
+      },
       outputs: [
         { key: 'vendorName', label: 'Vendor Name', type: 'string', required: true },
         { key: 'invoiceNumber', label: 'Invoice Number', type: 'string', required: true },
@@ -36,9 +53,24 @@ export const aiDocumentOCRManifest: ConnectorManifest = {
       name: 'Extract Receipt Details',
       description: 'Reads merchant receipt images and extracts store name, total, date & payment method.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['documentContent'],
+        properties: {
+          documentContent       : { type: 'string', title: 'Receipt Base64 or URL' },
+        },
+      },
       inputs: [
         { key: 'documentContent', label: 'Receipt Base64 or URL', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          merchantName          : { type: 'string', title: 'Store / Merchant Name' },
+          total                 : { type: 'string', title: 'Total Amount Paid' },
+          date                  : { type: 'string', title: 'Purchase Date' },
+        },
+      },
       outputs: [
         { key: 'merchantName', label: 'Store / Merchant Name', type: 'string', required: true },
         { key: 'total', label: 'Total Amount Paid', type: 'string', required: true },

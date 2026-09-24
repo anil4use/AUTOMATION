@@ -73,7 +73,7 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/chat/completions',
-      inputs: [
+            inputs: [
         { key: 'model', label: 'Model', type: 'select', required: true, hasDynamicChoices: true, choicesFieldId: 'model', options: [{ label: 'GPT-4o', value: 'gpt-4o' }, { label: 'GPT-4o Mini', value: 'gpt-4o-mini' }, { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' }, { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' }] },
         { key: 'systemPrompt', label: 'System Prompt', type: 'string', required: false, description: 'Optional system-level instructions for the model.' },
         { key: 'userMessage', label: 'User Message', type: 'string', required: true },
@@ -81,6 +81,17 @@ const openaiManifest: ConnectorManifest = {
         { key: 'maxTokens', label: 'Max Output Tokens', type: 'number', required: false },
         { key: 'responseFormat', label: 'Response Format', type: 'select', required: false, options: [{ label: 'Text', value: 'text' }, { label: 'JSON Object', value: 'json_object' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'Response Text' },
+          finishReason          : { type: 'string', title: 'Finish Reason' },
+          promptTokens          : { type: 'number', title: 'Prompt Tokens Used' },
+          completionTokens      : { type: 'number', title: 'Completion Tokens Used' },
+          totalTokens           : { type: 'number', title: 'Total Tokens Used' },
+          model                 : { type: 'string', title: 'Model Used' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'Response Text', type: 'string', required: true },
         { key: 'finishReason', label: 'Finish Reason', type: 'string', required: true },
@@ -98,12 +109,20 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/chat/completions',
-      inputs: [
+            inputs: [
         { key: 'model', label: 'Model', type: 'select', required: true, hasDynamicChoices: true, choicesFieldId: 'model', options: [{ label: 'GPT-4o', value: 'gpt-4o' }, { label: 'GPT-4o Mini', value: 'gpt-4o-mini' }] },
         { key: 'messages', label: 'Messages Array (JSON)', type: 'json', required: true, description: '[{"role":"user","content":"Hello"},{"role":"assistant","content":"Hi!"},...]' },
         { key: 'systemPrompt', label: 'System Prompt', type: 'string', required: false },
         { key: 'maxTokens', label: 'Max Output Tokens', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'Response Text' },
+          totalTokens           : { type: 'number', title: 'Total Tokens Used' },
+          finishReason          : { type: 'string', title: 'Finish Reason' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'Response Text', type: 'string', required: true },
         { key: 'totalTokens', label: 'Total Tokens Used', type: 'number', required: true },
@@ -117,6 +136,13 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/images/generations',
+            inputSchema: {
+        type: 'object',
+        required: ['prompt'],
+        properties: {
+          prompt                : { type: 'string', title: 'Image Prompt' },
+        },
+      },
       inputs: [
         { key: 'prompt', label: 'Image Prompt', type: 'string', required: true, description: 'Describe the image you want to generate. Be detailed for best results.' },
         { key: 'model', label: 'Model', type: 'select', required: false, options: [{ label: 'DALL-E 3 (Best)', value: 'dall-e-3' }, { label: 'DALL-E 2', value: 'dall-e-2' }] },
@@ -125,6 +151,14 @@ const openaiManifest: ConnectorManifest = {
         { key: 'style', label: 'Style', type: 'select', required: false, options: [{ label: 'Natural', value: 'natural' }, { label: 'Vivid', value: 'vivid' }] },
         { key: 'n', label: 'Number of Images (DALL-E 2 only, max 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          imageUrl              : { type: 'string', title: 'Generated Image URL' },
+          revisedPrompt         : { type: 'string', title: 'Revised Prompt (DALL-E 3)' },
+          allUrls               : { type: 'array', title: 'All Generated URLs' },
+        },
+      },
       outputs: [
         { key: 'imageUrl', label: 'Generated Image URL', type: 'string', required: true },
         { key: 'revisedPrompt', label: 'Revised Prompt (DALL-E 3)', type: 'string', required: false },
@@ -138,6 +172,16 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/audio/transcriptions',
+            inputSchema: {
+        type: 'object',
+        required: ['audioBase64', 'audioFileName'],
+        properties: {
+          audioBase64           : { type: 'string', title: 'Audio File (Base64 encoded)' },
+          audioFileName         : { type: 'string', title: 'Audio File Name (with extension)' },
+          language              : { type: 'string', title: 'Language (ISO 639-1 code, e.g. en)' },
+          prompt                : { type: 'string', title: 'Context Prompt (optional)' },
+        },
+      },
       inputs: [
         { key: 'audioBase64', label: 'Audio File (Base64 encoded)', type: 'string', required: true, description: 'Base64 encoded audio. Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm.' },
         { key: 'audioFileName', label: 'Audio File Name (with extension)', type: 'string', required: true, description: 'e.g. recording.mp3 — needed for format detection.' },
@@ -145,6 +189,15 @@ const openaiManifest: ConnectorManifest = {
         { key: 'prompt', label: 'Context Prompt (optional)', type: 'string', required: false, description: 'Provide context to improve transcription quality (e.g. "This is a medical consultation about diabetes").' },
         { key: 'responseFormat', label: 'Response Format', type: 'select', required: false, options: [{ label: 'JSON', value: 'json' }, { label: 'Verbose JSON', value: 'verbose_json' }, { label: 'Text', value: 'text' }, { label: 'SRT', value: 'srt' }, { label: 'VTT', value: 'vtt' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          text                  : { type: 'string', title: 'Transcribed Text' },
+          language              : { type: 'string', title: 'Detected Language' },
+          duration              : { type: 'number', title: 'Audio Duration (seconds)' },
+          segments              : { type: 'array', title: 'Segments (verbose_json only)' },
+        },
+      },
       outputs: [
         { key: 'text', label: 'Transcribed Text', type: 'string', required: true },
         { key: 'language', label: 'Detected Language', type: 'string', required: false },
@@ -159,11 +212,27 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/embeddings',
+            inputSchema: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text                  : { type: 'string', title: 'Text to Embed' },
+        },
+      },
       inputs: [
         { key: 'text', label: 'Text to Embed', type: 'string', required: true, description: 'The text to generate embeddings for. Can be a sentence, paragraph, or document.' },
         { key: 'model', label: 'Embedding Model', type: 'select', required: false, options: [{ label: 'text-embedding-3-small (Best Value)', value: 'text-embedding-3-small' }, { label: 'text-embedding-3-large (Most Capable)', value: 'text-embedding-3-large' }, { label: 'text-embedding-ada-002 (Legacy)', value: 'text-embedding-ada-002' }] },
         { key: 'dimensions', label: 'Output Dimensions (optional, text-embedding-3 only)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          embedding             : { type: 'array', title: 'Embedding Vector (array of floats)' },
+          tokenCount            : { type: 'number', title: 'Tokens Used' },
+          model                 : { type: 'string', title: 'Model Used' },
+          dimensions            : { type: 'number', title: 'Vector Dimensions' },
+        },
+      },
       outputs: [
         { key: 'embedding', label: 'Embedding Vector (array of floats)', type: 'array', required: true },
         { key: 'tokenCount', label: 'Tokens Used', type: 'number', required: true },
@@ -178,10 +247,27 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/moderations',
+            inputSchema: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text                  : { type: 'string', title: 'Text to Moderate' },
+        },
+      },
       inputs: [
         { key: 'text', label: 'Text to Moderate', type: 'string', required: true },
         { key: 'model', label: 'Model', type: 'select', required: false, options: [{ label: 'omni-moderation-latest (Recommended)', value: 'omni-moderation-latest' }, { label: 'text-moderation-latest', value: 'text-moderation-latest' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          flagged               : { type: 'boolean', title: 'Is Flagged' },
+          categories            : { type: 'object', title: 'Flagged Categories' },
+          scores                : { type: 'object', title: 'Category Scores' },
+          highestScore          : { type: 'number', title: 'Highest Category Score' },
+          highestCategory       : { type: 'string', title: 'Highest Scoring Category' },
+        },
+      },
       outputs: [
         { key: 'flagged', label: 'Is Flagged', type: 'boolean', required: true },
         { key: 'categories', label: 'Flagged Categories', type: 'json', required: true },
@@ -197,7 +283,14 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/models',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          models                : { type: 'array', title: 'Models Array' },
+          count                 : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'models', label: 'Models Array', type: 'array', required: true },
         { key: 'count', label: 'Total Count', type: 'number', required: true },
@@ -208,10 +301,24 @@ const openaiManifest: ConnectorManifest = {
       name: 'Count Tokens (Estimate)',
       description: 'Estimates the number of tokens in a text string for a given model. Uses js-tiktoken for accurate counting.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text                  : { type: 'string', title: 'Text' },
+        },
+      },
       inputs: [
         { key: 'text', label: 'Text', type: 'string', required: true },
         { key: 'model', label: 'Model', type: 'select', required: false, options: [{ label: 'GPT-4o', value: 'gpt-4o' }, { label: 'GPT-4', value: 'gpt-4' }, { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' }] },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          estimatedTokens       : { type: 'number', title: 'Estimated Token Count' },
+          estimatedCostUSD      : { type: 'number', title: 'Estimated Cost (USD, approximate)' },
+        },
+      },
       outputs: [
         { key: 'estimatedTokens', label: 'Estimated Token Count', type: 'number', required: true },
         { key: 'estimatedCostUSD', label: 'Estimated Cost (USD, approximate)', type: 'number', required: false },
@@ -224,6 +331,14 @@ const openaiManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/assistants',
+            inputSchema: {
+        type: 'object',
+        required: ['name', 'instructions'],
+        properties: {
+          name                  : { type: 'string', title: 'Assistant Name' },
+          instructions          : { type: 'string', title: 'System Instructions' },
+        },
+      },
       inputs: [
         { key: 'name', label: 'Assistant Name', type: 'string', required: true },
         { key: 'instructions', label: 'System Instructions', type: 'string', required: true, description: 'Define the assistant behavior and persona.' },
@@ -232,6 +347,15 @@ const openaiManifest: ConnectorManifest = {
         { key: 'enableFileSearch', label: 'Enable File Search', type: 'boolean', required: false },
         { key: 'description', label: 'Description (optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          assistantId           : { type: 'string', title: 'Assistant ID' },
+          name                  : { type: 'string', title: 'Name' },
+          model                 : { type: 'string', title: 'Model' },
+          createdAt             : { type: 'number', title: 'Created At' },
+        },
+      },
       outputs: [
         { key: 'assistantId', label: 'Assistant ID', type: 'string', required: true },
         { key: 'name', label: 'Name', type: 'string', required: true },
@@ -244,12 +368,32 @@ const openaiManifest: ConnectorManifest = {
       name: 'Run Assistant Thread',
       description: 'Sends a message to an Assistant and waits for the response. Creates a new thread if threadId is not provided.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['assistantId', 'userMessage'],
+        properties: {
+          assistantId           : { type: 'string', title: 'Assistant ID' },
+          userMessage           : { type: 'string', title: 'User Message' },
+          threadId              : { type: 'string', title: 'Thread ID (optional — provide for multi-turn conversation)' },
+          maxWaitSeconds        : { type: 'number', title: 'Max Wait Seconds (default 60)' },
+        },
+      },
       inputs: [
         { key: 'assistantId', label: 'Assistant ID', type: 'string', required: true, description: 'From the Create Assistant action output or from platform.openai.com' },
         { key: 'userMessage', label: 'User Message', type: 'string', required: true },
         { key: 'threadId', label: 'Thread ID (optional — provide for multi-turn conversation)', type: 'string', required: false },
         { key: 'maxWaitSeconds', label: 'Max Wait Seconds (default 60)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          response              : { type: 'string', title: 'Assistant Response Text' },
+          threadId              : { type: 'string', title: 'Thread ID (reuse for next message)' },
+          runId                 : { type: 'string', title: 'Run ID' },
+          status                : { type: 'string', title: 'Run Status' },
+          totalTokens           : { type: 'number', title: 'Total Tokens Used' },
+        },
+      },
       outputs: [
         { key: 'response', label: 'Assistant Response Text', type: 'string', required: true },
         { key: 'threadId', label: 'Thread ID (reuse for next message)', type: 'string', required: true },

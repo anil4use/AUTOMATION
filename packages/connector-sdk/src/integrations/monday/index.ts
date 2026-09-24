@@ -36,11 +36,25 @@ export const mondayManifest: ConnectorManifest = {
       name: 'Create Board Item',
       description: 'Creates a new item row on a Monday.com board.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['itemName'],
+        properties: {
+          itemName              : { type: 'string', title: 'Item Name' },
+          columnValuesJson      : { type: 'string', title: 'Column Values (JSON object string)' },
+        },
+      },
       inputs: [
         { key: 'boardId', label: 'Board', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'boardId' } },
         { key: 'itemName', label: 'Item Name', type: 'string', required: true },
         { key: 'columnValuesJson', label: 'Column Values (JSON object string)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Created Item ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Created Item ID', type: 'string', required: true },
       ],
@@ -50,10 +64,24 @@ export const mondayManifest: ConnectorManifest = {
       name: 'Add Item Update / Comment',
       description: 'Posts an update/comment on an item.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['itemId', 'body'],
+        properties: {
+          itemId                : { type: 'string', title: 'Item ID' },
+          body                  : { type: 'string', title: 'Update Text Content' },
+        },
+      },
       inputs: [
         { key: 'itemId', label: 'Item ID', type: 'string', required: true },
         { key: 'body', label: 'Update Text Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Update ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Update ID', type: 'string', required: true },
       ],

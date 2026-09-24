@@ -34,10 +34,25 @@ export const metaMessengerManifest: ConnectorManifest = {
       name: 'Send Messenger Message',
       description: 'Sends a direct message reply to a customer PSID.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['recipient_psid', 'text'],
+        properties: {
+          recipient_psid        : { type: 'string', title: 'Customer Page-Scoped User ID (PSID)' },
+          text                  : { type: 'string', title: 'Message Text Content' },
+        },
+      },
       inputs: [
         { key: 'recipient_psid', label: 'Customer Page-Scoped User ID (PSID)', type: 'string', required: true },
         { key: 'text', label: 'Message Text Content', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          recipient_id          : { type: 'string', title: 'Recipient PSID' },
+          message_id            : { type: 'string', title: 'Message ID' },
+        },
+      },
       outputs: [
         { key: 'recipient_id', label: 'Recipient PSID', type: 'string', required: true },
         { key: 'message_id', label: 'Message ID', type: 'string', required: true },

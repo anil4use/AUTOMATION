@@ -33,10 +33,25 @@ export const glassdoorManifest: ConnectorManifest = {
       name: 'Search Companies & Ratings',
       description: 'Search company profiles, overall star ratings, CEO approval %, and reviews on Glassdoor.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['companyName'],
+        properties: {
+          companyName           : { type: 'string', title: 'Company Name' },
+          limit                 : { type: 'number', title: 'Result Limit (Default: 5)' },
+        },
+      },
       inputs: [
         { key: 'companyName', label: 'Company Name', type: 'string', required: true },
         { key: 'limit', label: 'Result Limit (Default: 5)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          companies             : { type: 'object', title: 'Array of Company Data' },
+          count                 : { type: 'number', title: 'Matching Count' },
+        },
+      },
       outputs: [
         { key: 'companies', label: 'Array of Company Data', type: 'json', required: true },
         { key: 'count', label: 'Matching Count', type: 'number', required: true },
@@ -47,10 +62,29 @@ export const glassdoorManifest: ConnectorManifest = {
       name: 'Get Salary Benchmarks',
       description: 'Retrieve benchmark salary ranges (median, min, max) by job title and location.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobTitle'],
+        properties: {
+          jobTitle              : { type: 'string', title: 'Job Title (e.g. Senior Frontend Engineer)' },
+          location              : { type: 'string', title: 'Location (e.g. San Francisco, CA)' },
+        },
+      },
       inputs: [
         { key: 'jobTitle', label: 'Job Title (e.g. Senior Frontend Engineer)', type: 'string', required: true },
         { key: 'location', label: 'Location (e.g. San Francisco, CA)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobTitle              : { type: 'string', title: 'Job Title' },
+          location              : { type: 'string', title: 'Location' },
+          medianSalary          : { type: 'number', title: 'Median Base Pay ($/yr)' },
+          minSalary             : { type: 'number', title: 'Min Salary Range' },
+          maxSalary             : { type: 'number', title: 'Max Salary Range' },
+          currency              : { type: 'string', title: 'Currency Code (USD, EUR)' },
+        },
+      },
       outputs: [
         { key: 'jobTitle', label: 'Job Title', type: 'string', required: true },
         { key: 'location', label: 'Location', type: 'string', required: true },
@@ -65,11 +99,27 @@ export const glassdoorManifest: ConnectorManifest = {
       name: 'Search Glassdoor Jobs',
       description: 'Search active job postings listed on Glassdoor.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Job Title or Keyword' },
+          location              : { type: 'string', title: 'Location' },
+          limit                 : { type: 'number', title: 'Max Results Limit' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Job Title or Keyword', type: 'string', required: true },
         { key: 'location', label: 'Location', type: 'string', required: false },
         { key: 'limit', label: 'Max Results Limit', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of Jobs' },
+          totalCount            : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of Jobs', type: 'json', required: true },
         { key: 'totalCount', label: 'Total Count', type: 'number', required: true },

@@ -76,6 +76,17 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Search LinkedIn Jobs',
       description: 'Search active LinkedIn job postings by keyword, location, and job type.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['keywords'],
+        properties: {
+          keywords              : { type: 'string', title: 'Keywords or Title' },
+          location              : { type: 'string', title: 'Location (e.g. Remote, San Francisco)' },
+          jobType               : { type: 'string', title: 'Job Type (remote, onsite, hybrid)' },
+          experienceLevel       : { type: 'string', title: 'Experience Level (entry, mid, senior)' },
+          maxResults            : { type: 'number', title: 'Max Results Limit (Default: 20)' },
+        },
+      },
       inputs: [
         { key: 'keywords', label: 'Keywords or Title', type: 'string', required: true },
         { key: 'location', label: 'Location (e.g. Remote, San Francisco)', type: 'string', required: false },
@@ -83,6 +94,13 @@ export const linkedinManifest: ConnectorManifest = {
         { key: 'experienceLevel', label: 'Experience Level (entry, mid, senior)', type: 'string', required: false },
         { key: 'maxResults', label: 'Max Results Limit (Default: 20)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of Job Postings' },
+          totalCount            : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of Job Postings', type: 'json', required: true },
         { key: 'totalCount', label: 'Total Count', type: 'number', required: true },
@@ -93,9 +111,28 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Get Job Details',
       description: 'Retrieve full description, requirements, salary, and applicant count for a job posting.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobUrl'],
+        properties: {
+          jobUrl                : { type: 'string', title: 'LinkedIn Job URL or ID' },
+        },
+      },
       inputs: [
         { key: 'jobUrl', label: 'LinkedIn Job URL or ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          title                 : { type: 'string', title: 'Job Title' },
+          company               : { type: 'string', title: 'Company Name' },
+          location              : { type: 'string', title: 'Location' },
+          description           : { type: 'string', title: 'Full Job Description' },
+          salary                : { type: 'string', title: 'Salary Range' },
+          applicantCount        : { type: 'number', title: 'Applicant Count' },
+          postedAt              : { type: 'string', title: 'Posted Timestamp' },
+        },
+      },
       outputs: [
         { key: 'title', label: 'Job Title', type: 'string', required: true },
         { key: 'company', label: 'Company Name', type: 'string', required: true },
@@ -111,11 +148,28 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Apply to Easy Apply Job',
       description: 'Submit an application to a LinkedIn Easy Apply job posting.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jobUrl'],
+        properties: {
+          jobUrl                : { type: 'string', title: 'LinkedIn Easy Apply Job URL' },
+          resumeText            : { type: 'string', title: 'Resume Summary Text' },
+          coverLetter           : { type: 'string', title: 'Cover Letter Text' },
+        },
+      },
       inputs: [
         { key: 'jobUrl', label: 'LinkedIn Easy Apply Job URL', type: 'string', required: true },
         { key: 'resumeText', label: 'Resume Summary Text', type: 'string', required: false },
         { key: 'coverLetter', label: 'Cover Letter Text', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success (true/false)' },
+          applicationId         : { type: 'string', title: 'Application ID' },
+          message               : { type: 'string', title: 'Submission Message' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success (true/false)', type: 'boolean', required: true },
         { key: 'applicationId', label: 'Application ID', type: 'string', required: true },
@@ -127,12 +181,29 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Search Profiles & Network',
       description: 'Search LinkedIn profiles by keywords, company, and location.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['keywords'],
+        properties: {
+          keywords              : { type: 'string', title: 'Keywords or Skills' },
+          location              : { type: 'string', title: 'Location' },
+          company               : { type: 'string', title: 'Company Name' },
+          maxResults            : { type: 'number', title: 'Max Results Limit' },
+        },
+      },
       inputs: [
         { key: 'keywords', label: 'Keywords or Skills', type: 'string', required: true },
         { key: 'location', label: 'Location', type: 'string', required: false },
         { key: 'company', label: 'Company Name', type: 'string', required: false },
         { key: 'maxResults', label: 'Max Results Limit', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          profiles              : { type: 'object', title: 'Array of Member Profiles' },
+          count                 : { type: 'number', title: 'Matching Count' },
+        },
+      },
       outputs: [
         { key: 'profiles', label: 'Array of Member Profiles', type: 'json', required: true },
         { key: 'count', label: 'Matching Count', type: 'number', required: true },
@@ -143,9 +214,27 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Get Member Profile',
       description: 'Read a public LinkedIn profile (headline, about, experience, education, skills).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['profileUrl'],
+        properties: {
+          profileUrl            : { type: 'string', title: 'LinkedIn Profile URL or Handle' },
+        },
+      },
       inputs: [
         { key: 'profileUrl', label: 'LinkedIn Profile URL or Handle', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          name                  : { type: 'string', title: 'Member Name' },
+          headline              : { type: 'string', title: 'Professional Headline' },
+          location              : { type: 'string', title: 'Location' },
+          about                 : { type: 'string', title: 'About Bio Text' },
+          experience            : { type: 'object', title: 'Experience Array' },
+          skills                : { type: 'object', title: 'Skills Array' },
+        },
+      },
       outputs: [
         { key: 'name', label: 'Member Name', type: 'string', required: true },
         { key: 'headline', label: 'Professional Headline', type: 'string', required: true },
@@ -160,10 +249,25 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Send Connection Invite',
       description: 'Send a connection request to a LinkedIn member with an optional note.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['profileUrl'],
+        properties: {
+          profileUrl            : { type: 'string', title: 'Target Member Profile URL' },
+          message               : { type: 'string', title: 'Personal Note (Max 300 chars)' },
+        },
+      },
       inputs: [
         { key: 'profileUrl', label: 'Target Member Profile URL', type: 'string', required: true },
         { key: 'message', label: 'Personal Note (Max 300 chars)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success (true/false)' },
+          status                : { type: 'string', title: 'Invite Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success (true/false)', type: 'boolean', required: true },
         { key: 'status', label: 'Invite Status', type: 'string', required: true },
@@ -174,10 +278,25 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Send LinkedIn Message',
       description: 'Send a direct message to a 1st-degree connection on LinkedIn.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['profileUrl', 'message'],
+        properties: {
+          profileUrl            : { type: 'string', title: 'Recipient Profile URL' },
+          message               : { type: 'string', title: 'Message Body' },
+        },
+      },
       inputs: [
         { key: 'profileUrl', label: 'Recipient Profile URL', type: 'string', required: true },
         { key: 'message', label: 'Message Body', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success (true/false)' },
+          conversationId        : { type: 'string', title: 'Conversation ID' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success (true/false)', type: 'boolean', required: true },
         { key: 'conversationId', label: 'Conversation ID', type: 'string', required: true },
@@ -188,11 +307,28 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Create Post on Feed',
       description: 'Publish an update or job notice to your LinkedIn feed.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text                  : { type: 'string', title: 'Post Content Text' },
+          visibility            : { type: 'string', title: 'Visibility (public, connections)' },
+          imageUrl              : { type: 'string', title: 'Image URL Attachment' },
+        },
+      },
       inputs: [
         { key: 'text', label: 'Post Content Text', type: 'string', required: true },
         { key: 'visibility', label: 'Visibility (public, connections)', type: 'string', required: false },
         { key: 'imageUrl', label: 'Image URL Attachment', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success' },
+          postUrl               : { type: 'string', title: 'Published Post Link' },
+          postId                : { type: 'string', title: 'Post ID' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success', type: 'boolean', required: true },
         { key: 'postUrl', label: 'Published Post Link', type: 'string', required: true },
@@ -204,9 +340,22 @@ export const linkedinManifest: ConnectorManifest = {
       name: 'Get Recent Feed Posts',
       description: 'Read recent LinkedIn feed posts from your network.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          maxResults            : { type: 'number', title: 'Max Results (Default: 10)' },
+        },
+      },
       inputs: [
         { key: 'maxResults', label: 'Max Results (Default: 10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          posts                 : { type: 'object', title: 'Array of Feed Posts' },
+          count                 : { type: 'number', title: 'Post Count' },
+        },
+      },
       outputs: [
         { key: 'posts', label: 'Array of Feed Posts', type: 'json', required: true },
         { key: 'count', label: 'Post Count', type: 'number', required: true },

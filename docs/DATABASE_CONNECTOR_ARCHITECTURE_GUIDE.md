@@ -4,6 +4,12 @@
 **Last Updated**: 2026-09-08  
 **Status**: Production Ready & Fully Verified  
 
+> [!NOTE]
+> **This document is about internal DB subsystem architecture** — connection pooling, SSH tunnels, security guards, and supported engines.
+> It is NOT a guide for building connectors. For that, see:
+> - 📋 [CONNECTOR_DEVELOPMENT_STANDARD.md](./CONNECTOR_DEVELOPMENT_STANDARD.md) — How to build any new connector (templates, checklist, 10/10 criteria)
+> - 🔧 [CONNECTOR_AUDIT_FIX_TRACKER.md](./CONNECTOR_AUDIT_FIX_TRACKER.md) — What needs to be fixed in existing connectors
+
 ---
 
 ## 📌 Executive Summary

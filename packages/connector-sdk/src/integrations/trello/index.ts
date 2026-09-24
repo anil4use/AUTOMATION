@@ -54,6 +54,15 @@ export const trelloManifest: ConnectorManifest = {
       name: 'Create Trello Card',
       description: 'Creates a new card in a specified Trello list.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name                  : { type: 'string', title: 'Card Name / Title' },
+          desc                  : { type: 'string', title: 'Description Content (Markdown)' },
+          due                   : { type: 'string', title: 'Due Date (ISO string)' },
+        },
+      },
       inputs: [
         { key: 'boardId', label: 'Board', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'boardId' } },
         { key: 'listId', label: 'List', type: 'string', required: true, hasDynamicChoices: true, dependsOn: 'boardId', dynamicChoice: { endpoint: 'listId' } },
@@ -61,6 +70,13 @@ export const trelloManifest: ConnectorManifest = {
         { key: 'desc', label: 'Description Content (Markdown)', type: 'string', required: false },
         { key: 'due', label: 'Due Date (ISO string)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Created Card ID' },
+          url                   : { type: 'string', title: 'Card Short URL' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Created Card ID', type: 'string', required: true },
         { key: 'url', label: 'Card Short URL', type: 'string', required: true },
@@ -71,10 +87,25 @@ export const trelloManifest: ConnectorManifest = {
       name: 'Move Card to List',
       description: 'Moves an existing card to a different list.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['cardId', 'listId'],
+        properties: {
+          cardId                : { type: 'string', title: 'Card ID' },
+          listId                : { type: 'string', title: 'Destination List ID' },
+        },
+      },
       inputs: [
         { key: 'cardId', label: 'Card ID', type: 'string', required: true },
         { key: 'listId', label: 'Destination List ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Card ID' },
+          idList                : { type: 'string', title: 'New List ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Card ID', type: 'string', required: true },
         { key: 'idList', label: 'New List ID', type: 'string', required: true },
@@ -85,10 +116,24 @@ export const trelloManifest: ConnectorManifest = {
       name: 'Add Comment to Card',
       description: 'Posts a comment on a card.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['cardId', 'text'],
+        properties: {
+          cardId                : { type: 'string', title: 'Card ID' },
+          text                  : { type: 'string', title: 'Comment Text' },
+        },
+      },
       inputs: [
         { key: 'cardId', label: 'Card ID', type: 'string', required: true },
         { key: 'text', label: 'Comment Text', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Comment Action ID' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Comment Action ID', type: 'string', required: true },
       ],

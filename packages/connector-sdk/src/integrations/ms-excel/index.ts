@@ -37,12 +37,27 @@ export const msExcelManifest: ConnectorManifest = {
       name: 'Append Row to Worksheet Table',
       description: 'Appends a new row of values to the bottom of an Excel table.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['values'],
+        properties: {
+          tableName             : { type: 'string', title: 'Table Name (Default: Table1)' },
+          values                : { type: 'string', title: 'Row Values (JSON Array or Comma Separated)' },
+        },
+      },
       inputs: [
         { key: 'driveItemId', label: 'Workbook File', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'driveItemId' } },
         { key: 'worksheetName', label: 'Worksheet', type: 'string', required: true, hasDynamicChoices: true, dependsOn: 'driveItemId', dynamicChoice: { endpoint: 'worksheetName' } },
         { key: 'tableName', label: 'Table Name (Default: Table1)', type: 'string', required: false },
         { key: 'values', label: 'Row Values (JSON Array or Comma Separated)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          index                 : { type: 'number', title: 'Appended Row Index' },
+          address               : { type: 'string', title: 'Cell Address (e.g. Sheet1!A10:D10)' },
+        },
+      },
       outputs: [
         { key: 'index', label: 'Appended Row Index', type: 'number', required: true },
         { key: 'address', label: 'Cell Address (e.g. Sheet1!A10:D10)', type: 'string', required: true },
@@ -53,11 +68,25 @@ export const msExcelManifest: ConnectorManifest = {
       name: 'Read Cell Range',
       description: 'Reads data values from a specified range (e.g. A1:D10).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['range'],
+        properties: {
+          range                 : { type: 'string', title: 'Cell Range Address (e.g. A1:C50)' },
+        },
+      },
       inputs: [
         { key: 'driveItemId', label: 'Workbook File', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'driveItemId' } },
         { key: 'worksheetName', label: 'Worksheet', type: 'string', required: true, hasDynamicChoices: true, dependsOn: 'driveItemId', dynamicChoice: { endpoint: 'worksheetName' } },
         { key: 'range', label: 'Cell Range Address (e.g. A1:C50)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          values                : { type: 'object', title: 'Values 2D Array' },
+          rowCount              : { type: 'number', title: 'Row Count' },
+        },
+      },
       outputs: [
         { key: 'values', label: 'Values 2D Array', type: 'json', required: true },
         { key: 'rowCount', label: 'Row Count', type: 'number', required: true },

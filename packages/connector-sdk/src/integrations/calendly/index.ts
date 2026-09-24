@@ -49,14 +49,30 @@ export const calendlyManifest: ConnectorManifest = {
       name: 'Get Scheduled Event Details',
       description: 'Fetches details and invitees for a scheduled Calendly event.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['event_uuid'],
+        properties: {
+          event_uuid: { type: 'string', title: 'Event UUID or URI', description: 'The Calendly scheduled event UUID or full URI' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          name:       { type: 'string', title: 'Event Name' },
+          start_time: { type: 'string', title: 'Start Time' },
+          end_time:   { type: 'string', title: 'End Time' },
+          status:     { type: 'string', title: 'Event Status' },
+        },
+      },
       inputs: [
         { key: 'event_uuid', label: 'Event UUID or URI', type: 'string', required: true },
       ],
       outputs: [
-        { key: 'name', label: 'Event Name', type: 'string', required: true },
-        { key: 'start_time', label: 'Start Time', type: 'string', required: true },
-        { key: 'end_time', label: 'End Time', type: 'string', required: true },
-        { key: 'status', label: 'Event Status', type: 'string', required: true },
+        { key: 'name',       label: 'Event Name',  type: 'string', required: true },
+        { key: 'start_time', label: 'Start Time',  type: 'string', required: true },
+        { key: 'end_time',   label: 'End Time',    type: 'string', required: true },
+        { key: 'status',     label: 'Event Status',type: 'string', required: true },
       ],
     },
     {
@@ -64,9 +80,23 @@ export const calendlyManifest: ConnectorManifest = {
       name: 'Cancel Scheduled Event',
       description: 'Cancels an existing appointment.',
       type: 'action',
+      inputSchema: {
+        type: 'object',
+        required: ['event_uuid'],
+        properties: {
+          event_uuid: { type: 'string', title: 'Event UUID or URI',    description: 'The UUID or URI of the event to cancel' },
+          reason:     { type: 'string', title: 'Cancellation Reason',  description: 'Optional reason for the cancellation' },
+        },
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', title: 'Cancellation Status' },
+        },
+      },
       inputs: [
-        { key: 'event_uuid', label: 'Event UUID or URI', type: 'string', required: true },
-        { key: 'reason', label: 'Cancellation Reason', type: 'string', required: false },
+        { key: 'event_uuid', label: 'Event UUID or URI',   type: 'string', required: true  },
+        { key: 'reason',     label: 'Cancellation Reason', type: 'string', required: false },
       ],
       outputs: [
         { key: 'status', label: 'Status', type: 'string', required: true },

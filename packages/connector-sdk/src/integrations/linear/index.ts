@@ -37,12 +37,29 @@ export const linearManifest: ConnectorManifest = {
       name: 'Create Issue',
       description: 'Creates a new issue for a Linear team.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'Issue Title' },
+          description           : { type: 'string', title: 'Issue Description (Markdown)' },
+          priority              : { type: 'number', title: 'Priority (0: No priority, 1: Urgent, 2: High, 3: Medium, 4: Low)' },
+        },
+      },
       inputs: [
         { key: 'teamId', label: 'Team', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'teamId' } },
         { key: 'title', label: 'Issue Title', type: 'string', required: true },
         { key: 'description', label: 'Issue Description (Markdown)', type: 'string', required: false },
         { key: 'priority', label: 'Priority (0: No priority, 1: Urgent, 2: High, 3: Medium, 4: Low)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Issue ID' },
+          identifier            : { type: 'string', title: 'Issue Key' },
+          url                   : { type: 'string', title: 'Issue Web URL' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Issue ID', type: 'string', required: true },
         { key: 'identifier', label: 'Issue Key', type: 'string', required: true },

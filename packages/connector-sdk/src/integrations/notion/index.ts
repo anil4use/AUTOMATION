@@ -77,12 +77,28 @@ const notionManifest: ConnectorManifest = {
       name: 'Create Database Page',
       description: 'Creates a new page inside a Notion database.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title                 : { type: 'string', title: 'Page Title' },
+          content               : { type: 'string', title: 'Initial Page Text / Content' },
+          propertiesJson        : { type: 'string', title: 'Additional Properties (JSON string)' },
+        },
+      },
       inputs: [
         { key: 'databaseId', label: 'Database', type: 'string', required: true, dynamicChoice: { endpoint: 'databaseId' } },
         { key: 'title', label: 'Page Title', type: 'string', required: true },
         { key: 'content', label: 'Initial Page Text / Content', type: 'string', required: false },
         { key: 'propertiesJson', label: 'Additional Properties (JSON string)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          pageId                : { type: 'string', title: 'Page ID' },
+          url                   : { type: 'string', title: 'Page URL' },
+        },
+      },
       outputs: [
         { key: 'pageId', label: 'Page ID', type: 'string', required: true },
         { key: 'url', label: 'Page URL', type: 'string', required: true },
@@ -93,10 +109,23 @@ const notionManifest: ConnectorManifest = {
       name: 'Query Database',
       description: 'Queries pages from a Notion database with optional filter.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          filterJson            : { type: 'string', title: 'Notion Filter Object (JSON string)' },
+        },
+      },
       inputs: [
         { key: 'databaseId', label: 'Database', type: 'string', required: true, dynamicChoice: { endpoint: 'databaseId' } },
         { key: 'filterJson', label: 'Notion Filter Object (JSON string)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Pages Count' },
+          pages                 : { type: 'array', title: 'Pages Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Pages Count', type: 'number', required: true },
         { key: 'pages', label: 'Pages Array', type: 'array', required: true },
@@ -107,9 +136,24 @@ const notionManifest: ConnectorManifest = {
       name: 'Get Page Details',
       description: 'Retrieves metadata and properties of a specific Notion page.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['pageId'],
+        properties: {
+          pageId                : { type: 'string', title: 'Page ID' },
+        },
+      },
       inputs: [
         { key: 'pageId', label: 'Page ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Page ID' },
+          url                   : { type: 'string', title: 'URL' },
+          properties            : { type: 'object', title: 'Properties Object' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Page ID', type: 'string', required: true },
         { key: 'url', label: 'URL', type: 'string', required: true },
@@ -121,9 +165,22 @@ const notionManifest: ConnectorManifest = {
       name: 'Archive / Delete Page',
       description: 'Archives a page in Notion.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['pageId'],
+        properties: {
+          pageId                : { type: 'string', title: 'Page ID' },
+        },
+      },
       inputs: [
         { key: 'pageId', label: 'Page ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -133,10 +190,24 @@ const notionManifest: ConnectorManifest = {
       name: 'Append Content Block to Page',
       description: 'Appends paragraph or heading blocks to a page.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['pageId', 'text'],
+        properties: {
+          pageId                : { type: 'string', title: 'Page or Block ID' },
+          text                  : { type: 'string', title: 'Paragraph Text to Append' },
+        },
+      },
       inputs: [
         { key: 'pageId', label: 'Page or Block ID', type: 'string', required: true },
         { key: 'text', label: 'Paragraph Text to Append', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -146,9 +217,23 @@ const notionManifest: ConnectorManifest = {
       name: 'Search Workspace',
       description: 'Searches pages and databases across the Notion workspace.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          count                 : { type: 'number', title: 'Results Count' },
+          results               : { type: 'array', title: 'Results Array' },
+        },
+      },
       outputs: [
         { key: 'count', label: 'Results Count', type: 'number', required: true },
         { key: 'results', label: 'Results Array', type: 'array', required: true },
@@ -159,9 +244,23 @@ const notionManifest: ConnectorManifest = {
       name: 'Get Database Metadata',
       description: 'Retrieves schema and metadata of a Notion database.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['databaseId'],
+        properties: {
+          databaseId            : { type: 'string', title: 'Database ID' },
+        },
+      },
       inputs: [
         { key: 'databaseId', label: 'Database ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Database ID' },
+          title                 : { type: 'string', title: 'Title' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Database ID', type: 'string', required: true },
         { key: 'title', label: 'Title', type: 'string', required: true },
@@ -172,10 +271,24 @@ const notionManifest: ConnectorManifest = {
       name: 'Create Database',
       description: 'Creates an inline database inside a parent page.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['parentPageId', 'title'],
+        properties: {
+          parentPageId          : { type: 'string', title: 'Parent Page ID' },
+          title                 : { type: 'string', title: 'Database Title' },
+        },
+      },
       inputs: [
         { key: 'parentPageId', label: 'Parent Page ID', type: 'string', required: true },
         { key: 'title', label: 'Database Title', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          databaseId            : { type: 'string', title: 'Database ID' },
+        },
+      },
       outputs: [
         { key: 'databaseId', label: 'Database ID', type: 'string', required: true },
       ],
@@ -185,9 +298,23 @@ const notionManifest: ConnectorManifest = {
       name: 'Get Block Details',
       description: 'Retrieves details of a specific content block.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['blockId'],
+        properties: {
+          blockId               : { type: 'string', title: 'Block ID' },
+        },
+      },
       inputs: [
         { key: 'blockId', label: 'Block ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Block ID' },
+          type                  : { type: 'string', title: 'Type' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Block ID', type: 'string', required: true },
         { key: 'type', label: 'Type', type: 'string', required: true },
@@ -198,9 +325,22 @@ const notionManifest: ConnectorManifest = {
       name: 'Delete Block',
       description: 'Deletes/archives a specific content block.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['blockId'],
+        properties: {
+          blockId               : { type: 'string', title: 'Block ID' },
+        },
+      },
       inputs: [
         { key: 'blockId', label: 'Block ID', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -210,10 +350,24 @@ const notionManifest: ConnectorManifest = {
       name: 'Update Page Properties',
       description: 'Updates page property values in Notion.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['pageId', 'propertiesJson'],
+        properties: {
+          pageId                : { type: 'string', title: 'Page ID' },
+          propertiesJson        : { type: 'string', title: 'Properties JSON string' },
+        },
+      },
       inputs: [
         { key: 'pageId', label: 'Page ID', type: 'string', required: true },
         { key: 'propertiesJson', label: 'Properties JSON string', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Status' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Success Status', type: 'boolean', required: true },
       ],
@@ -223,7 +377,13 @@ const notionManifest: ConnectorManifest = {
       name: 'List Workspace Users',
       description: 'Lists all users in Notion workspace.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          users                 : { type: 'array', title: 'Users Array' },
+        },
+      },
       outputs: [
         { key: 'users', label: 'Users Array', type: 'array', required: true },
       ],

@@ -18,10 +18,26 @@ export const aiNodesManifest: ConnectorManifest = {
       name: 'AI Text Classifier',
       description: 'Classifies unstructured text into defined categories with confidence scoring.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['text', 'categories'],
+        properties: {
+          text                  : { type: 'string', title: 'Input Content / Ticket / Email' },
+          categories            : { type: 'string', title: 'Categories List (comma separated)' },
+        },
+      },
       inputs: [
         { key: 'text', label: 'Input Content / Ticket / Email', type: 'string', required: true },
         { key: 'categories', label: 'Categories List (comma separated)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          category              : { type: 'string', title: 'Top Matched Category' },
+          confidence            : { type: 'number', title: 'Confidence Score (0-1)' },
+          reasoning             : { type: 'string', title: 'Classifier Rationale' },
+        },
+      },
       outputs: [
         { key: 'category', label: 'Top Matched Category', type: 'string', required: true },
         { key: 'confidence', label: 'Confidence Score (0-1)', type: 'number', required: true },
@@ -33,10 +49,25 @@ export const aiNodesManifest: ConnectorManifest = {
       name: 'AI Structured JSON Extractor',
       description: 'Extracts exact typed JSON fields from unstructured documents or text.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['text', 'jsonSchema'],
+        properties: {
+          text                  : { type: 'string', title: 'Source Text / Document Content' },
+          jsonSchema            : { type: 'string', title: 'Target Schema (JSON or Key-Value Description)' },
+        },
+      },
       inputs: [
         { key: 'text', label: 'Source Text / Document Content', type: 'string', required: true },
         { key: 'jsonSchema', label: 'Target Schema (JSON or Key-Value Description)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          extractedData         : { type: 'object', title: 'Extracted JSON Object' },
+          confidence            : { type: 'number', title: 'Extraction Confidence' },
+        },
+      },
       outputs: [
         { key: 'extractedData', label: 'Extracted JSON Object', type: 'json', required: true },
         { key: 'confidence', label: 'Extraction Confidence', type: 'number', required: true },
@@ -47,10 +78,25 @@ export const aiNodesManifest: ConnectorManifest = {
       name: 'Autonomous AI Agent Node',
       description: 'Executes an autonomous goal-driven agent with tool execution & memory.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['goal'],
+        properties: {
+          goal                  : { type: 'string', title: 'Agent Task Goal Statement' },
+          maxSteps              : { type: 'number', title: 'Max Multi-Step Tool Execution Limit (Default: 5)' },
+        },
+      },
       inputs: [
         { key: 'goal', label: 'Agent Task Goal Statement', type: 'string', required: true },
         { key: 'maxSteps', label: 'Max Multi-Step Tool Execution Limit (Default: 5)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          finalResult           : { type: 'string', title: 'Agent Goal Final Result' },
+          stepsTaken            : { type: 'object', title: 'Steps Execution Array' },
+        },
+      },
       outputs: [
         { key: 'finalResult', label: 'Agent Goal Final Result', type: 'string', required: true },
         { key: 'stepsTaken', label: 'Steps Execution Array', type: 'json', required: true },

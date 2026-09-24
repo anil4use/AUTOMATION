@@ -51,10 +51,24 @@ export const greenhouseManifest: ConnectorManifest = {
       name: 'List Greenhouse Jobs',
       description: 'Fetch open job positions in Greenhouse ATS.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          status                : { type: 'string', title: 'Job Status (open, closed, draft)' },
+          departmentId          : { type: 'string', title: 'Department ID' },
+        },
+      },
       inputs: [
         { key: 'status', label: 'Job Status (open, closed, draft)', type: 'string', required: false },
         { key: 'departmentId', label: 'Department ID', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          jobs                  : { type: 'object', title: 'Array of Greenhouse Jobs' },
+          count                 : { type: 'number', title: 'Total Jobs Count' },
+        },
+      },
       outputs: [
         { key: 'jobs', label: 'Array of Greenhouse Jobs', type: 'json', required: true },
         { key: 'count', label: 'Total Jobs Count', type: 'number', required: true },
@@ -65,9 +79,27 @@ export const greenhouseManifest: ConnectorManifest = {
       name: 'Get Candidate Details',
       description: 'Retrieve candidate profile, application history, notes, and contact emails.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['candidateId'],
+        properties: {
+          candidateId           : { type: 'number', title: 'Greenhouse Candidate ID' },
+        },
+      },
       inputs: [
         { key: 'candidateId', label: 'Greenhouse Candidate ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          candidateId           : { type: 'number', title: 'Candidate ID' },
+          firstName             : { type: 'string', title: 'First Name' },
+          lastName              : { type: 'string', title: 'Last Name' },
+          emails                : { type: 'object', title: 'Email Addresses List' },
+          company               : { type: 'string', title: 'Current Company' },
+          title                 : { type: 'string', title: 'Current Title' },
+        },
+      },
       outputs: [
         { key: 'candidateId', label: 'Candidate ID', type: 'number', required: true },
         { key: 'firstName', label: 'First Name', type: 'string', required: true },
@@ -82,11 +114,28 @@ export const greenhouseManifest: ConnectorManifest = {
       name: 'Add Candidate Note',
       description: 'Add interviewer or recruiter feedback note to a candidate in Greenhouse.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['candidateId', 'note'],
+        properties: {
+          candidateId           : { type: 'number', title: 'Candidate ID' },
+          note                  : { type: 'string', title: 'Note Text / Feedback Content' },
+          visibility            : { type: 'string', title: 'Visibility (public, private)' },
+        },
+      },
       inputs: [
         { key: 'candidateId', label: 'Candidate ID', type: 'number', required: true },
         { key: 'note', label: 'Note Text / Feedback Content', type: 'string', required: true },
         { key: 'visibility', label: 'Visibility (public, private)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          noteId                : { type: 'number', title: 'Created Note ID' },
+          candidateId           : { type: 'number', title: 'Candidate ID' },
+          createdAt             : { type: 'string', title: 'Created Timestamp' },
+        },
+      },
       outputs: [
         { key: 'noteId', label: 'Created Note ID', type: 'number', required: true },
         { key: 'candidateId', label: 'Candidate ID', type: 'number', required: true },
@@ -98,10 +147,26 @@ export const greenhouseManifest: ConnectorManifest = {
       name: 'Advance Candidate Stage',
       description: 'Move candidate application to a specific interview stage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['applicationId', 'stageId'],
+        properties: {
+          applicationId         : { type: 'number', title: 'Application ID' },
+          stageId               : { type: 'number', title: 'Target Stage ID' },
+        },
+      },
       inputs: [
         { key: 'applicationId', label: 'Application ID', type: 'number', required: true },
         { key: 'stageId', label: 'Target Stage ID', type: 'number', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          applicationId         : { type: 'number', title: 'Application ID' },
+          currentStage          : { type: 'string', title: 'New Current Stage' },
+          status                : { type: 'string', title: 'Update Status' },
+        },
+      },
       outputs: [
         { key: 'applicationId', label: 'Application ID', type: 'number', required: true },
         { key: 'currentStage', label: 'New Current Stage', type: 'string', required: true },

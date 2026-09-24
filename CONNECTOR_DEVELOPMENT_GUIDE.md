@@ -1,5 +1,15 @@
 # AutoFlow V2 — Connector & SDK Development Guide
 
+> [!IMPORTANT]
+> **This file is superseded.** The canonical and up-to-date standards are now in:
+> - 📋 **[`docs/CONNECTOR_DEVELOPMENT_STANDARD.md`](docs/CONNECTOR_DEVELOPMENT_STANDARD.md)** — Complete guide, templates, and 10/10 checklist for all new connectors
+> - 🔧 **[`docs/CONNECTOR_AUDIT_FIX_TRACKER.md`](docs/CONNECTOR_AUDIT_FIX_TRACKER.md)** — Backlog of all 60 connectors that need to be fixed
+>
+> When adding a **new connector**, use `CONNECTOR_DEVELOPMENT_STANDARD.md` only.
+> This file is kept for historical reference.
+
+---
+
 Welcome to the **AutoFlow V2 Connector & SDK Development Guide**. This document outlines the standard workflow, rules, and architecture for adding new connectors, integrations, and capability SDKs to the AutoFlow platform.
 
 AutoFlow V2 uses a **Database-Driven Connector Platform** architecture. MongoDB serves as the single source of truth for connector metadata, capabilities, action schemas, authentication fields, feature support matrices, and test suites, while TypeScript code provides execution strategies and adapters.

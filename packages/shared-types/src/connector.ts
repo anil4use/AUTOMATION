@@ -73,6 +73,31 @@ export interface ConnectorFieldSchema {
   };
 }
 
+// ─── JSON Schema (for inputSchema / outputSchema on actions) ─────────────────
+
+export interface JSONSchemaProperty {
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  title?: string;
+  description?: string;
+  enum?: string[];
+  default?: any;
+  items?: JSONSchemaProperty;
+  properties?: Record<string, JSONSchemaProperty>;
+  required?: string[];
+  format?: string;
+  dynamicOptions?: {
+    endpoint: string;
+    dependsOn?: string[];
+  };
+}
+
+export interface JSONSchema {
+  type: 'object';
+  required?: string[];
+  properties: Record<string, JSONSchemaProperty>;
+  additionalProperties?: boolean;
+}
+
 // ─── Operation (Trigger or Action) ────────────────────────────────────────────
 
 export interface RateLimitInfo {
@@ -91,6 +116,18 @@ export interface ConnectorOperation {
   type: 'trigger' | 'action';
   inputs: ConnectorFieldSchema[];
   outputs: ConnectorFieldSchema[];
+  // ── V2 Schema Fields (dynamic form rendering + test drawer) ──────────────
+  /** Full JSON Schema for input fields — drives dynamic form rendering */
+  inputSchema?: JSONSchema;
+  /** Full JSON Schema for output fields — drives output visualizer */
+  outputSchema?: JSONSchema;
+  /** UI hints for each field: placeholders, default test values, visibility */
+  uiSchema?: Record<string, {
+    defaultTestValue?: any;
+    placeholder?: string;
+    hidden?: boolean;
+    widget?: 'textarea' | 'code' | 'password' | 'select' | 'date';
+  }>;
   // Trigger-specific
   deliveryMethod?: 'webhook' | 'polling'; // how the trigger receives events
   pollingCursorField?: string;            // field used as poll cursor (e.g. 'updated_at', 'max_id')

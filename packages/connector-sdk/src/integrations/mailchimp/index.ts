@@ -52,6 +52,17 @@ export const mailchimpManifest: ConnectorManifest = {
       name: 'Add / Update Subscriber',
       description: 'Adds a new contact to an audience list or updates their info.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email                 : { type: 'string', title: 'Subscriber Email Address' },
+          first_name            : { type: 'string', title: 'First Name' },
+          last_name             : { type: 'string', title: 'Last Name' },
+          tags                  : { type: 'string', title: 'Member Tags (Comma separated e.g. Customer,VIP)' },
+          status                : { type: 'string', title: 'Subscription Status (subscribed, pending, unsubscribed)' },
+        },
+      },
       inputs: [
         { key: 'listId', label: 'Audience List', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'listId' } },
         { key: 'email', label: 'Subscriber Email Address', type: 'string', required: true },
@@ -60,6 +71,14 @@ export const mailchimpManifest: ConnectorManifest = {
         { key: 'tags', label: 'Member Tags (Comma separated e.g. Customer,VIP)', type: 'string', required: false },
         { key: 'status', label: 'Subscription Status (subscribed, pending, unsubscribed)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Subscriber Member Hash' },
+          email_address         : { type: 'string', title: 'Email Address' },
+          status                : { type: 'string', title: 'Member Status' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Subscriber Member Hash', type: 'string', required: true },
         { key: 'email_address', label: 'Email Address', type: 'string', required: true },
@@ -71,10 +90,23 @@ export const mailchimpManifest: ConnectorManifest = {
       name: 'Archive / Delete Subscriber',
       description: 'Removes or unsubscribes a member from an audience list.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email                 : { type: 'string', title: 'Subscriber Email Address' },
+        },
+      },
       inputs: [
         { key: 'listId', label: 'Audience List', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'listId' } },
         { key: 'email', label: 'Subscriber Email Address', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          status                : { type: 'string', title: 'Deletion Status' },
+        },
+      },
       outputs: [
         { key: 'status', label: 'Deletion Status', type: 'string', required: true },
       ],

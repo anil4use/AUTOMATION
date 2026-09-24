@@ -45,12 +45,28 @@ export const textTransformerManifest: ConnectorManifest = {
       name: 'Replace Text / Regex',
       description: 'Replaces occurrences of text or regex pattern.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['input', 'pattern', 'replacement'],
+        properties: {
+          input                 : { type: 'string', title: 'Input Text' },
+          pattern               : { type: 'string', title: 'Search String or Regex Pattern' },
+          replacement           : { type: 'string', title: 'Replacement String' },
+          isRegex               : { type: 'boolean', title: 'Treat as Regular Expression' },
+        },
+      },
       inputs: [
         { key: 'input', label: 'Input Text', type: 'string', required: true },
         { key: 'pattern', label: 'Search String or Regex Pattern', type: 'string', required: true },
         { key: 'replacement', label: 'Replacement String', type: 'string', required: true },
         { key: 'isRegex', label: 'Treat as Regular Expression', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          result                : { type: 'string', title: 'Transformed Text' },
+        },
+      },
       outputs: [{ key: 'result', label: 'Transformed Text', type: 'string', required: true }],
     },
     {
@@ -58,10 +74,25 @@ export const textTransformerManifest: ConnectorManifest = {
       name: 'Split String to Array',
       description: 'Splits text by delimiter into an array.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['input'],
+        properties: {
+          input                 : { type: 'string', title: 'Input Text' },
+          delimiter             : { type: 'string', title: 'Delimiter (default: comma)' },
+        },
+      },
       inputs: [
         { key: 'input', label: 'Input Text', type: 'string', required: true },
         { key: 'delimiter', label: 'Delimiter (default: comma)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'object', title: 'Result Array' },
+          count                 : { type: 'number', title: 'Item Count' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Result Array', type: 'json', required: true },
         { key: 'count', label: 'Item Count', type: 'number', required: true },
@@ -72,10 +103,24 @@ export const textTransformerManifest: ConnectorManifest = {
       name: 'Convert Case',
       description: 'Converts text to UPPERCASE, lowercase, or Title Case.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['input', 'targetCase'],
+        properties: {
+          input                 : { type: 'string', title: 'Input Text' },
+          targetCase            : { type: 'string', title: 'Target Case (uppercase, lowercase, titlecase)' },
+        },
+      },
       inputs: [
         { key: 'input', label: 'Input Text', type: 'string', required: true },
         { key: 'targetCase', label: 'Target Case (uppercase, lowercase, titlecase)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          result                : { type: 'string', title: 'Transformed Text' },
+        },
+      },
       outputs: [{ key: 'result', label: 'Transformed Text', type: 'string', required: true }],
     },
   ],
@@ -136,10 +181,24 @@ export const jsonTransformerManifest: ConnectorManifest = {
       name: 'JSONPath Query',
       description: 'Evaluates a JSONPath query against a JSON object or array.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jsonInput'],
+        properties: {
+          jsonInput             : { type: 'string', title: 'Target JSON (Object or String)' },
+        },
+      },
       inputs: [
         { key: 'jsonInput', label: 'Target JSON (Object or String)', type: 'string', required: true },
         { key: 'path', label: 'JSONPath Expression (e.g. $.items[*].id)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          result                : { type: 'object', title: 'QueryResult' },
+          matchCount            : { type: 'number', title: 'Match Count' },
+        },
+      },
       outputs: [
         { key: 'result', label: 'QueryResult', type: 'json', required: true },
         { key: 'matchCount', label: 'Match Count', type: 'number', required: true },
@@ -150,7 +209,20 @@ export const jsonTransformerManifest: ConnectorManifest = {
       name: 'Parse JSON String',
       description: 'Parses a JSON string into an object/array.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['jsonString'],
+        properties: {
+          jsonString            : { type: 'string', title: 'JSON String' },
+        },
+      },
       inputs: [{ key: 'jsonString', label: 'JSON String', type: 'string', required: true }],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          data                  : { type: 'object', title: 'Parsed Object' },
+        },
+      },
       outputs: [{ key: 'data', label: 'Parsed Object', type: 'json', required: true }],
     },
   ],

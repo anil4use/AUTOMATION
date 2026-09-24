@@ -18,11 +18,28 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Google Web Search',
       description: 'Performs a live web search using Google Custom Search API.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+          numResults            : { type: 'number', title: 'Number of Results (1-10)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
         { key: 'numResults', label: 'Number of Results (1-10)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          totalResults          : { type: 'string', title: 'Total Results Count' },
+          items                 : { type: 'array', title: 'Search Result Items' },
+          topSnippet            : { type: 'string', title: 'First Result Snippet' },
+        },
+      },
       outputs: [
         { key: 'totalResults', label: 'Total Results Count', type: 'string', required: true },
         { key: 'items', label: 'Search Result Items', type: 'array', required: true },
@@ -34,10 +51,24 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Google Image Search',
       description: 'Searches for images via Google Custom Search.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          images                : { type: 'array', title: 'Image Results Array' },
+        },
+      },
       outputs: [
         { key: 'images', label: 'Image Results Array', type: 'array', required: true },
       ],
@@ -47,10 +78,24 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Google News Search',
       description: 'Searches for news articles via Google CSE.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'array', title: 'News Results Array' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'News Results Array', type: 'array', required: true },
       ],
@@ -60,10 +105,24 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Google Video Search',
       description: 'Searches for video links via Google CSE.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'array', title: 'Video Results Array' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Video Results Array', type: 'array', required: true },
       ],
@@ -73,11 +132,26 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Site-Restricted Search',
       description: 'Searches within a specific website domain.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'site', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          site                  : { type: 'string', title: 'Site Domain (e.g. github.com)' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'site', label: 'Site Domain (e.g. github.com)', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'array', title: 'Results Array' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Results Array', type: 'array', required: true },
       ],
@@ -87,9 +161,23 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Extract Page Metadata',
       description: 'Fetches page title and meta description for a search result URL.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url                   : { type: 'string', title: 'Page URL' },
+        },
+      },
       inputs: [
         { key: 'url', label: 'Page URL', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          title                 : { type: 'string', title: 'Page Title' },
+          description           : { type: 'string', title: 'Meta Description' },
+        },
+      },
       outputs: [
         { key: 'title', label: 'Page Title', type: 'string', required: true },
         { key: 'description', label: 'Meta Description', type: 'string', required: true },
@@ -100,12 +188,28 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Custom CSE Query',
       description: 'Executes advanced Google Custom Search query.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+          gl                    : { type: 'string', title: 'Country Code (e.g. us)' },
+          hl                    : { type: 'string', title: 'Language Code (e.g. en)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
         { key: 'gl', label: 'Country Code (e.g. us)', type: 'string', required: false },
         { key: 'hl', label: 'Language Code (e.g. en)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'array', title: 'Results Array' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Results Array', type: 'array', required: true },
       ],
@@ -115,11 +219,26 @@ const googleSearchManifest: ConnectorManifest = {
       name: 'Search File Type',
       description: 'Searches for specific document filetypes (pdf, docx, etc).',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['query', 'fileType', 'cx'],
+        properties: {
+          query                 : { type: 'string', title: 'Search Query' },
+          fileType              : { type: 'string', title: 'File Type Extension (e.g. pdf)' },
+          cx                    : { type: 'string', title: 'Search Engine ID (cx)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query', type: 'string', required: true },
         { key: 'fileType', label: 'File Type Extension (e.g. pdf)', type: 'string', required: true },
         { key: 'cx', label: 'Search Engine ID (cx)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'array', title: 'File Results Array' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'File Results Array', type: 'array', required: true },
       ],

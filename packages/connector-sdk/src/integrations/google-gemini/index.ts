@@ -20,12 +20,28 @@ export const googleGeminiManifest: ConnectorManifest = {
       name: 'Generate Text Content',
       description: 'Generates text response using Google Gemini 1.5 Pro/Flash.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['prompt'],
+        properties: {
+          prompt                : { type: 'string', title: 'User Prompt' },
+          systemInstruction     : { type: 'string', title: 'System Persona Instruction' },
+          temperature           : { type: 'number', title: 'Temperature (0.0 to 1.0)' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Gemini Model', type: 'string', required: true, hasDynamicChoices: true, dynamicChoice: { endpoint: 'model' } },
         { key: 'prompt', label: 'User Prompt', type: 'string', required: true },
         { key: 'systemInstruction', label: 'System Persona Instruction', type: 'string', required: false },
         { key: 'temperature', label: 'Temperature (0.0 to 1.0)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          text                  : { type: 'string', title: 'Generated Output Text' },
+          finishReason          : { type: 'string', title: 'Finish Reason' },
+        },
+      },
       outputs: [
         { key: 'text', label: 'Generated Output Text', type: 'string', required: true },
         { key: 'finishReason', label: 'Finish Reason', type: 'string', required: true },
@@ -36,12 +52,27 @@ export const googleGeminiManifest: ConnectorManifest = {
       name: 'Analyze Multimodal Image',
       description: 'Understands image content using Gemini Vision capabilities.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['prompt', 'image_base64'],
+        properties: {
+          prompt                : { type: 'string', title: 'Question or Prompt about Image' },
+          image_base64          : { type: 'string', title: 'Image Base64 or Public Image URL' },
+          mime_type             : { type: 'string', title: 'MIME Type (image/png, image/jpeg)' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Model (Default: gemini-1.5-flash)', type: 'string', required: false, hasDynamicChoices: true, dynamicChoice: { endpoint: 'model' } },
         { key: 'prompt', label: 'Question or Prompt about Image', type: 'string', required: true },
         { key: 'image_base64', label: 'Image Base64 or Public Image URL', type: 'string', required: true },
         { key: 'mime_type', label: 'MIME Type (image/png, image/jpeg)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          text                  : { type: 'string', title: 'Analysis Summary Output' },
+        },
+      },
       outputs: [
         { key: 'text', label: 'Analysis Summary Output', type: 'string', required: true },
       ],

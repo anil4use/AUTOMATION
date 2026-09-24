@@ -18,10 +18,24 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Get Item',
       description: 'Retrieves item by primary key.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table', 'key'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          key                   : { type: 'string', title: 'Key JSON Object' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'key', label: 'Key JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          item                  : { type: 'object', title: 'Item Document' },
+        },
+      },
       outputs: [{ key: 'item', label: 'Item Document', type: 'json', required: true }],
     },
     {
@@ -29,10 +43,24 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Put Item',
       description: 'Creates or replaces an item.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table', 'item'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          item                  : { type: 'string', title: 'Item JSON Object' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'item', label: 'Item JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Flag' },
+        },
+      },
       outputs: [{ key: 'success', label: 'Success Flag', type: 'boolean', required: true }],
     },
     {
@@ -40,11 +68,26 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Update Item',
       description: 'Edits an existing item attributes.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table', 'key', 'updates'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          key                   : { type: 'string', title: 'Key JSON Object' },
+          updates               : { type: 'string', title: 'Update Expression JSON Object' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'key', label: 'Key JSON Object', type: 'string', required: true },
         { key: 'updates', label: 'Update Expression JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          updatedItem           : { type: 'object', title: 'Updated Attributes' },
+        },
+      },
       outputs: [{ key: 'updatedItem', label: 'Updated Attributes', type: 'json', required: true }],
     },
     {
@@ -52,10 +95,24 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Delete Item',
       description: 'Deletes an item by key.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table', 'key'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          key                   : { type: 'string', title: 'Key JSON Object' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'key', label: 'Key JSON Object', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Flag' },
+        },
+      },
       outputs: [{ key: 'success', label: 'Success Flag', type: 'boolean', required: true }],
     },
     {
@@ -63,11 +120,27 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Query Table',
       description: 'Finds items based on primary key values.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table', 'keyCondition'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          keyCondition          : { type: 'string', title: 'Key Condition Expression String' },
+          limit                 : { type: 'number', title: 'Item Limit' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'keyCondition', label: 'Key Condition Expression String', type: 'string', required: true },
         { key: 'limit', label: 'Item Limit', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'object', title: 'Matched Items Array' },
+          count                 : { type: 'number', title: 'Item Count' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Matched Items Array', type: 'json', required: true },
         { key: 'count', label: 'Item Count', type: 'number', required: true },
@@ -78,11 +151,27 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Scan Table',
       description: 'Scans all items in a table.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          filterExpression      : { type: 'string', title: 'Filter Expression String' },
+          limit                 : { type: 'number', title: 'Item Limit' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'filterExpression', label: 'Filter Expression String', type: 'string', required: false },
         { key: 'limit', label: 'Item Limit', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'object', title: 'Scanned Items Array' },
+          count                 : { type: 'number', title: 'Item Count' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Scanned Items Array', type: 'json', required: true },
         { key: 'count', label: 'Item Count', type: 'number', required: true },
@@ -93,10 +182,24 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Batch Get Items',
       description: 'Retrieves attributes of multiple items.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table', 'keys'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          keys                  : { type: 'string', title: 'Keys Array of JSON Objects' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'keys', label: 'Keys Array of JSON Objects', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'object', title: 'Returned Items Array' },
+        },
+      },
       outputs: [{ key: 'items', label: 'Returned Items Array', type: 'json', required: true }],
     },
     {
@@ -104,11 +207,26 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Batch Write Items',
       description: 'Puts or deletes multiple items.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+          puts                  : { type: 'string', title: 'Put Items Array of JSON Objects' },
+          deletes               : { type: 'string', title: 'Delete Keys Array of JSON Objects' },
+        },
+      },
       inputs: [
         { key: 'table', label: 'Table Name', type: 'string', required: true },
         { key: 'puts', label: 'Put Items Array of JSON Objects', type: 'string', required: false },
         { key: 'deletes', label: 'Delete Keys Array of JSON Objects', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Success Flag' },
+        },
+      },
       outputs: [{ key: 'success', label: 'Success Flag', type: 'boolean', required: true }],
     },
     {
@@ -116,7 +234,13 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'List Tables',
       description: 'Returns array of table names.',
       type: 'action',
-      inputs: [],
+            inputs: [],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          tables                : { type: 'object', title: 'Table Names Array' },
+        },
+      },
       outputs: [{ key: 'tables', label: 'Table Names Array', type: 'json', required: true }],
     },
     {
@@ -124,7 +248,20 @@ export const dynamodbManifest: ConnectorManifest = {
       name: 'Describe Table',
       description: 'Returns information about a table.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['table'],
+        properties: {
+          table                 : { type: 'string', title: 'Table Name' },
+        },
+      },
       inputs: [{ key: 'table', label: 'Table Name', type: 'string', required: true }],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          schema                : { type: 'object', title: 'Table Description Object' },
+        },
+      },
       outputs: [{ key: 'schema', label: 'Table Description Object', type: 'json', required: true }],
     },
   ],

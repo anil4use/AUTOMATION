@@ -34,12 +34,30 @@ export const quickbooksManifest: ConnectorManifest = {
       name: 'Create Invoice',
       description: 'Creates a new customer sales invoice.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['realmId', 'customerId', 'amount'],
+        properties: {
+          realmId               : { type: 'string', title: 'Company Realm ID' },
+          customerId            : { type: 'string', title: 'Customer ID' },
+          amount                : { type: 'string', title: 'Line Item Amount' },
+          description           : { type: 'string', title: 'Invoice Item Description' },
+        },
+      },
       inputs: [
         { key: 'realmId', label: 'Company Realm ID', type: 'string', required: true },
         { key: 'customerId', label: 'Customer ID', type: 'string', required: true },
         { key: 'amount', label: 'Line Item Amount', type: 'string', required: true },
         { key: 'description', label: 'Invoice Item Description', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Invoice ID' },
+          docNumber             : { type: 'string', title: 'Doc Number' },
+          totalAmt              : { type: 'number', title: 'Total Amount' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Invoice ID', type: 'string', required: true },
         { key: 'docNumber', label: 'Doc Number', type: 'string', required: true },
@@ -51,11 +69,27 @@ export const quickbooksManifest: ConnectorManifest = {
       name: 'Create Customer',
       description: 'Creates a new customer record.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['realmId', 'displayName'],
+        properties: {
+          realmId               : { type: 'string', title: 'Company Realm ID' },
+          displayName           : { type: 'string', title: 'Customer Display Name' },
+          email                 : { type: 'string', title: 'Email Address' },
+        },
+      },
       inputs: [
         { key: 'realmId', label: 'Company Realm ID', type: 'string', required: true },
         { key: 'displayName', label: 'Customer Display Name', type: 'string', required: true },
         { key: 'email', label: 'Email Address', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          id                    : { type: 'string', title: 'Customer ID' },
+          displayName           : { type: 'string', title: 'Display Name' },
+        },
+      },
       outputs: [
         { key: 'id', label: 'Customer ID', type: 'string', required: true },
         { key: 'displayName', label: 'Display Name', type: 'string', required: true },

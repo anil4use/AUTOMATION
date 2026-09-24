@@ -63,6 +63,17 @@ const anthropicManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/messages',
+            inputSchema: {
+        type: 'object',
+        required: ['model', 'userMessage'],
+        properties: {
+          model                 : { type: 'string', title: 'Model' },
+          systemPrompt          : { type: 'string', title: 'System Prompt (optional)' },
+          userMessage           : { type: 'string', title: 'User Message' },
+          maxTokens             : { type: 'number', title: 'Max Output Tokens (default 4096)' },
+          temperature           : { type: 'number', title: 'Temperature (0-1)' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Model', type: 'select', required: true, hasDynamicChoices: true, choicesFieldId: 'model', options: ANTHROPIC_MODELS },
         { key: 'systemPrompt', label: 'System Prompt (optional)', type: 'string', required: false },
@@ -70,6 +81,16 @@ const anthropicManifest: ConnectorManifest = {
         { key: 'maxTokens', label: 'Max Output Tokens (default 4096)', type: 'number', required: false },
         { key: 'temperature', label: 'Temperature (0-1)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'Response Text' },
+          inputTokens           : { type: 'number', title: 'Input Tokens Used' },
+          outputTokens          : { type: 'number', title: 'Output Tokens Used' },
+          stopReason            : { type: 'string', title: 'Stop Reason' },
+          model                 : { type: 'string', title: 'Model Used' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'Response Text', type: 'string', required: true },
         { key: 'inputTokens', label: 'Input Tokens Used', type: 'number', required: true },
@@ -85,12 +106,28 @@ const anthropicManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/messages',
+            inputSchema: {
+        type: 'object',
+        required: ['model'],
+        properties: {
+          model                 : { type: 'string', title: 'Model' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Model', type: 'select', required: true, options: ANTHROPIC_MODELS },
         { key: 'messages', label: 'Messages Array (JSON)', type: 'json', required: true, description: '[{"role":"user","content":"Hello"},{"role":"assistant","content":"Hi!"},...]' },
         { key: 'systemPrompt', label: 'System Prompt (optional)', type: 'string', required: false },
         { key: 'maxTokens', label: 'Max Output Tokens (default 4096)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'Response Text' },
+          inputTokens           : { type: 'number', title: 'Input Tokens' },
+          outputTokens          : { type: 'number', title: 'Output Tokens' },
+          stopReason            : { type: 'string', title: 'Stop Reason' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'Response Text', type: 'string', required: true },
         { key: 'inputTokens', label: 'Input Tokens', type: 'number', required: true },
@@ -105,6 +142,14 @@ const anthropicManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/messages',
+            inputSchema: {
+        type: 'object',
+        required: ['model', 'documentBase64'],
+        properties: {
+          model                 : { type: 'string', title: 'Model' },
+          documentBase64        : { type: 'string', title: 'Document Content (Base64 encoded)' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Model', type: 'select', required: true, options: ANTHROPIC_MODELS, description: 'Claude 3+ models support document input.' },
         {
@@ -130,6 +175,15 @@ const anthropicManifest: ConnectorManifest = {
         { key: 'systemPrompt', label: 'System Prompt (optional)', type: 'string', required: false },
         { key: 'maxTokens', label: 'Max Output Tokens (default 4096)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'Response Text' },
+          inputTokens           : { type: 'number', title: 'Input Tokens' },
+          outputTokens          : { type: 'number', title: 'Output Tokens' },
+          stopReason            : { type: 'string', title: 'Stop Reason' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'Response Text', type: 'string', required: true },
         { key: 'inputTokens', label: 'Input Tokens', type: 'number', required: true },
@@ -144,11 +198,26 @@ const anthropicManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/messages/count_tokens',
+            inputSchema: {
+        type: 'object',
+        required: ['model', 'messages'],
+        properties: {
+          model                 : { type: 'string', title: 'Model' },
+          messages              : { type: 'object', title: 'Messages Array (JSON)' },
+          systemPrompt          : { type: 'string', title: 'System Prompt (optional)' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Model', type: 'select', required: true, options: ANTHROPIC_MODELS },
         { key: 'messages', label: 'Messages Array (JSON)', type: 'json', required: true },
         { key: 'systemPrompt', label: 'System Prompt (optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          inputTokens           : { type: 'number', title: 'Input Token Count' },
+        },
+      },
       outputs: [
         { key: 'inputTokens', label: 'Input Token Count', type: 'number', required: true },
       ],
@@ -160,10 +229,26 @@ const anthropicManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'POST',
       endpoint: '/messages/batches',
+            inputSchema: {
+        type: 'object',
+        required: ['model'],
+        properties: {
+          model                 : { type: 'string', title: 'Default Model' },
+        },
+      },
       inputs: [
         { key: 'model', label: 'Default Model', type: 'select', required: true, options: ANTHROPIC_MODELS },
         { key: 'requests', label: 'Batch Requests (JSON array)', type: 'json', required: true, description: '[{"custom_id":"req-1","params":{"model":"...","max_tokens":100,"messages":[{"role":"user","content":"Hello"}]}}]' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          batchId               : { type: 'string', title: 'Batch ID' },
+          requestCounts         : { type: 'object', title: 'Request Counts (processing/succeeded/errored)' },
+          processingStatus      : { type: 'string', title: 'Processing Status' },
+          resultsUrl            : { type: 'string', title: 'Results URL (available when complete)' },
+        },
+      },
       outputs: [
         { key: 'batchId', label: 'Batch ID', type: 'string', required: true },
         { key: 'requestCounts', label: 'Request Counts (processing/succeeded/errored)', type: 'json', required: true },
@@ -178,9 +263,26 @@ const anthropicManifest: ConnectorManifest = {
       type: 'action',
       httpMethod: 'GET',
       endpoint: '/messages/batches/{batch_id}',
+            inputSchema: {
+        type: 'object',
+        required: ['batchId'],
+        properties: {
+          batchId               : { type: 'string', title: 'Batch ID' },
+        },
+      },
       inputs: [
         { key: 'batchId', label: 'Batch ID', type: 'string', required: true, description: 'From the Batch Messages action output.' },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          batchId               : { type: 'string', title: 'Batch ID' },
+          processingStatus      : { type: 'string', title: 'Processing Status (in_progress/ended)' },
+          requestCounts         : { type: 'object', title: 'Request Counts' },
+          resultsUrl            : { type: 'string', title: 'Results URL' },
+          endedAt               : { type: 'string', title: 'Ended At' },
+        },
+      },
       outputs: [
         { key: 'batchId', label: 'Batch ID', type: 'string', required: true },
         { key: 'processingStatus', label: 'Processing Status (in_progress/ended)', type: 'string', required: true },

@@ -101,20 +101,7 @@ export class ConnectorSeederService {
   }
 
   private static async seedConnector(manifest: any): Promise<void> {
-    const defaultCategoryMap: Record<string, string> = {
-      linkedin: 'recruitment', indeed: 'recruitment', ziprecruiter: 'recruitment', glassdoor: 'recruitment', greenhouse: 'recruitment', lever: 'recruitment',
-      gmail: 'communication', slack: 'communication', discord: 'communication', telegram: 'communication', whatsapp: 'communication', twilio: 'communication', 'ms-teams': 'communication', 'ms-outlook': 'communication', zoom: 'communication', 'meta-messenger': 'communication',
-      'google-sheets': 'productivity', 'google-calendar': 'productivity', 'google-docs': 'productivity', notion: 'productivity', airtable: 'productivity', 'ms-excel': 'productivity',
-      openai: 'ai', anthropic: 'ai', 'google-gemini': 'ai', 'ai-document-ocr': 'ai', 'ai-nodes': 'ai', 'vector-rag': 'ai', 'command-router': 'ai', 'google-search': 'ai',
-      postgresql: 'database', mysql: 'database', mongodb: 'database', redis: 'database', supabase: 'database', dynamodb: 'database', 'amazon-s3': 'database', 'cloudflare-r2': 'database',
-      github: 'developer', gitlab: 'developer', 'web-browser': 'developer', 'web-search': 'developer', 'http-request': 'developer', 'webhook-trigger': 'developer', vercel: 'developer', linear: 'developer',
-      hubspot: 'crm', salesforce: 'crm', pipedrive: 'crm', mailchimp: 'crm', activecampaign: 'crm', instagram: 'crm', facebook: 'crm',
-      jira: 'project', trello: 'project', asana: 'project', monday: 'project',
-      stripe: 'ecommerce', paypal: 'ecommerce', shopify: 'ecommerce', woocommerce: 'ecommerce', quickbooks: 'ecommerce',
-      'google-drive': 'utilities', dropbox: 'utilities', docusign: 'utilities', calendly: 'utilities', condition: 'utilities', 'control-flow': 'utilities', 'text-transformer': 'utilities', 'json-transformer': 'utilities', 'amazon-flipkart': 'utilities'
-    };
-
-    const categoryId = manifest.category || defaultCategoryMap[manifest.id] || 'utilities';
+    const categoryId = manifest.category ? manifest.category.toLowerCase().replace(/[^a-z0-9]/g, '-') : 'utilities';
 
     const payload = {
       connectorId: manifest.id,
@@ -215,23 +202,7 @@ export class ConnectorSeederService {
   }
 
   private static async seedAuthSpec(manifest: any): Promise<void> {
-    const consoleUrlMap: Record<string, string> = {
-      gmail: 'https://console.cloud.google.com/apis/credentials',
-      'google-sheets': 'https://console.cloud.google.com/apis/credentials',
-      'google-drive': 'https://console.cloud.google.com/apis/credentials',
-      slack: 'https://api.slack.com/apps',
-      github: 'https://github.com/settings/developers',
-      discord: 'https://discord.com/developers/applications',
-      spotify: 'https://developer.spotify.com/dashboard',
-      notion: 'https://www.notion.so/my-integrations',
-      stripe: 'https://dashboard.stripe.com/apikeys',
-      openai: 'https://platform.openai.com/api-keys',
-      anthropic: 'https://console.anthropic.com/settings/keys',
-      hubspot: 'https://app.hubspot.com/l/developer-home',
-      jira: 'https://id.atlassian.com/manage-profile/security/api-tokens',
-    };
-
-    const providerConsoleUrl = consoleUrlMap[manifest.id] || `https://developer.${manifest.id}.com`;
+    const providerConsoleUrl = manifest.docsUrl || manifest.website || `https://developer.${manifest.id}.com`;
 
     const authPayload = {
       authenticationId: `${manifest.id}-auth-v2`,
@@ -251,7 +222,7 @@ export class ConnectorSeederService {
         ],
         redirectUriRequirement: `http://localhost:5000/api/v1/auth/${manifest.id}/callback`,
       },
-      fields: [
+      fields: manifest.authConfig?.fields || [
         {
           key: 'clientId',
           label: 'Client ID / API Key',
@@ -271,9 +242,9 @@ export class ConnectorSeederService {
           docUrl: providerConsoleUrl,
         },
       ],
-      scopes: manifest.scopes || ['read', 'write'],
-      authorizationUrl: manifest.authorizationUrl || `https://${manifest.id}.com/oauth/authorize`,
-      tokenUrl: manifest.tokenUrl || `https://${manifest.id}.com/oauth/token`,
+      scopes: manifest.authScopes || manifest.scopes || ['read', 'write'],
+      authorizationUrl: manifest.authConfig?.authorizationUrl || manifest.authorizationUrl || `https://${manifest.id}.com/oauth/authorize`,
+      tokenUrl: manifest.authConfig?.tokenUrl || manifest.tokenUrl || `https://${manifest.id}.com/oauth/token`,
       refreshTokenSupported: true,
     };
 
@@ -289,7 +260,7 @@ export class ConnectorSeederService {
       { featureId: 'core_actions', name: 'Core Action Execution', category: 'Actions', status: 'SUPPORTED' },
       { featureId: 'search_query', name: 'Search & Data Querying', category: 'Search', status: 'SUPPORTED' },
       { featureId: 'oauth_auth', name: 'OAuth 2.0 / API Key Auth', category: 'Security', status: 'SUPPORTED' },
-      { featureId: 'realtime_webhooks', name: 'Realtime Webhook Triggers', category: 'Triggers', status: 'SUPPORTED' },
+      { featureId: 'realtime_webhooks', name: 'Realtime Webhook Triggers', category: 'Triggers', status: manifest.triggers?.length ? 'SUPPORTED' : 'UNSUPPORTED' },
     ];
 
     for (const feat of defaultFeatures) {
@@ -303,22 +274,69 @@ export class ConnectorSeederService {
   }
 
   private static async seedTests(manifest: any): Promise<number> {
-    const testPayload = {
-      testId: `test-${manifest.id}-default`,
-      connectorId: manifest.id,
-      name: `Default Health & Action Test for ${manifest.name}`,
-      actionId: 'execute',
-      sampleInput: { ping: true },
-      expectedOutputKeys: ['success', 'data'],
-      enabled: true,
-    };
+    let testCount = 0;
+    const actions = manifest.actions || [];
 
-    await ConnectorTestDefinitionModel.findOneAndUpdate(
-      { testId: testPayload.testId },
-      { $set: testPayload },
-      { upsert: true, new: true }
-    );
-    return 1;
+    for (const action of actions) {
+      const actionId = action.id || action.actionId;
+      if (!actionId) continue;
+
+      const sampleInput: Record<string, any> = {};
+      const props = action.inputSchema?.properties || {};
+
+      for (const [key, prop] of Object.entries<any>(props)) {
+        if (prop.default !== undefined) {
+          sampleInput[key] = prop.default;
+        } else if (prop.type === 'string') {
+          sampleInput[key] = `test_${key}`;
+        } else if (prop.type === 'number') {
+          sampleInput[key] = 1;
+        } else if (prop.type === 'boolean') {
+          sampleInput[key] = true;
+        } else if (prop.type === 'array') {
+          sampleInput[key] = [];
+        } else if (prop.type === 'object') {
+          sampleInput[key] = {};
+        }
+      }
+
+      const testPayload = {
+        testId: `test-${manifest.id}-${actionId}`,
+        connectorId: manifest.id,
+        name: `Test ${action.name || actionId} for ${manifest.name}`,
+        actionId,
+        sampleInput,
+        expectedOutputKeys: ['success', 'data'],
+        enabled: true,
+      };
+
+      await ConnectorTestDefinitionModel.findOneAndUpdate(
+        { testId: testPayload.testId },
+        { $set: testPayload },
+        { upsert: true, new: true }
+      );
+      testCount++;
+    }
+
+    if (testCount === 0) {
+      const fallbackTestPayload = {
+        testId: `test-${manifest.id}-default`,
+        connectorId: manifest.id,
+        name: `Default Health & Action Test for ${manifest.name}`,
+        actionId: 'execute',
+        sampleInput: { ping: true },
+        expectedOutputKeys: ['success', 'data'],
+        enabled: true,
+      };
+      await ConnectorTestDefinitionModel.findOneAndUpdate(
+        { testId: fallbackTestPayload.testId },
+        { $set: fallbackTestPayload },
+        { upsert: true, new: true }
+      );
+      testCount = 1;
+    }
+
+    return testCount;
   }
 
   private static buildInputSchemaFromAction(act: any, manifestId: string): any {
@@ -327,14 +345,15 @@ export class ConnectorSeederService {
     }
 
     const inputsList = act.inputs || act.parameters || act.fields || [];
+    const properties: Record<string, any> = {};
+    const required: string[] = [];
+
     if (Array.isArray(inputsList) && inputsList.length > 0) {
-      const properties: Record<string, any> = {};
-      const required: string[] = [];
       inputsList.forEach((inp: any) => {
         const key = inp.key || inp.name || inp.id;
         if (key) {
           properties[key] = {
-            type: inp.type || 'string',
+            type: inp.type === 'json' ? 'object' : inp.type || 'string',
             title: inp.label || inp.name || key,
             description: inp.description || inp.help || `Enter ${inp.label || key}`,
           };
@@ -342,193 +361,30 @@ export class ConnectorSeederService {
           if (inp.required) required.push(key);
         }
       });
-      if (Object.keys(properties).length > 0) {
-        return {
-          type: 'object',
-          properties,
-          ...(required.length > 0 ? { required } : {}),
-        };
-      }
-    }
-
-    // Action ID or Manifest ID smart fallback map
-    const actionId = (act.actionId || act.id || '').toLowerCase();
-
-    if (actionId === 'get_all' || actionId === 'list_all' || actionId.includes('get_all') || actionId.includes('list_all')) {
-      return {
-        type: 'object',
-        properties: {
-          limit: { type: 'number', title: 'Max Records Limit (Default 50, Max 250)', description: 'Maximum number of items/records to retrieve' },
-          offset: { type: 'number', title: 'Offset / Page Starting Index', description: 'Zero-based offset index for pagination' },
-          query: { type: 'string', title: 'Search Filter Keywords (Optional)', description: 'Optional search query or metadata filter' },
-          sortBy: { type: 'string', title: 'Sort Field (Optional)', description: 'Field name to sort items by (e.g. createdAt, id)' },
-        },
-        required: [],
-      };
-    }
-
-    if (actionId.includes('email') || actionId.includes('mail')) {
-      return {
-        type: 'object',
-        properties: {
-          to: { type: 'string', title: 'Recipient Email', description: 'Destination email address (e.g. user@example.com)' },
-          subject: { type: 'string', title: 'Subject Line', description: 'Email subject title' },
-          body: { type: 'string', title: 'Email Body Content', description: 'Main message content in HTML or plain text' },
-          cc: { type: 'string', title: 'CC (Optional)', description: 'Carbon copy recipient email' },
-          bcc: { type: 'string', title: 'BCC (Optional)', description: 'Blind carbon copy recipient email' },
-        },
-        required: ['to', 'subject', 'body'],
-      };
-    }
-
-    if (actionId.includes('message') || actionId.includes('slack') || actionId.includes('post_text') || actionId.includes('send_chat')) {
-      return {
-        type: 'object',
-        properties: {
-          channel: { type: 'string', title: 'Channel / Recipient ID', description: 'Target channel name, ID, or phone number' },
-          text: { type: 'string', title: 'Message Text', description: 'Content of the message to send' },
-        },
-        required: ['channel', 'text'],
-      };
-    }
-
-    if (actionId.includes('issue') || actionId.includes('ticket') || actionId.includes('task')) {
-      return {
-        type: 'object',
-        properties: {
-          title: { type: 'string', title: 'Title / Summary', description: 'Short title or summary' },
-          description: { type: 'string', title: 'Description', description: 'Detailed explanation' },
-        },
-        required: ['title'],
-      };
-    }
-
-    if (actionId.includes('completion') || actionId.includes('prompt') || actionId.includes('generate') || actionId.includes('ai') || actionId.includes('chat')) {
-      return {
-        type: 'object',
-        properties: {
-          prompt: { type: 'string', title: 'Prompt / Instruction', description: 'Input text or prompt for AI' },
-          model: { type: 'string', title: 'Model (Optional)', description: 'AI model identifier' },
-        },
-        required: ['prompt'],
-      };
-    }
-
-    if (actionId.includes('query') || actionId.includes('sql') || actionId.includes('select')) {
-      return {
-        type: 'object',
-        properties: {
-          query: { type: 'string', title: 'Query Statement', description: 'SQL or database query string' },
-        },
-        required: ['query'],
-      };
     }
 
     return {
       type: 'object',
-      properties: {
-        payload: { type: 'string', title: 'Input Payload', description: 'Enter execution payload or configuration' },
-      },
+      properties,
+      ...(required.length > 0 ? { required } : {}),
     };
   }
 
   private static buildUiSchemaFromAction(inputSchema: any, act: any, manifestId: string): Record<string, any> {
     const properties = inputSchema?.properties || {};
     const uiSchema: Record<string, any> = {};
-    const isDbConnector = ['postgresql', 'mysql', 'mongodb', 'supabase', 'redis', 'dynamodb', 'airtable'].some(db => manifestId.toLowerCase().includes(db));
 
     Object.entries(properties).forEach(([key, meta]: [string, any]) => {
-      const k = key.toLowerCase();
-      const connectorId = manifestId.toLowerCase();
-
-      let widget: 'text' | 'textarea' | 'select' | 'dynamic_select' | 'key_value' | 'code_editor' | 'boolean' | 'number' | 'file' = 'text';
-      let placeholder = meta.description || `Enter ${meta.title || key}...`;
-      let defaultTestValue: any = '';
-      let optionsEndpoint: string | undefined = undefined;
-
-      // 1. Dynamic Dropdown Selectors
-      if (k.includes('spreadsheet') || k.includes('sheet_id') || k.includes('project_key') || k.includes('project') || k.includes('team_id') || k.includes('folder_id') || k.includes('database_id')) {
-        widget = 'dynamic_select';
-        optionsEndpoint = `/api/v2/connectors/${manifestId}/actions/${act.actionId || act.id}/options/${key}`;
-        placeholder = `Select ${meta.title || key} dynamically...`;
-      }
-      // 2. Select Enum Dropdown
-      else if (meta.enum && Array.isArray(meta.enum) && meta.enum.length > 0) {
-        widget = 'select';
-        defaultTestValue = meta.enum[0];
-      }
-      // 3. Search Queries & Keywords (Web search, news search, email search)
-      else if ((connectorId.includes('search') || k.includes('search') || k === 'query' || k === 'q') && !isDbConnector && !k.includes('sql')) {
-        widget = 'text';
-        defaultTestValue = 'Latest AI tech developments';
-        placeholder = 'Enter search query keywords (e.g. OpenAI, SpaceX, tech news)';
-      }
-      // 3b. Data Vault & Storage File Name / Format / Dataset Defaults
-      else if (k === 'filename' || k === 'name' || k === 'datasetname' || k === 'file_name') {
-        widget = 'text';
-        defaultTestValue = connectorId === 'data-vault' ? 'sample_test_document' : 'sample_test_file.txt';
-        placeholder = 'Enter File Name (e.g. report, document, dataset)';
-      }
-      else if (k === 'format' || k === 'fileformat' || k === 'extension') {
-        widget = 'text';
-        defaultTestValue = '.html';
-        placeholder = 'Enter File Format (e.g. .html, .csv, .json, .pdf, .md)';
-      }
-      else if (k === 'records' || k === 'items' || k === 'dataset') {
-        widget = 'code_editor';
-        defaultTestValue = JSON.stringify([
-          { id: 1, name: "Alice", role: "Developer", company: "AutoFlow" },
-          { id: 2, name: "Bob", role: "Architect", company: "AutoFlow" }
-        ], null, 2);
-      }
-      // 4. Textarea Multi-line
-      else if (k.includes('body') || k.includes('content') || k.includes('text') || k.includes('prompt') || k.includes('description') || k.includes('html')) {
-        widget = 'textarea';
-        if (k.includes('prompt')) defaultTestValue = 'Explain AI automation in 1 sentence.';
-        else if (k.includes('body') || k.includes('content')) defaultTestValue = 'Hello! Live test message executed from AutoFlow.';
-        else if (k.includes('text')) defaultTestValue = 'AutoFlow live connector action test verified!';
-      }
-      // 5. Code Editor (SQL, JSON Queries, Scripts)
-      else if ((isDbConnector && (k.includes('query') || k.includes('sql') || k.includes('filter'))) || k.includes('sql') || k.includes('json') || k.includes('script') || k.includes('code')) {
-        widget = 'code_editor';
-        if (k.includes('sql') || isDbConnector) defaultTestValue = 'SELECT 1 as live_test_connection;';
-        else defaultTestValue = '{\n  "status": "active"\n}';
-      }
-      // 6. Key-Value Row Builder
-      else if (k.includes('params') || k.includes('headers') || k.includes('rowvalues') || k.includes('metadata') || k.includes('attributes') || k.includes('payload')) {
-        if (connectorId.includes('postgres') || connectorId.includes('mysql') || connectorId.includes('mongo') || connectorId.includes('sheets') || connectorId.includes('http')) {
-          widget = 'key_value';
-          defaultTestValue = { testKey: 'testValue' };
-        }
-      }
-      // 7. Number Input
-      else if (meta.type === 'number' || meta.type === 'integer' || k.includes('limit') || k.includes('maxresults') || k.includes('amount') || k.includes('count')) {
-        widget = 'number';
-        defaultTestValue = 5;
-      }
-      // 8. Boolean Switch
-      else if (meta.type === 'boolean' || k.includes('is_') || k.includes('has_') || k.includes('enable')) {
-        widget = 'boolean';
-        defaultTestValue = true;
-      }
-      // 9. Text Input Fallbacks
-      else {
-        if (k === 'to' || k === 'recipient' || k.includes('email')) {
-          defaultTestValue = 'anil4use@gmail.com';
-        } else if (k === 'subject') {
-          defaultTestValue = 'AutoFlow Verification Test Email';
-        } else if (k === 'channel') {
-          defaultTestValue = 'general';
-        } else if (k === 'title' || k === 'summary') {
-          defaultTestValue = 'AutoFlow Live Verification Item';
-        }
-      }
+      let widget: string = 'text';
+      if (meta.type === 'number') widget = 'number';
+      else if (meta.type === 'boolean') widget = 'boolean';
+      else if (meta.type === 'object' || meta.type === 'array') widget = 'code_editor';
+      else if (meta.enum) widget = 'select';
 
       uiSchema[key] = {
         widget,
-        placeholder,
-        defaultTestValue,
-        ...(optionsEndpoint ? { optionsEndpoint } : {}),
+        placeholder: meta.description || meta.title || `Enter ${key}`,
+        defaultTestValue: meta.default !== undefined ? meta.default : meta.type === 'number' ? 1 : meta.type === 'boolean' ? true : `sample_${key}`,
         ...(meta.enum ? { enum: meta.enum.map((e: any) => ({ label: String(e), value: e })) } : {}),
       };
     });

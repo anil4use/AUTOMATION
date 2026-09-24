@@ -140,12 +140,33 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Save Document File',
       description: 'Save structured JSON, Markdown, HTML, or text content as a persistent vault file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileName', 'format', 'content'],
+        properties: {
+          fileName              : { type: 'string', title: 'File Name (e.g. sample_test_document)' },
+          format                : { type: 'string', title: 'File Format (e.g. .html, .csv, .json, .pdf, .md)' },
+          content               : { type: 'string', title: 'Document Content Payload' },
+          subfolder             : { type: 'string', title: 'Optional Subfolder' },
+        },
+      },
       inputs: [
         { key: 'fileName', label: 'File Name (e.g. sample_test_document)', type: 'string', required: true },
         { key: 'format', label: 'File Format (e.g. .html, .csv, .json, .pdf, .md)', type: 'string', required: true },
         { key: 'content', label: 'Document Content Payload', type: 'string', required: true },
         { key: 'subfolder', label: 'Optional Subfolder', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileName              : { type: 'string', title: 'Saved File Name' },
+          filePath              : { type: 'string', title: 'Local Disk Path' },
+          fileSize              : { type: 'number', title: 'File Size (Bytes)' },
+          mimeType              : { type: 'string', title: 'MIME Content Type' },
+          downloadUrl           : { type: 'string', title: '1-Click Download URL' },
+          viewUrl               : { type: 'string', title: '1-Click Preview / View URL' },
+        },
+      },
       outputs: [
         { key: 'fileName', label: 'Saved File Name', type: 'string', required: true },
         { key: 'filePath', label: 'Local Disk Path', type: 'string', required: true },
@@ -160,12 +181,35 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Save & Store Local File',
       description: 'Saves text, JSON, CSV, Base64 buffer, or document directly into local persistent vault storage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileName', 'content'],
+        properties: {
+          fileName              : { type: 'string', title: 'File Name with Extension (e.g. report.csv, data.json, summary.md)' },
+          content               : { type: 'string', title: 'File Content (Text, JSON string, or Base64 buffer)' },
+          subfolder             : { type: 'string', title: 'Optional Subfolder (e.g. exports, datasets)' },
+          isBase64              : { type: 'boolean', title: 'Is Content Base64 Encoded (true/false)' },
+        },
+      },
       inputs: [
         { key: 'fileName', label: 'File Name with Extension (e.g. report.csv, data.json, summary.md)', type: 'string', required: true },
         { key: 'content', label: 'File Content (Text, JSON string, or Base64 buffer)', type: 'string', required: true },
         { key: 'subfolder', label: 'Optional Subfolder (e.g. exports, datasets)', type: 'string', required: false },
         { key: 'isBase64', label: 'Is Content Base64 Encoded (true/false)', type: 'boolean', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileId                : { type: 'string', title: 'File Unique Identifier' },
+          fileName              : { type: 'string', title: 'Saved File Name' },
+          filePath              : { type: 'string', title: 'Local Disk Path' },
+          fileSize              : { type: 'number', title: 'File Size (Bytes)' },
+          mimeType              : { type: 'string', title: 'MIME Content Type' },
+          downloadUrl           : { type: 'string', title: '1-Click Download URL' },
+          viewUrl               : { type: 'string', title: '1-Click Preview / View URL' },
+          savedAt               : { type: 'string', title: 'Timestamp' },
+        },
+      },
       outputs: [
         { key: 'fileId', label: 'File Unique Identifier', type: 'string', required: true },
         { key: 'fileName', label: 'Saved File Name', type: 'string', required: true },
@@ -182,11 +226,30 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Export Dataset to CSV / JSON File',
       description: 'Converts JSON array of records into a clean formatted CSV table or JSON file saved to local vault storage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['datasetName', 'records'],
+        properties: {
+          datasetName           : { type: 'string', title: 'Dataset File Name (e.g. lead_contacts, emails_list)' },
+          records               : { type: 'string', title: 'Array of JSON Objects or Data Payload' },
+          format                : { type: 'string', title: 'Export Format (csv or json)' },
+        },
+      },
       inputs: [
         { key: 'datasetName', label: 'Dataset File Name (e.g. lead_contacts, emails_list)', type: 'string', required: true },
         { key: 'records', label: 'Array of JSON Objects or Data Payload', type: 'string', required: true },
         { key: 'format', label: 'Export Format (csv or json)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileName              : { type: 'string', title: 'Saved File Name' },
+          recordCount           : { type: 'number', title: 'Total Records Count' },
+          fileSize              : { type: 'number', title: 'File Size (Bytes)' },
+          downloadUrl           : { type: 'string', title: '1-Click Download URL' },
+          viewUrl               : { type: 'string', title: '1-Click View URL' },
+        },
+      },
       outputs: [
         { key: 'fileName', label: 'Saved File Name', type: 'string', required: true },
         { key: 'recordCount', label: 'Total Records Count', type: 'number', required: true },
@@ -200,10 +263,26 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Append CSV Dataset Rows',
       description: 'Appends JSON record array or CSV rows to an existing or new CSV file in local vault storage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['datasetName', 'records'],
+        properties: {
+          datasetName           : { type: 'string', title: 'CSV Dataset File Name (e.g. scraped_leads.csv)' },
+          records               : { type: 'string', title: 'Array of Records or Row Payload' },
+        },
+      },
       inputs: [
         { key: 'datasetName', label: 'CSV Dataset File Name (e.g. scraped_leads.csv)', type: 'string', required: true },
         { key: 'records', label: 'Array of Records or Row Payload', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          fileName              : { type: 'string', title: 'File Name' },
+          totalSize             : { type: 'number', title: 'Total File Size (Bytes)' },
+          downloadUrl           : { type: 'string', title: '1-Click Download URL' },
+        },
+      },
       outputs: [
         { key: 'fileName', label: 'File Name', type: 'string', required: true },
         { key: 'totalSize', label: 'Total File Size (Bytes)', type: 'number', required: true },
@@ -215,11 +294,26 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Query Saved Vault Files',
       description: 'Search and query files stored in local vault storage by name, extension, or content keywords.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          query                 : { type: 'string', title: 'Search Query Keywords' },
+          fileType              : { type: 'string', title: 'File Extension Filter (e.g. html, csv, json, pdf)' },
+          limit                 : { type: 'number', title: 'Max Records Limit (Default 50)' },
+        },
+      },
       inputs: [
         { key: 'query', label: 'Search Query Keywords', type: 'string', required: false },
         { key: 'fileType', label: 'File Extension Filter (e.g. html, csv, json, pdf)', type: 'string', required: false },
         { key: 'limit', label: 'Max Records Limit (Default 50)', type: 'number', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'object', title: 'Matching Vault Files' },
+          totalCount            : { type: 'number', title: 'Total Count' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Matching Vault Files', type: 'json', required: true },
         { key: 'totalCount', label: 'Total Count', type: 'number', required: true },
@@ -230,10 +324,26 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Create Versioned Snapshot',
       description: 'Creates a timestamped snapshot backup copy of an existing vault file.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileName'],
+        properties: {
+          fileName              : { type: 'string', title: 'Source File Name to Snapshot' },
+          snapshotLabel         : { type: 'string', title: 'Snapshot Label / Tag (Optional)' },
+        },
+      },
       inputs: [
         { key: 'fileName', label: 'Source File Name to Snapshot', type: 'string', required: true },
         { key: 'snapshotLabel', label: 'Snapshot Label / Tag (Optional)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          snapshotFileName      : { type: 'string', title: 'Snapshot File Name' },
+          originalFileName      : { type: 'string', title: 'Original File Name' },
+          downloadUrl           : { type: 'string', title: '1-Click Download URL' },
+        },
+      },
       outputs: [
         { key: 'snapshotFileName', label: 'Snapshot File Name', type: 'string', required: true },
         { key: 'originalFileName', label: 'Original File Name', type: 'string', required: true },
@@ -245,9 +355,25 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Read Vault File Content',
       description: 'Reads file text or JSON dataset stored in local vault storage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileName'],
+        properties: {
+          fileName              : { type: 'string', title: 'Vault File Name (e.g. report.csv)' },
+        },
+      },
       inputs: [
         { key: 'fileName', label: 'Vault File Name (e.g. report.csv)', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          content               : { type: 'string', title: 'File Text Content' },
+          fileName              : { type: 'string', title: 'File Name' },
+          fileSize              : { type: 'number', title: 'Size (Bytes)' },
+          mimeType              : { type: 'string', title: 'MIME Type' },
+        },
+      },
       outputs: [
         { key: 'content', label: 'File Text Content', type: 'string', required: true },
         { key: 'fileName', label: 'File Name', type: 'string', required: true },
@@ -260,12 +386,30 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Get All / List Local Vault Files',
       description: 'Browse, list, and filter all files saved in local persistent vault storage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        properties: {
+          limit                 : { type: 'number', title: 'Max Records Limit (Default 50, Max 250)' },
+          offset                : { type: 'number', title: 'Offset Starting Index' },
+          query                 : { type: 'string', title: 'Filter Keywords / Prefix' },
+          fileType              : { type: 'string', title: 'File Extension Filter (e.g. csv, json, pdf, txt, html)' },
+        },
+      },
       inputs: [
         { key: 'limit', label: 'Max Records Limit (Default 50, Max 250)', type: 'number', required: false },
         { key: 'offset', label: 'Offset Starting Index', type: 'number', required: false },
         { key: 'query', label: 'Filter Keywords / Prefix', type: 'string', required: false },
         { key: 'fileType', label: 'File Extension Filter (e.g. csv, json, pdf, txt, html)', type: 'string', required: false },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          items                 : { type: 'object', title: 'Vault Files Array' },
+          totalCount            : { type: 'number', title: 'Total Files Count' },
+          limit                 : { type: 'number', title: 'Applied Limit' },
+          hasMore               : { type: 'boolean', title: 'Has More Files' },
+        },
+      },
       outputs: [
         { key: 'items', label: 'Vault Files Array', type: 'json', required: true },
         { key: 'totalCount', label: 'Total Files Count', type: 'number', required: true },
@@ -278,9 +422,24 @@ export const dataVaultManifest: ConnectorManifest = {
       name: 'Delete File from Vault',
       description: 'Deletes a file from local vault disk storage.',
       type: 'action',
+            inputSchema: {
+        type: 'object',
+        required: ['fileName'],
+        properties: {
+          fileName              : { type: 'string', title: 'Vault File Name' },
+        },
+      },
       inputs: [
         { key: 'fileName', label: 'Vault File Name', type: 'string', required: true },
       ],
+            outputSchema: {
+        type: 'object',
+        properties: {
+          success               : { type: 'boolean', title: 'Deletion Status' },
+          fileName              : { type: 'string', title: 'Deleted File Name' },
+          message               : { type: 'string', title: 'Status Message' },
+        },
+      },
       outputs: [
         { key: 'success', label: 'Deletion Status', type: 'boolean', required: true },
         { key: 'fileName', label: 'Deleted File Name', type: 'string', required: true },
