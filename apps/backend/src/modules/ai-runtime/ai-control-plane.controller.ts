@@ -255,11 +255,41 @@ export class AIControlPlaneController {
 
       const orgId = (req as any).user?.organizationId || 'default-org';
 
-      // 1. Fetch active user connections and all enabled DB connectors
-      const [userConns, dbConnectors] = await Promise.all([
+      // 1. Fetch active user connections, enabled DB connectors, DB actions, and SDK manifests
+      const { ConnectorActionModel } = require('@automation/database');
+      let manifestRegistry: any = null;
+      try {
+        manifestRegistry = require('@automation/connector-sdk').manifestRegistry;
+      } catch {}
+
+      const [userConns, dbConnectors, dbActions] = await Promise.all([
         ConnectorService.getUserConnections(orgId).catch(() => []),
         ConnectorModel.find({ enabled: true }).lean().catch(() => []),
+        ConnectorActionModel.find({ enabled: true }).lean().catch(() => []),
       ]);
+
+      const dbActionsMap: Record<string, string[]> = {};
+      for (const act of dbActions || []) {
+        if (!dbActionsMap[act.connectorId]) dbActionsMap[act.connectorId] = [];
+        if (act.actionId && !dbActionsMap[act.connectorId].includes(act.actionId)) {
+          dbActionsMap[act.connectorId].push(act.actionId);
+        }
+      }
+
+      const defaultActionsMap: Record<string, string[]> = {
+        'gmail': ['search_messages', 'get_unread_emails', 'read_message_details', 'send_email'],
+        'data-vault': ['save_document', 'append_csv_dataset', 'create_version_snapshot'],
+        'slack': ['post_message', 'list_channels', 'read_message_history'],
+        'google-sheets': ['read_rows', 'append_row', 'update_cell'],
+        'google-drive': ['list_files', 'upload_file', 'download_file'],
+        'web-search': ['search_query', 'get_web_page'],
+        'web-browser': ['navigate', 'click_element', 'scrape_text'],
+        'google-calendar': ['list_events', 'create_event'],
+        'google-docs': ['read_document', 'append_text'],
+        'http-request': ['execute_request'],
+        'autoflow-schedule': ['trigger_schedule'],
+        'ai-agent': ['analyze_data', 'synthesize_text'],
+      };
 
       const systemConfiguredIds = new Set([
         'data-vault',
@@ -304,24 +334,57 @@ export class AIControlPlaneController {
       }
 
       const realConnectorContextStr = JSON.stringify(
-        targetConnectors.map((c: any) => ({
-          id: c.connectorId || c._id,
-          name: c.displayName || c.name || c.connectorId,
-          status: 'connected',
-          authStatus: authedUserConnIds.has(c.connectorId) ? 'user_authenticated' : 'system_configured',
-          actions: (c.actions || []).map((a: any) => a.id || a.actionId || 'execute'),
-        })),
+        targetConnectors.map((c: any) => {
+          const connId = c.connectorId || c._id;
+          let actionsList: string[] = [];
+
+          // 1. Check SDK Manifest
+          if (manifestRegistry) {
+            try {
+              const manifest = manifestRegistry.getManifest(connId);
+              if (manifest && Array.isArray(manifest.actions) && manifest.actions.length > 0) {
+                actionsList = manifest.actions.map((a: any) => a.id || a.actionId || a.name);
+              }
+            } catch {}
+          }
+
+          // 2. Check DB Actions
+          if (actionsList.length === 0 && dbActionsMap[connId] && dbActionsMap[connId].length > 0) {
+            actionsList = dbActionsMap[connId];
+          }
+
+          // 3. Fallback map
+          if (actionsList.length === 0 && defaultActionsMap[connId]) {
+            actionsList = defaultActionsMap[connId];
+          }
+
+          // 4. Default fallback
+          if (actionsList.length === 0) {
+            actionsList = Array.isArray(c.actions) && c.actions.length > 0
+              ? c.actions.map((a: any) => (typeof a === 'string' ? a : a.id || a.actionId || 'execute'))
+              : ['execute'];
+          }
+
+          return {
+            id: connId,
+            name: c.displayName || c.name || connId,
+            status: 'connected',
+            authStatus: authedUserConnIds.has(connId) ? 'user_authenticated' : 'system_configured',
+            actions: actionsList,
+          };
+        }),
         null,
         2
       );
 
       // 2. Use AI to generate contextually perfect test payload for all requested variables
+      // Rules for test payload generator
       const systemPrompt = `You are a test payload generation engine for the AutoFlow AI Platform.
 Given a prompt template and expected variable names, generate a JSON object containing realistic, contextually matching test values for each variable.
 
 Rules:
 - If a variable name is "connectorContext", return the provided real connector JSON array string: ${JSON.stringify(realConnectorContextStr)}
-- If a variable name is "historyContext", return a realistic 2-3 sentence execution history log of previous automated steps.
+- If a variable name is "historyContext", return a clean session initialization string indicating a fresh session (e.g. "Session initialized. No steps executed yet in current turn.") unless the prompt explicitly asks for previous context.
 - For any other variable (e.g. userMessage, sourceData, targetSchema, agentPersonality, etc.), produce realistic sample data that fits the prompt context.
 - Also include a key "userMessage" with a realistic, clear user instruction prompt matching the prompt key.
 
@@ -360,7 +423,7 @@ Return ONLY a valid JSON object matching key-value pairs for variables, plus "us
         parsedPayload.connectorContext = realConnectorContextStr;
       }
       if (!parsedPayload.historyContext) {
-        parsedPayload.historyContext = 'User previously executed: "Fetch unread emails". Last step: Gmail search retrieved 3 sales lead messages.';
+        parsedPayload.historyContext = 'Session initialized for user. No previous actions taken yet.';
       }
       if (!parsedPayload.userMessage) {
         parsedPayload.userMessage = 'Read unread lead emails from Gmail, insert into Google Sheets, and send a Slack notification';

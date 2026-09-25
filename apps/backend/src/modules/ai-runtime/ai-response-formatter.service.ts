@@ -106,13 +106,17 @@ Your job is to convert raw execution outputs and system payloads into clean, use
 
 CRITICAL RULES:
 1. ONLY use the actual facts, data, keys, and values present in the input payload. NEVER invent, fake, or hardcode fictitious data.
-2. Strip away internal system metadata (e.g. stepId, connectorId, connectionId, actionId, requiresConfirmation) unless explicitly asked.
-3. Convert the actual payload data into the requested format (${formatType.toUpperCase()}):
-   - "summary" or "text": Natural, clear Markdown summary based strictly on payload data.
-   - "table": Markdown table formatting the payload data rows and columns.
-   - "csv": Valid CSV output formatting the actual payload fields into CSV header and rows.
-   - "pdf": Structured Markdown formatted for document export.
-   - "json": Clean JSON containing only the payload data.
+2. If the payload is an Execution Plan (contains "plan" array with connector steps):
+   - Format it as a clear step-by-step execution roadmap in natural, readable human language.
+   - For each step, highlight what action is taken, which connector is used, and the target output file or parameters.
+   - Do NOT just spit out raw JSON code blocks or internal keys like stepId or connectionId.
+3. If the payload contains tabular or dataset results:
+   - Convert the payload data into the requested format (${formatType.toUpperCase()}):
+     - "summary" or "text": Natural, clear Markdown summary based strictly on payload data.
+     - "table": Markdown table formatting the payload data rows and columns.
+     - "csv": Valid CSV output formatting the actual payload fields into CSV header and rows.
+     - "pdf": Structured Markdown formatted for document export.
+     - "json": Clean JSON containing only the payload data.
 
 Target Format: ${formatType.toUpperCase()}
 User Request Context: "${instruction || 'Format this response'}"`;
@@ -158,6 +162,24 @@ User Request Context: "${instruction || 'Format this response'}"`;
     };
 
     const dataArray = findArray(parsed);
+
+    // Special handling if raw output is a Workflow Plan array
+    const isPlan = Array.isArray(parsed?.plan) || (dataArray && dataArray[0]?.connectorId && dataArray[0]?.actionId);
+    if (isPlan && dataArray) {
+      if (formatType === 'summary' || formatType === 'text' || formatType === 'pdf') {
+        let text = `### 📋 Execution Workflow Plan\n\n`;
+        dataArray.forEach((step: any, idx: number) => {
+          const name = step.description || `Step ${idx + 1}: ${step.connectorId} -> ${step.actionId}`;
+          text += `**Step ${idx + 1}: ${name}**\n`;
+          if (step.connectorId) text += `- **Connector:** \`${step.connectorId}\` (${step.actionId || 'action'})\n`;
+          if (step.inputs && Object.keys(step.inputs).length > 0) {
+            text += `- **Inputs:** ${JSON.stringify(step.inputs)}\n`;
+          }
+          text += '\n';
+        });
+        return text.trim();
+      }
+    }
 
     if (formatType === 'csv') {
       if (dataArray && dataArray.length > 0) {
