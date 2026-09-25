@@ -27,6 +27,7 @@ router.post('/test-prompt', AIControlPlaneController.testPrompt);
 router.post('/generate-test-payload', AIControlPlaneController.generateTestPayload);
 router.post('/format-response', AIControlPlaneController.formatResponse);
 router.post('/save-to-vault', AIControlPlaneController.saveToVault);
+router.post('/execute-plan', AIControlPlaneController.executePlan);
 router.get('/prompts/history/:feature/:promptKey', AIControlPlaneController.getPromptHistory);
 router.put('/prompts/activate/:id', AIControlPlaneController.activatePromptVersion);
 router.get('/prompts/:id', AIControlPlaneController.getPrompt);

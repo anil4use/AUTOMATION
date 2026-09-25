@@ -91,10 +91,14 @@ export default function PromptsPage() {
   const [testUserMessage, setTestUserMessage] = useState('');
 
   // AI Response Analyzer & Formatter State
-  const [outputViewMode, setOutputViewMode] = useState<'formatted' | 'raw'>('formatted');
+  const [outputViewMode, setOutputViewMode] = useState<'formatted' | 'raw' | 'live'>('formatted');
   const [formattedResponse, setFormattedResponse] = useState<string>('');
   const [isFormattingResponse, setIsFormattingResponse] = useState<boolean>(false);
   const [requestedVaultFormat, setRequestedVaultFormat] = useState<'auto' | 'summary' | 'pdf' | 'table' | 'csv' | 'json'>('auto');
+
+  // Live Plan Execution State
+  const [isExecutingPlan, setIsExecutingPlan] = useState(false);
+  const [planExecutionResult, setPlanExecutionResult] = useState<any>(null);
 
   // Selected step index in Multi-Step Flow Pipeline Visualizer
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
@@ -203,6 +207,39 @@ export default function PromptsPage() {
       toast.error('AI payload generation failed');
     } finally {
       setIsGeneratingAiPayload(false);
+    }
+  };
+
+  // Execute a live multi-step connector plan from the generated plan JSON
+  const handleExecutePlan = async () => {
+    if (!parsedExecutionPlan || parsedExecutionPlan.length === 0) {
+      toast.error('No execution plan detected. Run "Run Execution Test" first to generate a plan.');
+      return;
+    }
+    setIsExecutingPlan(true);
+    setPlanExecutionResult(null);
+    setOutputViewMode('live');
+    try {
+      const res = await apiClient.post('/v1/ai-control-plane/execute-plan', {
+        plan: parsedExecutionPlan,
+        userMessage: testUserMessage || selectedPrompt?.name || '',
+        requestedFormat: requestedVaultFormat,
+      });
+      setPlanExecutionResult(res.data);
+      if (res.data.success) {
+        toast.success(
+          `✅ Plan executed! ${res.data.stepsCompleted}/${res.data.stepsTotal} steps completed in ${res.data.totalDurationMs}ms`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(`Plan execution failed at step: ${res.data.error || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || err.message;
+      toast.error(`Live execution failed: ${errMsg}`);
+      setPlanExecutionResult({ success: false, error: errMsg, stepResults: [] });
+    } finally {
+      setIsExecutingPlan(false);
     }
   };
 
@@ -1058,15 +1095,38 @@ export default function PromptsPage() {
 
                 <button
                   onClick={handleRunTest}
-                  disabled={isTesting}
-                  className="mt-auto w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-[0_4px_14px_rgba(99,102,241,0.39)]"
+                  disabled={isTesting || isExecutingPlan}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-[0_4px_14px_rgba(99,102,241,0.39)]"
                 >
                   {isTesting ? (
                     <Loader2 className="animate-spin" size={16} />
                   ) : (
                     <Play size={16} className="fill-current" />
                   )}
-                  {isTesting ? 'Executing Live AI Execution Test...' : 'Run Execution Test'}
+                  {isTesting ? 'Generating Plan via LLM...' : '🧠 Generate Plan (LLM)'}
+                </button>
+
+                {/* Execute Live Plan Button — visible once a plan is parsed from LLM output */}
+                <button
+                  id="execute-live-plan-btn"
+                  onClick={handleExecutePlan}
+                  disabled={isExecutingPlan || isTesting || !parsedExecutionPlan || parsedExecutionPlan.length === 0}
+                  className={`mt-1 w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all border ${
+                    parsedExecutionPlan && parsedExecutionPlan.length > 0
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-emerald-500/50 text-white shadow-[0_4px_20px_rgba(16,185,129,0.4)] hover:scale-[1.02]'
+                      : 'bg-white/5 border-white/10 text-textMuted opacity-50 cursor-not-allowed'
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  {isExecutingPlan ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Zap size={16} className="fill-current" />
+                  )}
+                  {isExecutingPlan
+                    ? `Running ${parsedExecutionPlan?.length ?? ''} Connector Steps...`
+                    : parsedExecutionPlan && parsedExecutionPlan.length > 0
+                    ? `▶ Execute Live Plan (${parsedExecutionPlan.length} steps)`
+                    : '▶ Execute Live Plan (no plan yet)'}
                 </button>
               </div>
 
@@ -1135,8 +1195,8 @@ export default function PromptsPage() {
                   </div>
                 </div>
 
-                {/* View Mode Toggle: Human Response vs Technical Workflow Plan */}
-                <div className="flex items-center gap-2 mb-3">
+                {/* View Mode Toggle: Human Response vs Technical Workflow Plan vs Live Execution */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
                   <button
                     onClick={() => setOutputViewMode('formatted')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -1146,7 +1206,7 @@ export default function PromptsPage() {
                     }`}
                   >
                     <Sparkles size={13} className="text-amber-400" />
-                    <span>✨ AI Formatted Human Response</span>
+                    <span>✨ AI Formatted</span>
                   </button>
 
                   <button
@@ -1158,7 +1218,26 @@ export default function PromptsPage() {
                     }`}
                   >
                     <Code2 size={13} className="text-indigo-400" />
-                    <span>⚙️ Technical Plan & Raw Output</span>
+                    <span>⚙️ Raw Plan</span>
+                  </button>
+
+                  <button
+                    onClick={() => setOutputViewMode('live')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      outputViewMode === 'live'
+                        ? 'bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                        : 'bg-white/5 border border-white/10 text-textMuted hover:text-white'
+                    }`}
+                  >
+                    <Zap size={13} className="text-emerald-400" />
+                    <span>⚡ Live Execution</span>
+                    {planExecutionResult && (
+                      <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                        planExecutionResult.success ? 'bg-emerald-500/30 text-emerald-300' : 'bg-red-500/30 text-red-300'
+                      }`}>
+                        {planExecutionResult.success ? '✓' : '✗'}
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -1233,21 +1312,120 @@ export default function PromptsPage() {
                 )}
 
                 {/* Main AI Output Content Box */}
-                <div className="flex-1 bg-black/50 border border-white/10 rounded-xl p-5 text-xs text-gray-200 font-mono whitespace-pre-wrap overflow-y-auto custom-scrollbar leading-relaxed">
-                  {isTesting || isFormattingResponse ? (
-                    <div className="flex flex-col items-center justify-center h-full text-textMuted gap-3">
+                <div className="flex-1 bg-black/50 border border-white/10 rounded-xl text-xs text-gray-200 font-mono overflow-y-auto custom-scrollbar">
+                  {/* Live Execution Result View */}
+                  {outputViewMode === 'live' ? (
+                    isExecutingPlan ? (
+                      <div className="flex flex-col items-center justify-center h-full text-textMuted gap-3 p-5">
+                        <div className="relative">
+                          <Loader2 className="animate-spin text-emerald-400" size={36} />
+                          <div className="absolute inset-0 rounded-full bg-emerald-400/10 animate-ping" />
+                        </div>
+                        <span className="text-emerald-300 font-semibold">Executing {parsedExecutionPlan?.length ?? ''} connector steps against live APIs...</span>
+                        <span className="text-[10px] text-textMuted">Chaining outputs between connectors via {'{{stepId.path}}'} resolution</span>
+                      </div>
+                    ) : planExecutionResult ? (
+                      <div className="p-4 space-y-3">
+                        {/* Execution Summary Bar */}
+                        <div className={`flex items-center justify-between p-3 rounded-xl border text-xs ${
+                          planExecutionResult.success
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                            : 'bg-red-500/10 border-red-500/30 text-red-300'
+                        }`}>
+                          <span className="font-bold flex items-center gap-2">
+                            {planExecutionResult.success ? '✅' : '❌'}
+                            {planExecutionResult.stepsCompleted}/{planExecutionResult.stepsTotal} Steps Completed
+                          </span>
+                          <span className="text-textMuted font-mono">{planExecutionResult.totalDurationMs}ms total</span>
+                        </div>
+
+                        {/* Step-by-step results */}
+                        {(planExecutionResult.stepResults || []).map((step: any, idx: number) => (
+                          <div key={step.stepId || idx} className={`rounded-xl border p-3.5 space-y-2 ${
+                            step.success
+                              ? 'bg-white/[0.02] border-white/10'
+                              : 'bg-red-500/5 border-red-500/20'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                  step.success ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
+                                }`}>
+                                  {step.success ? '✓' : '✗'}
+                                </span>
+                                <span className="font-bold text-white text-[11px]">{step.stepId}</span>
+                                <span className="text-indigo-300 text-[10px] font-mono">{step.connectorId}.{step.actionId}</span>
+                              </div>
+                              <span className="text-textMuted text-[10px] font-mono">{step.durationMs}ms</span>
+                            </div>
+
+                            {step.description && (
+                              <p className="text-[10px] text-textMuted">{step.description}</p>
+                            )}
+
+                            {step.error && (
+                              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-[10px] text-red-300">
+                                ⚠️ {step.error}
+                              </div>
+                            )}
+
+                            {step.success && step.output && (
+                              <div>
+                                <span className="text-[9px] text-textMuted uppercase font-bold block mb-1">Output:</span>
+                                <pre className="bg-black/60 border border-white/5 rounded-lg p-2.5 text-[10px] text-gray-300 overflow-x-auto custom-scrollbar max-h-48">
+                                  {JSON.stringify(step.output, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Formatted final output */}
+                        {planExecutionResult.formattedContent && (
+                          <div className="mt-2">
+                            <div className="text-[10px] text-emerald-300 font-bold uppercase mb-1.5 flex items-center gap-1">
+                              <Sparkles size={11} /> Formatted Output (Ready to Save)
+                            </div>
+                            <div className="bg-black/60 border border-emerald-500/20 rounded-xl p-4 text-[11px] text-gray-200 whitespace-pre-wrap leading-relaxed">
+                              {planExecutionResult.formattedContent}
+                            </div>
+                            <button
+                              onClick={() => handleSaveToVault(planExecutionResult.formattedContent)}
+                              disabled={isSavingToVault}
+                              className="mt-2 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-2 border border-emerald-500/40 transition-all shadow-[0_0_15px_rgba(16,185,129,0.25)] hover:scale-[1.01] disabled:opacity-50"
+                            >
+                              {isSavingToVault ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+                              {isSavingToVault ? 'Saving...' : '📦 Save Live Output to Data Vault'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-textMuted gap-3 p-5">
+                        <Zap size={32} className="text-emerald-400/40" />
+                        <span className="text-sm font-medium">Ready for Live Execution</span>
+                        <span className="text-[11px] text-center max-w-xs">
+                          First click <strong className="text-indigo-300">🧠 Generate Plan (LLM)</strong> to get a plan,
+                          then click <strong className="text-emerald-300">▶ Execute Live Plan</strong> to run real connectors.
+                        </span>
+                      </div>
+                    )
+                  ) : isTesting || isFormattingResponse ? (
+                    <div className="flex flex-col items-center justify-center h-full text-textMuted gap-3 p-5">
                       <Loader2 className="animate-spin text-indigo-400" size={32} />
-                      <span>{isTesting ? 'Executing prompt across LLM...' : 'AI Normalizing & Formatting Response for User...'}</span>
+                      <span>{isTesting ? 'Generating execution plan via LLM...' : 'AI Normalizing & Formatting Response...'}</span>
                     </div>
                   ) : testResponse ? (
-                    outputViewMode === 'formatted' ? (
-                      formattedResponse || testResponse.content
-                    ) : (
-                      testResponse.content
-                    )
+                    <div className="p-5 whitespace-pre-wrap leading-relaxed">
+                      {outputViewMode === 'formatted' ? (
+                        formattedResponse || testResponse.content
+                      ) : (
+                        testResponse.content
+                      )}
+                    </div>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-textMuted italic">
-                      Click "Run Execution Test" to execute prompt against active LLM model.
+                    <div className="flex items-center justify-center h-full text-textMuted italic p-5">
+                      Click "🧠 Generate Plan (LLM)" to generate an execution plan, then "▶ Execute Live Plan" to run real connectors.
                     </div>
                   )}
                 </div>

@@ -671,4 +671,67 @@ Return ONLY a valid JSON object matching key-value pairs for variables, plus "us
       res.status(500).json({ error: err.message });
     }
   }
+
+  // --- Live Plan Executor ---
+  // Takes a generated execution plan and runs it against real connectors.
+  // Step outputs are chained via {{stepId.path}} template resolution.
+
+  public static async executePlan(req: Request, res: Response) {
+    try {
+      const {
+        plan,
+        userMessage,
+        requestedFormat,
+        sessionId,
+      } = req.body;
+
+      if (!plan || !Array.isArray(plan) || plan.length === 0) {
+        return res.status(400).json({ error: 'plan must be a non-empty array of execution steps' });
+      }
+
+      const orgId: string = (req as any).user?.organizationId || (req as any).organizationId || '';
+      if (!orgId) {
+        return res.status(401).json({ error: 'Organization context required to execute plan' });
+      }
+
+      const { PlanExecutorService } = require('./plan-executor.service');
+      const executionResult = await PlanExecutorService.executePlan({
+        plan,
+        orgId,
+        userMessage: userMessage || '',
+        sessionId: sessionId || `playground_${Date.now()}`,
+      });
+
+      // Auto-format the final output for human readability using LLM (primary) + deterministic fallback
+      let formattedContent: string | null = null;
+      if (executionResult.finalOutput) {
+        try {
+          const { AIResponseFormatterService } = require('./ai-response-formatter.service');
+          // Use the full format() path — LLM understands user intent, formats email data as CSV, etc.
+          const primaryResult = executionResult.finalOutput?.primaryResult ?? executionResult.finalOutput;
+          const fmt = await AIResponseFormatterService.format({
+            rawResponse: primaryResult,
+            userInstruction: userMessage || 'Format this execution output',
+            requestedFormat: requestedFormat || 'auto',
+          });
+          formattedContent = fmt.formattedContent || null;
+        } catch {
+          // Format failure is non-fatal — raw output still returned
+        }
+      }
+
+      res.json({
+        success: executionResult.success,
+        stepResults: executionResult.stepResults,
+        finalOutput: executionResult.finalOutput,
+        formattedContent,
+        totalDurationMs: executionResult.totalDurationMs,
+        stepsCompleted: executionResult.stepsCompleted,
+        stepsTotal: executionResult.stepsTotal,
+        error: executionResult.error,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Plan execution failed' });
+    }
+  }
 }
